@@ -37,6 +37,10 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
+//peter
+//#include <bits/types/sigset_t.h>
+#include <asm-generic/signal-defs.h>
+
 #ifndef HAVE_SOCKLEN_T
 typedef int socklen_t;
 #endif

@@ -32,6 +32,9 @@
 #include <fcntl.h>
 #include <errno.h>
 
+//peter
+#include <alloca.h>
+
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
@@ -155,7 +158,7 @@ remote_open (char *name)
 					   exits when the remote side dies.  */
     }
 
-  fcntl (remote_desc, F_SETFL, FASYNC);
+//  fcntl (remote_desc, F_SETFL, FASYNC);
 
   fprintf (stderr, "Replay logfile using %s\n", name);
   fflush (stderr);

@@ -89,7 +89,8 @@ extern const struct gdb_exception exception_none;
    exceptions).  */
 
 #if defined(HAVE_SIGSETJMP)
-#define EXCEPTIONS_SIGJMP_BUF		sigjmp_buf
+//#define EXCEPTIONS_SIGJMP_BUF		sigjmp_buf
+#define EXCEPTIONS_SIGJMP_BUF		jmp_buf
 #define EXCEPTIONS_SIGSETJMP(buf)	sigsetjmp((buf), 1)
 #define EXCEPTIONS_SIGLONGJMP(buf,val)	siglongjmp((buf), (val))
 #else

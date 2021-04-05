@@ -65,6 +65,8 @@ typedef size_t gdb_ps_size_t;
    This is a helper function for ps_pdread, ps_pdwrite, ps_ptread and
    ps_ptwrite.  */
 
+#define paddr_t psaddr_t
+
 static ps_err_e
 ps_xfer_memory (const struct ps_prochandle *ph, paddr_t addr,
 		gdb_byte *buf, size_t len, int write)

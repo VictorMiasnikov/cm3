@@ -38,6 +38,8 @@
 #include "solib-svr4.h"
 #include "gdbcore.h"
 
+#include "gregset.h"
+
 #ifdef HAVE_GNU_LIBC_VERSION_H
 #include <gnu/libc-version.h>
 #endif

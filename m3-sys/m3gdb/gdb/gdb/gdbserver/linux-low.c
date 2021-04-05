@@ -37,6 +37,9 @@
 #include <errno.h>
 #include <sys/syscall.h>
 
+//peter
+#include <alloca.h>
+
 /* ``all_threads'' is keyed by the LWP ID - it should be the thread ID instead,
    however.  This requires changing the ID in place when we go from !using_threads
    to using_threads, immediately.

@@ -29,6 +29,7 @@ struct target_ops;
    to find the range of real-time signals.  */
 
 #include <signal.h>
+#include <bits/types/sigset_t.h>
 
 #ifdef __SIGRTMIN
 #define REALTIME_LO	__SIGRTMIN

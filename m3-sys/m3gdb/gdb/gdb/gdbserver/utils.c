@@ -23,6 +23,9 @@
 #include <stdio.h>
 #include <string.h>
 
+//peter
+#include <alloca.h>
+
 /* Generally useful subroutines used throughout the program.  */
 
 /* Print the system error message for errno, and also mention STRING

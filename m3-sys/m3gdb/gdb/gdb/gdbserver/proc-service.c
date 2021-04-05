@@ -43,6 +43,9 @@
 
 #include "../gdb_proc_service.h"
 
+//peter
+#define paddr_t psaddr_t
+
 typedef struct ps_prochandle *gdb_ps_prochandle_t;
 typedef void *gdb_ps_read_buf_t;
 typedef const void *gdb_ps_write_buf_t;
