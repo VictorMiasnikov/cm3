@@ -6795,10 +6795,11 @@ PROCEDURE DebugGlobals(self : U) =
                where the global is declared. Assume its 1 *)
             LineNo        := 1,
             Ty            := globType,
-            isLocalToUnit := TRUE,
+            IsLocalToUnit := TRUE,
+            isDefined     := TRUE,
             Expr          := exp,
             Decl          := NIL,
-            templateParams:= NIL, (*MDTuple;*)            
+            TemplateParams:= NIL, (*MDTuple;*)            
             AlignInBits   := 0);
             
           (* set the !dbg tag for this global *)

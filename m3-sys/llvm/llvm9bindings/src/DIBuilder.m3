@@ -216,8 +216,13 @@ public class DIBuilder : IDisposable {
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIDerivedType, cPtr, false);
 
 
+   DIDerivedType createTypedef(DIType Ty, StringRef Name, DIFile File, CARDINAL LineNo, DIScope Context, uint32_t AlignInBits) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createTypedef0(swigCPtr,   = *(DIType **)&Ty; ,  = StringRef(Name->Data,Name->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIScope **)&Context; ,   = (uint32_t)AlignInBits; );
+    RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIDerivedType, cPtr, false);
+
+
    DIDerivedType createTypedef(DIType Ty, StringRef Name, DIFile File, CARDINAL LineNo, DIScope Context) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createTypedef(swigCPtr,   = *(DIType **)&Ty; ,  = StringRef(Name->Data,Name->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIScope **)&Context; );
+    cPtr := M3DIBuilderRaw.DIBuilder_createTypedef1(swigCPtr,   = *(DIType **)&Ty; ,  = StringRef(Name->Data,Name->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIScope **)&Context; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIDerivedType, cPtr, false);
 
 
@@ -515,48 +520,53 @@ public class DIBuilder : IDisposable {
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DISubrange, cPtr, false);
 
 
-   DIGlobalVariableExpression createGlobalVariableExpression(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN isLocalToUnit, DIExpression Expr, MDNode Decl, MDTuple templateParams, uint32_t AlignInBits) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression0(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = isLocalToUnit ? true : false; ,   = *(DIExpression **)&Expr; ,   = *(MDNode **)&Decl; ,   = *(MDTuple **)&templateParams; ,   = (uint32_t)AlignInBits; );
+   DIGlobalVariableExpression createGlobalVariableExpression(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN IsLocalToUnit, BOOLEAN isDefined, DIExpression Expr, MDNode Decl, MDTuple TemplateParams, uint32_t AlignInBits) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression0(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = IsLocalToUnit ? true : false; ,   = isDefined ? true : false; ,   = *(DIExpression **)&Expr; ,   = *(MDNode **)&Decl; ,   = *(MDTuple **)&TemplateParams; ,   = (uint32_t)AlignInBits; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIGlobalVariableExpression, cPtr, false);
 
 
-   DIGlobalVariableExpression createGlobalVariableExpression(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN isLocalToUnit, DIExpression Expr, MDNode Decl, MDTuple templateParams) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression1(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = isLocalToUnit ? true : false; ,   = *(DIExpression **)&Expr; ,   = *(MDNode **)&Decl; ,   = *(MDTuple **)&templateParams; );
+   DIGlobalVariableExpression createGlobalVariableExpression(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN IsLocalToUnit, BOOLEAN isDefined, DIExpression Expr, MDNode Decl, MDTuple TemplateParams) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression1(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = IsLocalToUnit ? true : false; ,   = isDefined ? true : false; ,   = *(DIExpression **)&Expr; ,   = *(MDNode **)&Decl; ,   = *(MDTuple **)&TemplateParams; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIGlobalVariableExpression, cPtr, false);
 
 
-   DIGlobalVariableExpression createGlobalVariableExpression(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN isLocalToUnit, DIExpression Expr, MDNode Decl) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression2(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = isLocalToUnit ? true : false; ,   = *(DIExpression **)&Expr; ,   = *(MDNode **)&Decl; );
+   DIGlobalVariableExpression createGlobalVariableExpression(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN IsLocalToUnit, BOOLEAN isDefined, DIExpression Expr, MDNode Decl) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression2(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = IsLocalToUnit ? true : false; ,   = isDefined ? true : false; ,   = *(DIExpression **)&Expr; ,   = *(MDNode **)&Decl; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIGlobalVariableExpression, cPtr, false);
 
 
-   DIGlobalVariableExpression createGlobalVariableExpression(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN isLocalToUnit, DIExpression Expr) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression3(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = isLocalToUnit ? true : false; ,   = *(DIExpression **)&Expr; );
+   DIGlobalVariableExpression createGlobalVariableExpression(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN IsLocalToUnit, BOOLEAN isDefined, DIExpression Expr) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression3(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = IsLocalToUnit ? true : false; ,   = isDefined ? true : false; ,   = *(DIExpression **)&Expr; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIGlobalVariableExpression, cPtr, false);
 
 
-   DIGlobalVariableExpression createGlobalVariableExpression(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN isLocalToUnit) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression4(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = isLocalToUnit ? true : false; );
+   DIGlobalVariableExpression createGlobalVariableExpression(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN IsLocalToUnit, BOOLEAN isDefined) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression4(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = IsLocalToUnit ? true : false; ,   = isDefined ? true : false; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIGlobalVariableExpression, cPtr, false);
 
 
-   DIGlobalVariable createTempGlobalVariableFwdDecl(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN isLocalToUnit, MDNode Decl, MDTuple templateParams, uint32_t AlignInBits) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createTempGlobalVariableFwdDecl0(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = isLocalToUnit ? true : false; ,   = *(MDNode **)&Decl; ,   = *(MDTuple **)&templateParams; ,   = (uint32_t)AlignInBits; );
+   DIGlobalVariableExpression createGlobalVariableExpression(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN IsLocalToUnit) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression5(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = IsLocalToUnit ? true : false; );
+    RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIGlobalVariableExpression, cPtr, false);
+
+
+   DIGlobalVariable createTempGlobalVariableFwdDecl(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN IsLocalToUnit, MDNode Decl, MDTuple TemplateParams, uint32_t AlignInBits) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createTempGlobalVariableFwdDecl0(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = IsLocalToUnit ? true : false; ,   = *(MDNode **)&Decl; ,   = *(MDTuple **)&TemplateParams; ,   = (uint32_t)AlignInBits; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIGlobalVariable, cPtr, false);
 
 
-   DIGlobalVariable createTempGlobalVariableFwdDecl(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN isLocalToUnit, MDNode Decl, MDTuple templateParams) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createTempGlobalVariableFwdDecl1(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = isLocalToUnit ? true : false; ,   = *(MDNode **)&Decl; ,   = *(MDTuple **)&templateParams; );
+   DIGlobalVariable createTempGlobalVariableFwdDecl(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN IsLocalToUnit, MDNode Decl, MDTuple TemplateParams) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createTempGlobalVariableFwdDecl1(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = IsLocalToUnit ? true : false; ,   = *(MDNode **)&Decl; ,   = *(MDTuple **)&TemplateParams; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIGlobalVariable, cPtr, false);
 
 
-   DIGlobalVariable createTempGlobalVariableFwdDecl(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN isLocalToUnit, MDNode Decl) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createTempGlobalVariableFwdDecl2(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = isLocalToUnit ? true : false; ,   = *(MDNode **)&Decl; );
+   DIGlobalVariable createTempGlobalVariableFwdDecl(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN IsLocalToUnit, MDNode Decl) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createTempGlobalVariableFwdDecl2(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = IsLocalToUnit ? true : false; ,   = *(MDNode **)&Decl; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIGlobalVariable, cPtr, false);
 
 
-   DIGlobalVariable createTempGlobalVariableFwdDecl(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN isLocalToUnit) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createTempGlobalVariableFwdDecl3(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = isLocalToUnit ? true : false; );
+   DIGlobalVariable createTempGlobalVariableFwdDecl(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN IsLocalToUnit) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createTempGlobalVariableFwdDecl3(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = IsLocalToUnit ? true : false; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIGlobalVariable, cPtr, false);
 
 
@@ -735,8 +745,8 @@ public class DIBuilder : IDisposable {
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DINamespace, cPtr, false);
 
 
-   DIModule createModule(DIScope Scope, StringRef Name, StringRef ConfigurationMacros, StringRef IncludePath, StringRef ISysRoot) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createModule(swigCPtr,   = *(DIScope **)&Scope; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(ConfigurationMacros->Data,ConfigurationMacros->Length);,  = StringRef(IncludePath->Data,IncludePath->Length);,  = StringRef(ISysRoot->Data,ISysRoot->Length););
+   DIModule createModule(DIScope Scope, StringRef Name, StringRef ConfigurationMacros, StringRef IncludePath, StringRef SysRoot) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createModule(swigCPtr,   = *(DIScope **)&Scope; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(ConfigurationMacros->Data,ConfigurationMacros->Length);,  = StringRef(IncludePath->Data,IncludePath->Length);,  = StringRef(SysRoot->Data,SysRoot->Length););
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIModule, cPtr, false);
 
 

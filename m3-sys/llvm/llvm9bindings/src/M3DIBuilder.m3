@@ -624,12 +624,13 @@ PROCEDURE DIBuilder_createReferenceType3
     RETURN LOOPHOLE(ret, DIDerivedType);
   END DIBuilder_createReferenceType3;
 
-PROCEDURE DIBuilder_createTypedef (         self   : DIBuilder;
-                                            Ty     : DIType;
-                                   READONLY Name   : StringRef;
-                                            File   : DIFile;
-                                            LineNo : uint;
-                                            Context: DIScope;   ):
+PROCEDURE DIBuilder_createTypedef (         self       : DIBuilder;
+                                            Ty         : DIType;
+                                   READONLY Name       : StringRef;
+                                            File       : DIFile;
+                                            LineNo     : uint;
+                                            Context    : DIScope;
+                                            AlignInBits: uint32_t;  ):
   DIDerivedType =
   VAR
     ret    : ADDRESS;
@@ -642,9 +643,32 @@ PROCEDURE DIBuilder_createTypedef (         self   : DIBuilder;
     arg4tmp := LOOPHOLE(File, ADDRESS);
     arg6tmp := LOOPHOLE(Context, ADDRESS);
     ret := M3DIBuilderRaw.DIBuilder_createTypedef(
-             selfAdr, arg2tmp, ADR(Name), arg4tmp, LineNo, arg6tmp);
+             selfAdr, arg2tmp, ADR(Name), arg4tmp, LineNo, arg6tmp,
+             AlignInBits);
     RETURN LOOPHOLE(ret, DIDerivedType);
   END DIBuilder_createTypedef;
+
+PROCEDURE DIBuilder_createTypedef1 (         self   : DIBuilder;
+                                             Ty     : DIType;
+                                    READONLY Name   : StringRef;
+                                             File   : DIFile;
+                                             LineNo : uint;
+                                             Context: DIScope;   ):
+  DIDerivedType =
+  VAR
+    ret    : ADDRESS;
+    selfAdr: ADDRESS := LOOPHOLE(self.cxxObj, ADDRESS);
+    arg2tmp: ADDRESS;
+    arg4tmp: ADDRESS;
+    arg6tmp: ADDRESS;
+  BEGIN
+    arg2tmp := LOOPHOLE(Ty, ADDRESS);
+    arg4tmp := LOOPHOLE(File, ADDRESS);
+    arg6tmp := LOOPHOLE(Context, ADDRESS);
+    ret := M3DIBuilderRaw.DIBuilder_createTypedef1(
+             selfAdr, arg2tmp, ADR(Name), arg4tmp, LineNo, arg6tmp);
+    RETURN LOOPHOLE(ret, DIDerivedType);
+  END DIBuilder_createTypedef1;
 
 PROCEDURE DIBuilder_createFriend (self: DIBuilder; Ty, FriendTy: DIType; ):
   DIDerivedType =
@@ -1826,17 +1850,17 @@ PROCEDURE DIBuilder_getOrCreateSubrange1
   END DIBuilder_getOrCreateSubrange1;
 
 PROCEDURE DIBuilder_createGlobalVariableExpression
-  (         self             : DIBuilder;
-            Context          : DIScope;
-   READONLY Name, LinkageName: StringRef;
-            File             : DIFile;
-            LineNo           : uint;
-            Ty               : DIType;
-            isLocalToUnit    : BOOLEAN;
-            Expr             : DIExpression;
-            Decl             : MDNode;
-            templateParams   : MDTuple;
-            AlignInBits      : uint32_t;     ):
+  (         self                    : DIBuilder;
+            Context                 : DIScope;
+   READONLY Name, LinkageName       : StringRef;
+            File                    : DIFile;
+            LineNo                  : uint;
+            Ty                      : DIType;
+            IsLocalToUnit, isDefined: BOOLEAN;
+            Expr                    : DIExpression;
+            Decl                    : MDNode;
+            TemplateParams          : MDTuple;
+            AlignInBits             : uint32_t;     ):
   DIGlobalVariableExpression =
   VAR
     ret     : ADDRESS;
@@ -1844,34 +1868,34 @@ PROCEDURE DIBuilder_createGlobalVariableExpression
     arg2tmp : ADDRESS;
     arg5tmp : ADDRESS;
     arg7tmp : ADDRESS;
-    arg9tmp : ADDRESS;
     arg10tmp: ADDRESS;
     arg11tmp: ADDRESS;
+    arg12tmp: ADDRESS;
   BEGIN
     arg2tmp := LOOPHOLE(Context, ADDRESS);
     arg5tmp := LOOPHOLE(File, ADDRESS);
     arg7tmp := LOOPHOLE(Ty, ADDRESS);
-    arg9tmp := LOOPHOLE(Expr, ADDRESS);
-    arg10tmp := LOOPHOLE(Decl, ADDRESS);
-    arg11tmp := LOOPHOLE(templateParams, ADDRESS);
-    ret :=
-      M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression(
-        selfAdr, arg2tmp, ADR(Name), ADR(LinkageName), arg5tmp, LineNo,
-        arg7tmp, isLocalToUnit, arg9tmp, arg10tmp, arg11tmp, AlignInBits);
+    arg10tmp := LOOPHOLE(Expr, ADDRESS);
+    arg11tmp := LOOPHOLE(Decl, ADDRESS);
+    arg12tmp := LOOPHOLE(TemplateParams, ADDRESS);
+    ret := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression(
+             selfAdr, arg2tmp, ADR(Name), ADR(LinkageName), arg5tmp,
+             LineNo, arg7tmp, IsLocalToUnit, isDefined, arg10tmp, arg11tmp,
+             arg12tmp, AlignInBits);
     RETURN LOOPHOLE(ret, DIGlobalVariableExpression);
   END DIBuilder_createGlobalVariableExpression;
 
 PROCEDURE DIBuilder_createGlobalVariableExpression1
-  (         self             : DIBuilder;
-            Context          : DIScope;
-   READONLY Name, LinkageName: StringRef;
-            File             : DIFile;
-            LineNo           : uint;
-            Ty               : DIType;
-            isLocalToUnit    : BOOLEAN;
-            Expr             : DIExpression;
-            Decl             : MDNode;
-            templateParams   : MDTuple;      ):
+  (         self                    : DIBuilder;
+            Context                 : DIScope;
+   READONLY Name, LinkageName       : StringRef;
+            File                    : DIFile;
+            LineNo                  : uint;
+            Ty                      : DIType;
+            IsLocalToUnit, isDefined: BOOLEAN;
+            Expr                    : DIExpression;
+            Decl                    : MDNode;
+            TemplateParams          : MDTuple;      ):
   DIGlobalVariableExpression =
   VAR
     ret     : ADDRESS;
@@ -1879,32 +1903,64 @@ PROCEDURE DIBuilder_createGlobalVariableExpression1
     arg2tmp : ADDRESS;
     arg5tmp : ADDRESS;
     arg7tmp : ADDRESS;
-    arg9tmp : ADDRESS;
+    arg10tmp: ADDRESS;
+    arg11tmp: ADDRESS;
+    arg12tmp: ADDRESS;
+  BEGIN
+    arg2tmp := LOOPHOLE(Context, ADDRESS);
+    arg5tmp := LOOPHOLE(File, ADDRESS);
+    arg7tmp := LOOPHOLE(Ty, ADDRESS);
+    arg10tmp := LOOPHOLE(Expr, ADDRESS);
+    arg11tmp := LOOPHOLE(Decl, ADDRESS);
+    arg12tmp := LOOPHOLE(TemplateParams, ADDRESS);
+    ret :=
+      M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression1(
+        selfAdr, arg2tmp, ADR(Name), ADR(LinkageName), arg5tmp, LineNo,
+        arg7tmp, IsLocalToUnit, isDefined, arg10tmp, arg11tmp, arg12tmp);
+    RETURN LOOPHOLE(ret, DIGlobalVariableExpression);
+  END DIBuilder_createGlobalVariableExpression1;
+
+PROCEDURE DIBuilder_createGlobalVariableExpression2
+  (         self                    : DIBuilder;
+            Context                 : DIScope;
+   READONLY Name, LinkageName       : StringRef;
+            File                    : DIFile;
+            LineNo                  : uint;
+            Ty                      : DIType;
+            IsLocalToUnit, isDefined: BOOLEAN;
+            Expr                    : DIExpression;
+            Decl                    : MDNode;       ):
+  DIGlobalVariableExpression =
+  VAR
+    ret     : ADDRESS;
+    selfAdr : ADDRESS := LOOPHOLE(self.cxxObj, ADDRESS);
+    arg2tmp : ADDRESS;
+    arg5tmp : ADDRESS;
+    arg7tmp : ADDRESS;
     arg10tmp: ADDRESS;
     arg11tmp: ADDRESS;
   BEGIN
     arg2tmp := LOOPHOLE(Context, ADDRESS);
     arg5tmp := LOOPHOLE(File, ADDRESS);
     arg7tmp := LOOPHOLE(Ty, ADDRESS);
-    arg9tmp := LOOPHOLE(Expr, ADDRESS);
-    arg10tmp := LOOPHOLE(Decl, ADDRESS);
-    arg11tmp := LOOPHOLE(templateParams, ADDRESS);
-    ret := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression1(
-             selfAdr, arg2tmp, ADR(Name), ADR(LinkageName), arg5tmp,
-             LineNo, arg7tmp, isLocalToUnit, arg9tmp, arg10tmp, arg11tmp);
+    arg10tmp := LOOPHOLE(Expr, ADDRESS);
+    arg11tmp := LOOPHOLE(Decl, ADDRESS);
+    ret :=
+      M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression2(
+        selfAdr, arg2tmp, ADR(Name), ADR(LinkageName), arg5tmp, LineNo,
+        arg7tmp, IsLocalToUnit, isDefined, arg10tmp, arg11tmp);
     RETURN LOOPHOLE(ret, DIGlobalVariableExpression);
-  END DIBuilder_createGlobalVariableExpression1;
+  END DIBuilder_createGlobalVariableExpression2;
 
-PROCEDURE DIBuilder_createGlobalVariableExpression2
-  (         self             : DIBuilder;
-            Context          : DIScope;
-   READONLY Name, LinkageName: StringRef;
-            File             : DIFile;
-            LineNo           : uint;
-            Ty               : DIType;
-            isLocalToUnit    : BOOLEAN;
-            Expr             : DIExpression;
-            Decl             : MDNode;       ):
+PROCEDURE DIBuilder_createGlobalVariableExpression3
+  (         self                    : DIBuilder;
+            Context                 : DIScope;
+   READONLY Name, LinkageName       : StringRef;
+            File                    : DIFile;
+            LineNo                  : uint;
+            Ty                      : DIType;
+            IsLocalToUnit, isDefined: BOOLEAN;
+            Expr                    : DIExpression; ):
   DIGlobalVariableExpression =
   VAR
     ret     : ADDRESS;
@@ -1912,56 +1968,27 @@ PROCEDURE DIBuilder_createGlobalVariableExpression2
     arg2tmp : ADDRESS;
     arg5tmp : ADDRESS;
     arg7tmp : ADDRESS;
-    arg9tmp : ADDRESS;
     arg10tmp: ADDRESS;
   BEGIN
     arg2tmp := LOOPHOLE(Context, ADDRESS);
     arg5tmp := LOOPHOLE(File, ADDRESS);
     arg7tmp := LOOPHOLE(Ty, ADDRESS);
-    arg9tmp := LOOPHOLE(Expr, ADDRESS);
-    arg10tmp := LOOPHOLE(Decl, ADDRESS);
-    ret := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression2(
-             selfAdr, arg2tmp, ADR(Name), ADR(LinkageName), arg5tmp,
-             LineNo, arg7tmp, isLocalToUnit, arg9tmp, arg10tmp);
-    RETURN LOOPHOLE(ret, DIGlobalVariableExpression);
-  END DIBuilder_createGlobalVariableExpression2;
-
-PROCEDURE DIBuilder_createGlobalVariableExpression3
-  (         self             : DIBuilder;
-            Context          : DIScope;
-   READONLY Name, LinkageName: StringRef;
-            File             : DIFile;
-            LineNo           : uint;
-            Ty               : DIType;
-            isLocalToUnit    : BOOLEAN;
-            Expr             : DIExpression; ):
-  DIGlobalVariableExpression =
-  VAR
-    ret    : ADDRESS;
-    selfAdr: ADDRESS := LOOPHOLE(self.cxxObj, ADDRESS);
-    arg2tmp: ADDRESS;
-    arg5tmp: ADDRESS;
-    arg7tmp: ADDRESS;
-    arg9tmp: ADDRESS;
-  BEGIN
-    arg2tmp := LOOPHOLE(Context, ADDRESS);
-    arg5tmp := LOOPHOLE(File, ADDRESS);
-    arg7tmp := LOOPHOLE(Ty, ADDRESS);
-    arg9tmp := LOOPHOLE(Expr, ADDRESS);
+    arg10tmp := LOOPHOLE(Expr, ADDRESS);
     ret := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression3(
              selfAdr, arg2tmp, ADR(Name), ADR(LinkageName), arg5tmp,
-             LineNo, arg7tmp, isLocalToUnit, arg9tmp);
+             LineNo, arg7tmp, IsLocalToUnit, isDefined, arg10tmp);
     RETURN LOOPHOLE(ret, DIGlobalVariableExpression);
   END DIBuilder_createGlobalVariableExpression3;
 
 PROCEDURE DIBuilder_createGlobalVariableExpression4
-  (         self             : DIBuilder;
-            Context          : DIScope;
-   READONLY Name, LinkageName: StringRef;
-            File             : DIFile;
-            LineNo           : uint;
-            Ty               : DIType;
-            isLocalToUnit    : BOOLEAN;   ): DIGlobalVariableExpression =
+  (         self                    : DIBuilder;
+            Context                 : DIScope;
+   READONLY Name, LinkageName       : StringRef;
+            File                    : DIFile;
+            LineNo                  : uint;
+            Ty                      : DIType;
+            IsLocalToUnit, isDefined: BOOLEAN;   ):
+  DIGlobalVariableExpression =
   VAR
     ret    : ADDRESS;
     selfAdr: ADDRESS := LOOPHOLE(self.cxxObj, ADDRESS);
@@ -1974,9 +2001,33 @@ PROCEDURE DIBuilder_createGlobalVariableExpression4
     arg7tmp := LOOPHOLE(Ty, ADDRESS);
     ret := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression4(
              selfAdr, arg2tmp, ADR(Name), ADR(LinkageName), arg5tmp,
-             LineNo, arg7tmp, isLocalToUnit);
+             LineNo, arg7tmp, IsLocalToUnit, isDefined);
     RETURN LOOPHOLE(ret, DIGlobalVariableExpression);
   END DIBuilder_createGlobalVariableExpression4;
+
+PROCEDURE DIBuilder_createGlobalVariableExpression5
+  (         self             : DIBuilder;
+            Context          : DIScope;
+   READONLY Name, LinkageName: StringRef;
+            File             : DIFile;
+            LineNo           : uint;
+            Ty               : DIType;
+            IsLocalToUnit    : BOOLEAN;   ): DIGlobalVariableExpression =
+  VAR
+    ret    : ADDRESS;
+    selfAdr: ADDRESS := LOOPHOLE(self.cxxObj, ADDRESS);
+    arg2tmp: ADDRESS;
+    arg5tmp: ADDRESS;
+    arg7tmp: ADDRESS;
+  BEGIN
+    arg2tmp := LOOPHOLE(Context, ADDRESS);
+    arg5tmp := LOOPHOLE(File, ADDRESS);
+    arg7tmp := LOOPHOLE(Ty, ADDRESS);
+    ret := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression5(
+             selfAdr, arg2tmp, ADR(Name), ADR(LinkageName), arg5tmp,
+             LineNo, arg7tmp, IsLocalToUnit);
+    RETURN LOOPHOLE(ret, DIGlobalVariableExpression);
+  END DIBuilder_createGlobalVariableExpression5;
 
 PROCEDURE DIBuilder_createTempGlobalVariableFwdDecl
   (         self             : DIBuilder;
@@ -1985,9 +2036,9 @@ PROCEDURE DIBuilder_createTempGlobalVariableFwdDecl
             File             : DIFile;
             LineNo           : uint;
             Ty               : DIType;
-            isLocalToUnit    : BOOLEAN;
+            IsLocalToUnit    : BOOLEAN;
             Decl             : MDNode;
-            templateParams   : MDTuple;
+            TemplateParams   : MDTuple;
             AlignInBits      : uint32_t;  ): DIGlobalVariable =
   VAR
     ret     : ADDRESS;
@@ -2002,11 +2053,11 @@ PROCEDURE DIBuilder_createTempGlobalVariableFwdDecl
     arg5tmp := LOOPHOLE(File, ADDRESS);
     arg7tmp := LOOPHOLE(Ty, ADDRESS);
     arg9tmp := LOOPHOLE(Decl, ADDRESS);
-    arg10tmp := LOOPHOLE(templateParams, ADDRESS);
+    arg10tmp := LOOPHOLE(TemplateParams, ADDRESS);
     ret :=
       M3DIBuilderRaw.DIBuilder_createTempGlobalVariableFwdDecl(
         selfAdr, arg2tmp, ADR(Name), ADR(LinkageName), arg5tmp, LineNo,
-        arg7tmp, isLocalToUnit, arg9tmp, arg10tmp, AlignInBits);
+        arg7tmp, IsLocalToUnit, arg9tmp, arg10tmp, AlignInBits);
     RETURN LOOPHOLE(ret, DIGlobalVariable);
   END DIBuilder_createTempGlobalVariableFwdDecl;
 
@@ -2017,9 +2068,9 @@ PROCEDURE DIBuilder_createTempGlobalVariableFwdDecl1
             File             : DIFile;
             LineNo           : uint;
             Ty               : DIType;
-            isLocalToUnit    : BOOLEAN;
+            IsLocalToUnit    : BOOLEAN;
             Decl             : MDNode;
-            templateParams   : MDTuple;   ): DIGlobalVariable =
+            TemplateParams   : MDTuple;   ): DIGlobalVariable =
   VAR
     ret     : ADDRESS;
     selfAdr : ADDRESS := LOOPHOLE(self.cxxObj, ADDRESS);
@@ -2033,10 +2084,10 @@ PROCEDURE DIBuilder_createTempGlobalVariableFwdDecl1
     arg5tmp := LOOPHOLE(File, ADDRESS);
     arg7tmp := LOOPHOLE(Ty, ADDRESS);
     arg9tmp := LOOPHOLE(Decl, ADDRESS);
-    arg10tmp := LOOPHOLE(templateParams, ADDRESS);
+    arg10tmp := LOOPHOLE(TemplateParams, ADDRESS);
     ret := M3DIBuilderRaw.DIBuilder_createTempGlobalVariableFwdDecl1(
              selfAdr, arg2tmp, ADR(Name), ADR(LinkageName), arg5tmp,
-             LineNo, arg7tmp, isLocalToUnit, arg9tmp, arg10tmp);
+             LineNo, arg7tmp, IsLocalToUnit, arg9tmp, arg10tmp);
     RETURN LOOPHOLE(ret, DIGlobalVariable);
   END DIBuilder_createTempGlobalVariableFwdDecl1;
 
@@ -2047,7 +2098,7 @@ PROCEDURE DIBuilder_createTempGlobalVariableFwdDecl2
             File             : DIFile;
             LineNo           : uint;
             Ty               : DIType;
-            isLocalToUnit    : BOOLEAN;
+            IsLocalToUnit    : BOOLEAN;
             Decl             : MDNode;    ): DIGlobalVariable =
   VAR
     ret    : ADDRESS;
@@ -2063,7 +2114,7 @@ PROCEDURE DIBuilder_createTempGlobalVariableFwdDecl2
     arg9tmp := LOOPHOLE(Decl, ADDRESS);
     ret := M3DIBuilderRaw.DIBuilder_createTempGlobalVariableFwdDecl2(
              selfAdr, arg2tmp, ADR(Name), ADR(LinkageName), arg5tmp,
-             LineNo, arg7tmp, isLocalToUnit, arg9tmp);
+             LineNo, arg7tmp, IsLocalToUnit, arg9tmp);
     RETURN LOOPHOLE(ret, DIGlobalVariable);
   END DIBuilder_createTempGlobalVariableFwdDecl2;
 
@@ -2074,7 +2125,7 @@ PROCEDURE DIBuilder_createTempGlobalVariableFwdDecl3
             File             : DIFile;
             LineNo           : uint;
             Ty               : DIType;
-            isLocalToUnit    : BOOLEAN;   ): DIGlobalVariable =
+            IsLocalToUnit    : BOOLEAN;   ): DIGlobalVariable =
   VAR
     ret    : ADDRESS;
     selfAdr: ADDRESS := LOOPHOLE(self.cxxObj, ADDRESS);
@@ -2087,7 +2138,7 @@ PROCEDURE DIBuilder_createTempGlobalVariableFwdDecl3
     arg7tmp := LOOPHOLE(Ty, ADDRESS);
     ret := M3DIBuilderRaw.DIBuilder_createTempGlobalVariableFwdDecl3(
              selfAdr, arg2tmp, ADR(Name), ADR(LinkageName), arg5tmp,
-             LineNo, arg7tmp, isLocalToUnit);
+             LineNo, arg7tmp, IsLocalToUnit);
     RETURN LOOPHOLE(ret, DIGlobalVariable);
   END DIBuilder_createTempGlobalVariableFwdDecl3;
 
@@ -2945,9 +2996,9 @@ PROCEDURE DIBuilder_createNameSpace (         self         : DIBuilder;
   END DIBuilder_createNameSpace;
 
 PROCEDURE DIBuilder_createModule
-  (         self                                            : DIBuilder;
-            Scope                                           : DIScope;
-   READONLY Name, ConfigurationMacros, IncludePath, ISysRoot: StringRef; ):
+  (         self                                           : DIBuilder;
+            Scope                                          : DIScope;
+   READONLY Name, ConfigurationMacros, IncludePath, SysRoot: StringRef; ):
   DIModule =
   VAR
     ret    : ADDRESS;
@@ -2957,7 +3008,7 @@ PROCEDURE DIBuilder_createModule
     arg2tmp := LOOPHOLE(Scope, ADDRESS);
     ret := M3DIBuilderRaw.DIBuilder_createModule(
              selfAdr, arg2tmp, ADR(Name), ADR(ConfigurationMacros),
-             ADR(IncludePath), ADR(ISysRoot));
+             ADR(IncludePath), ADR(SysRoot));
     RETURN LOOPHOLE(ret, DIModule);
   END DIBuilder_createModule;
 
@@ -3351,6 +3402,7 @@ REVEAL
       createReferenceType2        := DIBuilder_createReferenceType2;
       createReferenceType3        := DIBuilder_createReferenceType3;
       createTypedef               := DIBuilder_createTypedef;
+      createTypedef1              := DIBuilder_createTypedef1;
       createFriend                := DIBuilder_createFriend;
       createInheritance           := DIBuilder_createInheritance;
       createMemberType            := DIBuilder_createMemberType;
@@ -3408,6 +3460,7 @@ REVEAL
       createGlobalVariableExpression2 := DIBuilder_createGlobalVariableExpression2;
       createGlobalVariableExpression3 := DIBuilder_createGlobalVariableExpression3;
       createGlobalVariableExpression4 := DIBuilder_createGlobalVariableExpression4;
+      createGlobalVariableExpression5 := DIBuilder_createGlobalVariableExpression5;
       createTempGlobalVariableFwdDecl := DIBuilder_createTempGlobalVariableFwdDecl;
       createTempGlobalVariableFwdDecl1 := DIBuilder_createTempGlobalVariableFwdDecl1;
       createTempGlobalVariableFwdDecl2 := DIBuilder_createTempGlobalVariableFwdDecl2;

@@ -687,13 +687,30 @@ TYPE
        * \param File        File where this type is defined.
        * \param LineNo      Line number.
        * \param Context     The surrounding context for the typedef.
+       * \param AlignInBits Alignment. (optional)
        *)
 
-      createTypedef (         Ty     : DIType;
-                     READONLY Name   : StringRef;
-                              File   : DIFile;
-                              LineNo : uint;
-                              Context: DIScope;   ): DIDerivedType;
+      createTypedef (         Ty         : DIType;
+                     READONLY Name       : StringRef;
+                              File       : DIFile;
+                              LineNo     : uint;
+                              Context    : DIScope;
+                              AlignInBits: uint32_t;  ): DIDerivedType;
+
+      (** Create debugging information entry for a typedef.
+       * \param Ty          Original type.
+       * \param Name        Typedef name.
+       * \param File        File where this type is defined.
+       * \param LineNo      Line number.
+       * \param Context     The surrounding context for the typedef.
+       * \param AlignInBits Alignment. (optional)
+       *)
+
+      createTypedef1 (         Ty     : DIType;
+                      READONLY Name   : StringRef;
+                               File   : DIFile;
+                               LineNo : uint;
+                               Context: DIScope;   ): DIDerivedType;
 
       (** Create debugging information entry for a 'friend'.
       *)
@@ -1579,7 +1596,7 @@ TYPE
        * \param File        File where this variable is defined.
        * \param LineNo      Line number.
        * \param Ty          Variable Type.
-       * \param isLocalToUnit Boolean flag indicate whether this variable is
+       * \param IsLocalToUnit Boolean flag indicate whether this variable is
                             * externally visible or not.
        * \param Expr        The location of the global relative to the attached
                           * GlobalVariable.
@@ -1590,13 +1607,13 @@ TYPE
 
       createGlobalVariableExpression (Context: DIScope;
                                       READONLY Name, LinkageName: StringRef;
-                                      File          : DIFile;
-                                      LineNo        : uint;
-                                      Ty            : DIType;
-                                      isLocalToUnit : BOOLEAN;
+                                      File                    : DIFile;
+                                      LineNo                  : uint;
+                                      Ty                      : DIType;
+                                      IsLocalToUnit, isDefined: BOOLEAN;
                                       Expr          : DIExpression;
                                       Decl          : MDNode;
-                                      templateParams: MDTuple;
+                                      TemplateParams: MDTuple;
                                       AlignInBits   : uint32_t;     ):
                                       DIGlobalVariableExpression;
 
@@ -1607,7 +1624,7 @@ TYPE
        * \param File        File where this variable is defined.
        * \param LineNo      Line number.
        * \param Ty          Variable Type.
-       * \param isLocalToUnit Boolean flag indicate whether this variable is
+       * \param IsLocalToUnit Boolean flag indicate whether this variable is
                             * externally visible or not.
        * \param Expr        The location of the global relative to the attached
                           * GlobalVariable.
@@ -1618,13 +1635,13 @@ TYPE
 
       createGlobalVariableExpression1 (Context: DIScope;
                                        READONLY Name, LinkageName: StringRef;
-                                       File          : DIFile;
-                                       LineNo        : uint;
-                                       Ty            : DIType;
-                                       isLocalToUnit : BOOLEAN;
+                                       File                    : DIFile;
+                                       LineNo                  : uint;
+                                       Ty                      : DIType;
+                                       IsLocalToUnit, isDefined: BOOLEAN;
                                        Expr          : DIExpression;
                                        Decl          : MDNode;
-                                       templateParams: MDTuple;      ):
+                                       TemplateParams: MDTuple;      ):
                                        DIGlobalVariableExpression;
 
       (** Create a new descriptor for the specified variable.
@@ -1634,7 +1651,7 @@ TYPE
        * \param File        File where this variable is defined.
        * \param LineNo      Line number.
        * \param Ty          Variable Type.
-       * \param isLocalToUnit Boolean flag indicate whether this variable is
+       * \param IsLocalToUnit Boolean flag indicate whether this variable is
                             * externally visible or not.
        * \param Expr        The location of the global relative to the attached
                           * GlobalVariable.
@@ -1645,12 +1662,12 @@ TYPE
 
       createGlobalVariableExpression2 (Context: DIScope;
                                        READONLY Name, LinkageName: StringRef;
-                                       File         : DIFile;
-                                       LineNo       : uint;
-                                       Ty           : DIType;
-                                       isLocalToUnit: BOOLEAN;
-                                       Expr         : DIExpression;
-                                       Decl         : MDNode;       ):
+                                       File                    : DIFile;
+                                       LineNo                  : uint;
+                                       Ty                      : DIType;
+                                       IsLocalToUnit, isDefined: BOOLEAN;
+                                       Expr: DIExpression;
+                                       Decl: MDNode;       ):
                                        DIGlobalVariableExpression;
 
       (** Create a new descriptor for the specified variable.
@@ -1660,7 +1677,7 @@ TYPE
        * \param File        File where this variable is defined.
        * \param LineNo      Line number.
        * \param Ty          Variable Type.
-       * \param isLocalToUnit Boolean flag indicate whether this variable is
+       * \param IsLocalToUnit Boolean flag indicate whether this variable is
                             * externally visible or not.
        * \param Expr        The location of the global relative to the attached
                           * GlobalVariable.
@@ -1671,11 +1688,11 @@ TYPE
 
       createGlobalVariableExpression3 (Context: DIScope;
                                        READONLY Name, LinkageName: StringRef;
-                                       File         : DIFile;
-                                       LineNo       : uint;
-                                       Ty           : DIType;
-                                       isLocalToUnit: BOOLEAN;
-                                       Expr         : DIExpression; ):
+                                       File                    : DIFile;
+                                       LineNo                  : uint;
+                                       Ty                      : DIType;
+                                       IsLocalToUnit, isDefined: BOOLEAN;
+                                       Expr: DIExpression; ):
                                        DIGlobalVariableExpression;
 
       (** Create a new descriptor for the specified variable.
@@ -1685,7 +1702,7 @@ TYPE
        * \param File        File where this variable is defined.
        * \param LineNo      Line number.
        * \param Ty          Variable Type.
-       * \param isLocalToUnit Boolean flag indicate whether this variable is
+       * \param IsLocalToUnit Boolean flag indicate whether this variable is
                             * externally visible or not.
        * \param Expr        The location of the global relative to the attached
                           * GlobalVariable.
@@ -1696,10 +1713,34 @@ TYPE
 
       createGlobalVariableExpression4 (Context: DIScope;
                                        READONLY Name, LinkageName: StringRef;
+                                       File                    : DIFile;
+                                       LineNo                  : uint;
+                                       Ty                      : DIType;
+                                       IsLocalToUnit, isDefined: BOOLEAN; ):
+                                       DIGlobalVariableExpression;
+
+      (** Create a new descriptor for the specified variable.
+       * \param Context     Variable scope.
+       * \param Name        Name of the variable.
+       * \param LinkageName Mangled  name of the variable.
+       * \param File        File where this variable is defined.
+       * \param LineNo      Line number.
+       * \param Ty          Variable Type.
+       * \param IsLocalToUnit Boolean flag indicate whether this variable is
+                            * externally visible or not.
+       * \param Expr        The location of the global relative to the attached
+                          * GlobalVariable.
+       * \param Decl        Reference to the corresponding declaration.
+       * \param AlignInBits Variable alignment(or 0 if no alignment attr was
+                          * specified)
+       *)
+
+      createGlobalVariableExpression5 (Context: DIScope;
+                                       READONLY Name, LinkageName: StringRef;
                                        File         : DIFile;
                                        LineNo       : uint;
                                        Ty           : DIType;
-                                       isLocalToUnit: BOOLEAN; ):
+                                       IsLocalToUnit: BOOLEAN; ):
                                        DIGlobalVariableExpression;
 
       (** Identical to createGlobalVariable
@@ -1711,9 +1752,9 @@ TYPE
                                        File          : DIFile;
                                        LineNo        : uint;
                                        Ty            : DIType;
-                                       isLocalToUnit : BOOLEAN;
+                                       IsLocalToUnit : BOOLEAN;
                                        Decl          : MDNode;
-                                       templateParams: MDTuple;
+                                       TemplateParams: MDTuple;
                                        AlignInBits   : uint32_t; ):
                                        DIGlobalVariable;
 
@@ -1726,9 +1767,9 @@ TYPE
                                         File          : DIFile;
                                         LineNo        : uint;
                                         Ty            : DIType;
-                                        isLocalToUnit : BOOLEAN;
+                                        IsLocalToUnit : BOOLEAN;
                                         Decl          : MDNode;
-                                        templateParams: MDTuple; ):
+                                        TemplateParams: MDTuple; ):
                                         DIGlobalVariable;
 
       (** Identical to createGlobalVariable
@@ -1740,7 +1781,7 @@ TYPE
                                         File         : DIFile;
                                         LineNo       : uint;
                                         Ty           : DIType;
-                                        isLocalToUnit: BOOLEAN;
+                                        IsLocalToUnit: BOOLEAN;
                                         Decl         : MDNode;  ):
                                         DIGlobalVariable;
 
@@ -1753,7 +1794,7 @@ TYPE
                                         File         : DIFile;
                                         LineNo       : uint;
                                         Ty           : DIType;
-                                        isLocalToUnit: BOOLEAN; ):
+                                        IsLocalToUnit: BOOLEAN; ):
                                         DIGlobalVariable;
 
       (** Create a new descriptor for an auto variable.  This is a local variable
@@ -2439,12 +2480,12 @@ TYPE
                           * A space-separated shell-quoted list of -D macro
                           * definitions as they would appear on a command line.
        * \param IncludePath The path to the module map file.
-       * \param ISysRoot    The clang system root (value of -isysroot).
+       * \param SysRoot     The clang system root (value of -isysroot).
        *)
 
       createModule (Scope: DIScope;
                     READONLY Name, ConfigurationMacros, IncludePath,
-                               ISysRoot: StringRef; ): DIModule;
+                               SysRoot: StringRef; ): DIModule;
 
       (** This creates a descriptor for a lexical block with a new file
        * attached. This merely extends the existing
