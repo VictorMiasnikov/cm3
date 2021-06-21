@@ -249,7 +249,89 @@ SWIGEXPORT void DIBuilder_finalizeSubprogram(llvm::DIBuilder * self, DISubprogra
 }
 
 
-SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit(llvm::DIBuilder * self, unsigned int Lang, DIFile * File, LLVMStringRef Producer, bool isOptimized, LLVMStringRef Flags, unsigned int RV, LLVMStringRef SplitName, DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId, bool SplitDebugInlining, bool DebugInfoForProfiling, DICompileUnit::DebugNameTableKind NameTableKind, bool RangesBaseAddress) {
+SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit(llvm::DIBuilder * self, unsigned int Lang, DIFile * File, LLVMStringRef Producer, bool isOptimized, LLVMStringRef Flags, unsigned int RV, LLVMStringRef SplitName, DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId, bool SplitDebugInlining, bool DebugInfoForProfiling, DICompileUnit::DebugNameTableKind NameTableKind, bool RangesBaseAddress, LLVMStringRef SysRoot, LLVMStringRef SDK) {
+  llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
+  unsigned int arg2 ;
+  DIFile *arg3 = (DIFile *) 0 ;
+  StringRef arg4 ;
+  bool arg5 ;
+  StringRef arg6 ;
+  unsigned int arg7 ;
+  StringRef arg8 ;
+  DICompileUnit::DebugEmissionKind arg9 ;
+  uint64_t arg10 ;
+  bool arg11 ;
+  bool arg12 ;
+  DICompileUnit::DebugNameTableKind arg13 ;
+  bool arg14 ;
+  StringRef arg15 ;
+  StringRef arg16 ;
+  DICompileUnit *result = 0 ;
+  DICompileUnit * cresult ;
+  
+  arg1 = *(llvm::DIBuilder **)&self; 
+  arg2 = (unsigned int)Lang; 
+  arg3 = *(DIFile **)&File; 
+  arg4 = StringRef(Producer->Data,Producer->Length);
+  arg5 = isOptimized ? true : false; 
+  arg6 = StringRef(Flags->Data,Flags->Length);
+  arg7 = (unsigned int)RV; 
+  arg8 = StringRef(SplitName->Data,SplitName->Length);
+  arg9 = Kind;
+  arg10 = (uint64_t)DWOId; 
+  arg11 = SplitDebugInlining ? true : false; 
+  arg12 = DebugInfoForProfiling ? true : false; 
+  arg13 = NameTableKind;
+  arg14 = RangesBaseAddress ? true : false; 
+  arg15 = StringRef(SysRoot->Data,SysRoot->Length);
+  arg16 = StringRef(SDK->Data,SDK->Length);
+  result = (DICompileUnit *)(arg1)->createCompileUnit(arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9,arg10,arg11,arg12,arg13,arg14,arg15,arg16);
+  *(DICompileUnit **)&cresult = result; 
+  return cresult;
+}
+
+
+SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit1(llvm::DIBuilder * self, unsigned int Lang, DIFile * File, LLVMStringRef Producer, bool isOptimized, LLVMStringRef Flags, unsigned int RV, LLVMStringRef SplitName, DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId, bool SplitDebugInlining, bool DebugInfoForProfiling, DICompileUnit::DebugNameTableKind NameTableKind, bool RangesBaseAddress, LLVMStringRef SysRoot) {
+  llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
+  unsigned int arg2 ;
+  DIFile *arg3 = (DIFile *) 0 ;
+  StringRef arg4 ;
+  bool arg5 ;
+  StringRef arg6 ;
+  unsigned int arg7 ;
+  StringRef arg8 ;
+  DICompileUnit::DebugEmissionKind arg9 ;
+  uint64_t arg10 ;
+  bool arg11 ;
+  bool arg12 ;
+  DICompileUnit::DebugNameTableKind arg13 ;
+  bool arg14 ;
+  StringRef arg15 ;
+  DICompileUnit *result = 0 ;
+  DICompileUnit * cresult ;
+  
+  arg1 = *(llvm::DIBuilder **)&self; 
+  arg2 = (unsigned int)Lang; 
+  arg3 = *(DIFile **)&File; 
+  arg4 = StringRef(Producer->Data,Producer->Length);
+  arg5 = isOptimized ? true : false; 
+  arg6 = StringRef(Flags->Data,Flags->Length);
+  arg7 = (unsigned int)RV; 
+  arg8 = StringRef(SplitName->Data,SplitName->Length);
+  arg9 = Kind;
+  arg10 = (uint64_t)DWOId; 
+  arg11 = SplitDebugInlining ? true : false; 
+  arg12 = DebugInfoForProfiling ? true : false; 
+  arg13 = NameTableKind;
+  arg14 = RangesBaseAddress ? true : false; 
+  arg15 = StringRef(SysRoot->Data,SysRoot->Length);
+  result = (DICompileUnit *)(arg1)->createCompileUnit(arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9,arg10,arg11,arg12,arg13,arg14,arg15);
+  *(DICompileUnit **)&cresult = result; 
+  return cresult;
+}
+
+
+SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit2(llvm::DIBuilder * self, unsigned int Lang, DIFile * File, LLVMStringRef Producer, bool isOptimized, LLVMStringRef Flags, unsigned int RV, LLVMStringRef SplitName, DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId, bool SplitDebugInlining, bool DebugInfoForProfiling, DICompileUnit::DebugNameTableKind NameTableKind, bool RangesBaseAddress) {
   llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
   unsigned int arg2 ;
   DIFile *arg3 = (DIFile *) 0 ;
@@ -287,7 +369,7 @@ SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit(llvm::DIBuilder * self, u
 }
 
 
-SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit1(llvm::DIBuilder * self, unsigned int Lang, DIFile * File, LLVMStringRef Producer, bool isOptimized, LLVMStringRef Flags, unsigned int RV, LLVMStringRef SplitName, DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId, bool SplitDebugInlining, bool DebugInfoForProfiling, DICompileUnit::DebugNameTableKind NameTableKind) {
+SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit3(llvm::DIBuilder * self, unsigned int Lang, DIFile * File, LLVMStringRef Producer, bool isOptimized, LLVMStringRef Flags, unsigned int RV, LLVMStringRef SplitName, DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId, bool SplitDebugInlining, bool DebugInfoForProfiling, DICompileUnit::DebugNameTableKind NameTableKind) {
   llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
   unsigned int arg2 ;
   DIFile *arg3 = (DIFile *) 0 ;
@@ -323,7 +405,7 @@ SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit1(llvm::DIBuilder * self, 
 }
 
 
-SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit2(llvm::DIBuilder * self, unsigned int Lang, DIFile * File, LLVMStringRef Producer, bool isOptimized, LLVMStringRef Flags, unsigned int RV, LLVMStringRef SplitName, DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId, bool SplitDebugInlining, bool DebugInfoForProfiling) {
+SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit4(llvm::DIBuilder * self, unsigned int Lang, DIFile * File, LLVMStringRef Producer, bool isOptimized, LLVMStringRef Flags, unsigned int RV, LLVMStringRef SplitName, DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId, bool SplitDebugInlining, bool DebugInfoForProfiling) {
   llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
   unsigned int arg2 ;
   DIFile *arg3 = (DIFile *) 0 ;
@@ -357,7 +439,7 @@ SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit2(llvm::DIBuilder * self, 
 }
 
 
-SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit3(llvm::DIBuilder * self, unsigned int Lang, DIFile * File, LLVMStringRef Producer, bool isOptimized, LLVMStringRef Flags, unsigned int RV, LLVMStringRef SplitName, DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId, bool SplitDebugInlining) {
+SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit5(llvm::DIBuilder * self, unsigned int Lang, DIFile * File, LLVMStringRef Producer, bool isOptimized, LLVMStringRef Flags, unsigned int RV, LLVMStringRef SplitName, DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId, bool SplitDebugInlining) {
   llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
   unsigned int arg2 ;
   DIFile *arg3 = (DIFile *) 0 ;
@@ -389,7 +471,7 @@ SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit3(llvm::DIBuilder * self, 
 }
 
 
-SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit4(llvm::DIBuilder * self, unsigned int Lang, DIFile * File, LLVMStringRef Producer, bool isOptimized, LLVMStringRef Flags, unsigned int RV, LLVMStringRef SplitName, DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId) {
+SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit6(llvm::DIBuilder * self, unsigned int Lang, DIFile * File, LLVMStringRef Producer, bool isOptimized, LLVMStringRef Flags, unsigned int RV, LLVMStringRef SplitName, DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId) {
   llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
   unsigned int arg2 ;
   DIFile *arg3 = (DIFile *) 0 ;
@@ -419,7 +501,7 @@ SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit4(llvm::DIBuilder * self, 
 }
 
 
-SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit5(llvm::DIBuilder * self, unsigned int Lang, DIFile * File, LLVMStringRef Producer, bool isOptimized, LLVMStringRef Flags, unsigned int RV, LLVMStringRef SplitName, DICompileUnit::DebugEmissionKind Kind) {
+SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit7(llvm::DIBuilder * self, unsigned int Lang, DIFile * File, LLVMStringRef Producer, bool isOptimized, LLVMStringRef Flags, unsigned int RV, LLVMStringRef SplitName, DICompileUnit::DebugEmissionKind Kind) {
   llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
   unsigned int arg2 ;
   DIFile *arg3 = (DIFile *) 0 ;
@@ -447,7 +529,7 @@ SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit5(llvm::DIBuilder * self, 
 }
 
 
-SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit6(llvm::DIBuilder * self, unsigned int Lang, DIFile * File, LLVMStringRef Producer, bool isOptimized, LLVMStringRef Flags, unsigned int RV, LLVMStringRef SplitName) {
+SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit8(llvm::DIBuilder * self, unsigned int Lang, DIFile * File, LLVMStringRef Producer, bool isOptimized, LLVMStringRef Flags, unsigned int RV, LLVMStringRef SplitName) {
   llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
   unsigned int arg2 ;
   DIFile *arg3 = (DIFile *) 0 ;
@@ -473,7 +555,7 @@ SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit6(llvm::DIBuilder * self, 
 }
 
 
-SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit7(llvm::DIBuilder * self, unsigned int Lang, DIFile * File, LLVMStringRef Producer, bool isOptimized, LLVMStringRef Flags, unsigned int RV) {
+SWIGEXPORT DICompileUnit * DIBuilder_createCompileUnit9(llvm::DIBuilder * self, unsigned int Lang, DIFile * File, LLVMStringRef Producer, bool isOptimized, LLVMStringRef Flags, unsigned int RV) {
   llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
   unsigned int arg2 ;
   DIFile *arg3 = (DIFile *) 0 ;
@@ -943,7 +1025,31 @@ SWIGEXPORT DIDerivedType * DIBuilder_createReferenceType3(llvm::DIBuilder * self
 }
 
 
-SWIGEXPORT DIDerivedType * DIBuilder_createTypedef(llvm::DIBuilder * self, DIType * Ty, LLVMStringRef Name, DIFile * File, unsigned int LineNo, DIScope * Context) {
+SWIGEXPORT DIDerivedType * DIBuilder_createTypedef(llvm::DIBuilder * self, DIType * Ty, LLVMStringRef Name, DIFile * File, unsigned int LineNo, DIScope * Context, uint32_t AlignInBits) {
+  llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
+  DIType *arg2 = (DIType *) 0 ;
+  StringRef arg3 ;
+  DIFile *arg4 = (DIFile *) 0 ;
+  unsigned int arg5 ;
+  DIScope *arg6 = (DIScope *) 0 ;
+  uint32_t arg7 ;
+  DIDerivedType *result = 0 ;
+  DIDerivedType * cresult ;
+  
+  arg1 = *(llvm::DIBuilder **)&self; 
+  arg2 = *(DIType **)&Ty; 
+  arg3 = StringRef(Name->Data,Name->Length);
+  arg4 = *(DIFile **)&File; 
+  arg5 = (unsigned int)LineNo; 
+  arg6 = *(DIScope **)&Context; 
+  arg7 = (uint32_t)AlignInBits; 
+  result = (DIDerivedType *)(arg1)->createTypedef(arg2,arg3,arg4,arg5,arg6,arg7);
+  *(DIDerivedType **)&cresult = result; 
+  return cresult;
+}
+
+
+SWIGEXPORT DIDerivedType * DIBuilder_createTypedef1(llvm::DIBuilder * self, DIType * Ty, LLVMStringRef Name, DIFile * File, unsigned int LineNo, DIScope * Context) {
   llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
   DIType *arg2 = (DIType *) 0 ;
   StringRef arg3 ;
@@ -1655,11 +1761,12 @@ SWIGEXPORT DICompositeType * DIBuilder_createVariantPart1(llvm::DIBuilder * self
 }
 
 
-SWIGEXPORT DITemplateTypeParameter * DIBuilder_createTemplateTypeParameter(llvm::DIBuilder * self, DIScope * Scope, LLVMStringRef Name, DIType * Ty) {
+SWIGEXPORT DITemplateTypeParameter * DIBuilder_createTemplateTypeParameter(llvm::DIBuilder * self, DIScope * Scope, LLVMStringRef Name, DIType * Ty, bool IsDefault) {
   llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
   DIScope *arg2 = (DIScope *) 0 ;
   StringRef arg3 ;
   DIType *arg4 = (DIType *) 0 ;
+  bool arg5 ;
   DITemplateTypeParameter *result = 0 ;
   DITemplateTypeParameter * cresult ;
   
@@ -1667,18 +1774,20 @@ SWIGEXPORT DITemplateTypeParameter * DIBuilder_createTemplateTypeParameter(llvm:
   arg2 = *(DIScope **)&Scope; 
   arg3 = StringRef(Name->Data,Name->Length);
   arg4 = *(DIType **)&Ty; 
-  result = (DITemplateTypeParameter *)(arg1)->createTemplateTypeParameter(arg2,arg3,arg4);
+  arg5 = IsDefault ? true : false; 
+  result = (DITemplateTypeParameter *)(arg1)->createTemplateTypeParameter(arg2,arg3,arg4,arg5);
   *(DITemplateTypeParameter **)&cresult = result; 
   return cresult;
 }
 
 
-SWIGEXPORT DITemplateValueParameter * DIBuilder_createTemplateValueParameter(llvm::DIBuilder * self, DIScope * Scope, LLVMStringRef Name, DIType * Ty, llvm::Constant * Val) {
+SWIGEXPORT DITemplateValueParameter * DIBuilder_createTemplateValueParameter(llvm::DIBuilder * self, DIScope * Scope, LLVMStringRef Name, DIType * Ty, bool IsDefault, llvm::Constant * Val) {
   llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
   DIScope *arg2 = (DIScope *) 0 ;
   StringRef arg3 ;
   DIType *arg4 = (DIType *) 0 ;
-  llvm::Constant *arg5 = (llvm::Constant *) 0 ;
+  bool arg5 ;
+  llvm::Constant *arg6 = (llvm::Constant *) 0 ;
   DITemplateValueParameter *result = 0 ;
   DITemplateValueParameter * cresult ;
   
@@ -1686,8 +1795,9 @@ SWIGEXPORT DITemplateValueParameter * DIBuilder_createTemplateValueParameter(llv
   arg2 = *(DIScope **)&Scope; 
   arg3 = StringRef(Name->Data,Name->Length);
   arg4 = *(DIType **)&Ty; 
-  arg5 = *(llvm::Constant **)&Val; 
-  result = (DITemplateValueParameter *)(arg1)->createTemplateValueParameter(arg2,arg3,arg4,arg5);
+  arg5 = IsDefault ? true : false; 
+  arg6 = *(llvm::Constant **)&Val; 
+  result = (DITemplateValueParameter *)(arg1)->createTemplateValueParameter(arg2,arg3,arg4,arg5,arg6);
   *(DITemplateValueParameter **)&cresult = result; 
   return cresult;
 }
@@ -2359,7 +2469,27 @@ SWIGEXPORT DISubrange * DIBuilder_getOrCreateSubrange1(llvm::DIBuilder * self, i
 }
 
 
-SWIGEXPORT DIGlobalVariableExpression * DIBuilder_createGlobalVariableExpression(llvm::DIBuilder * self, DIScope * Context, LLVMStringRef Name, LLVMStringRef LinkageName, DIFile * File, unsigned int LineNo, DIType * Ty, bool isLocalToUnit, DIExpression * Expr, MDNode * Decl, MDTuple * templateParams, uint32_t AlignInBits) {
+SWIGEXPORT DISubrange * DIBuilder_getOrCreateSubrange2(llvm::DIBuilder * self, Metadata * Count, Metadata * LowerBound, Metadata * UpperBound, Metadata * Stride) {
+  llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
+  Metadata *arg2 = (Metadata *) 0 ;
+  Metadata *arg3 = (Metadata *) 0 ;
+  Metadata *arg4 = (Metadata *) 0 ;
+  Metadata *arg5 = (Metadata *) 0 ;
+  DISubrange *result = 0 ;
+  DISubrange * cresult ;
+  
+  arg1 = *(llvm::DIBuilder **)&self; 
+  arg2 = *(Metadata **)&Count; 
+  arg3 = *(Metadata **)&LowerBound; 
+  arg4 = *(Metadata **)&UpperBound; 
+  arg5 = *(Metadata **)&Stride; 
+  result = (DISubrange *)(arg1)->getOrCreateSubrange(arg2,arg3,arg4,arg5);
+  *(DISubrange **)&cresult = result; 
+  return cresult;
+}
+
+
+SWIGEXPORT DIGlobalVariableExpression * DIBuilder_createGlobalVariableExpression(llvm::DIBuilder * self, DIScope * Context, LLVMStringRef Name, LLVMStringRef LinkageName, DIFile * File, unsigned int LineNo, DIType * Ty, bool IsLocalToUnit, bool isDefined, DIExpression * Expr, MDNode * Decl, MDTuple * TemplateParams, uint32_t AlignInBits) {
   llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
   DIScope *arg2 = (DIScope *) 0 ;
   StringRef arg3 ;
@@ -2368,10 +2498,11 @@ SWIGEXPORT DIGlobalVariableExpression * DIBuilder_createGlobalVariableExpression
   unsigned int arg6 ;
   DIType *arg7 = (DIType *) 0 ;
   bool arg8 ;
-  DIExpression *arg9 = (DIExpression *) 0 ;
-  MDNode *arg10 = (MDNode *) 0 ;
-  MDTuple *arg11 = (MDTuple *) 0 ;
-  uint32_t arg12 ;
+  bool arg9 ;
+  DIExpression *arg10 = (DIExpression *) 0 ;
+  MDNode *arg11 = (MDNode *) 0 ;
+  MDTuple *arg12 = (MDTuple *) 0 ;
+  uint32_t arg13 ;
   DIGlobalVariableExpression *result = 0 ;
   DIGlobalVariableExpression * cresult ;
   
@@ -2382,18 +2513,53 @@ SWIGEXPORT DIGlobalVariableExpression * DIBuilder_createGlobalVariableExpression
   arg5 = *(DIFile **)&File; 
   arg6 = (unsigned int)LineNo; 
   arg7 = *(DIType **)&Ty; 
-  arg8 = isLocalToUnit ? true : false; 
-  arg9 = *(DIExpression **)&Expr; 
-  arg10 = *(MDNode **)&Decl; 
-  arg11 = *(MDTuple **)&templateParams; 
-  arg12 = (uint32_t)AlignInBits; 
+  arg8 = IsLocalToUnit ? true : false; 
+  arg9 = isDefined ? true : false; 
+  arg10 = *(DIExpression **)&Expr; 
+  arg11 = *(MDNode **)&Decl; 
+  arg12 = *(MDTuple **)&TemplateParams; 
+  arg13 = (uint32_t)AlignInBits; 
+  result = (DIGlobalVariableExpression *)(arg1)->createGlobalVariableExpression(arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9,arg10,arg11,arg12,arg13);
+  *(DIGlobalVariableExpression **)&cresult = result; 
+  return cresult;
+}
+
+
+SWIGEXPORT DIGlobalVariableExpression * DIBuilder_createGlobalVariableExpression1(llvm::DIBuilder * self, DIScope * Context, LLVMStringRef Name, LLVMStringRef LinkageName, DIFile * File, unsigned int LineNo, DIType * Ty, bool IsLocalToUnit, bool isDefined, DIExpression * Expr, MDNode * Decl, MDTuple * TemplateParams) {
+  llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
+  DIScope *arg2 = (DIScope *) 0 ;
+  StringRef arg3 ;
+  StringRef arg4 ;
+  DIFile *arg5 = (DIFile *) 0 ;
+  unsigned int arg6 ;
+  DIType *arg7 = (DIType *) 0 ;
+  bool arg8 ;
+  bool arg9 ;
+  DIExpression *arg10 = (DIExpression *) 0 ;
+  MDNode *arg11 = (MDNode *) 0 ;
+  MDTuple *arg12 = (MDTuple *) 0 ;
+  DIGlobalVariableExpression *result = 0 ;
+  DIGlobalVariableExpression * cresult ;
+  
+  arg1 = *(llvm::DIBuilder **)&self; 
+  arg2 = *(DIScope **)&Context; 
+  arg3 = StringRef(Name->Data,Name->Length);
+  arg4 = StringRef(LinkageName->Data,LinkageName->Length);
+  arg5 = *(DIFile **)&File; 
+  arg6 = (unsigned int)LineNo; 
+  arg7 = *(DIType **)&Ty; 
+  arg8 = IsLocalToUnit ? true : false; 
+  arg9 = isDefined ? true : false; 
+  arg10 = *(DIExpression **)&Expr; 
+  arg11 = *(MDNode **)&Decl; 
+  arg12 = *(MDTuple **)&TemplateParams; 
   result = (DIGlobalVariableExpression *)(arg1)->createGlobalVariableExpression(arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9,arg10,arg11,arg12);
   *(DIGlobalVariableExpression **)&cresult = result; 
   return cresult;
 }
 
 
-SWIGEXPORT DIGlobalVariableExpression * DIBuilder_createGlobalVariableExpression1(llvm::DIBuilder * self, DIScope * Context, LLVMStringRef Name, LLVMStringRef LinkageName, DIFile * File, unsigned int LineNo, DIType * Ty, bool isLocalToUnit, DIExpression * Expr, MDNode * Decl, MDTuple * templateParams) {
+SWIGEXPORT DIGlobalVariableExpression * DIBuilder_createGlobalVariableExpression2(llvm::DIBuilder * self, DIScope * Context, LLVMStringRef Name, LLVMStringRef LinkageName, DIFile * File, unsigned int LineNo, DIType * Ty, bool IsLocalToUnit, bool isDefined, DIExpression * Expr, MDNode * Decl) {
   llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
   DIScope *arg2 = (DIScope *) 0 ;
   StringRef arg3 ;
@@ -2402,9 +2568,9 @@ SWIGEXPORT DIGlobalVariableExpression * DIBuilder_createGlobalVariableExpression
   unsigned int arg6 ;
   DIType *arg7 = (DIType *) 0 ;
   bool arg8 ;
-  DIExpression *arg9 = (DIExpression *) 0 ;
-  MDNode *arg10 = (MDNode *) 0 ;
-  MDTuple *arg11 = (MDTuple *) 0 ;
+  bool arg9 ;
+  DIExpression *arg10 = (DIExpression *) 0 ;
+  MDNode *arg11 = (MDNode *) 0 ;
   DIGlobalVariableExpression *result = 0 ;
   DIGlobalVariableExpression * cresult ;
   
@@ -2415,17 +2581,17 @@ SWIGEXPORT DIGlobalVariableExpression * DIBuilder_createGlobalVariableExpression
   arg5 = *(DIFile **)&File; 
   arg6 = (unsigned int)LineNo; 
   arg7 = *(DIType **)&Ty; 
-  arg8 = isLocalToUnit ? true : false; 
-  arg9 = *(DIExpression **)&Expr; 
-  arg10 = *(MDNode **)&Decl; 
-  arg11 = *(MDTuple **)&templateParams; 
+  arg8 = IsLocalToUnit ? true : false; 
+  arg9 = isDefined ? true : false; 
+  arg10 = *(DIExpression **)&Expr; 
+  arg11 = *(MDNode **)&Decl; 
   result = (DIGlobalVariableExpression *)(arg1)->createGlobalVariableExpression(arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9,arg10,arg11);
   *(DIGlobalVariableExpression **)&cresult = result; 
   return cresult;
 }
 
 
-SWIGEXPORT DIGlobalVariableExpression * DIBuilder_createGlobalVariableExpression2(llvm::DIBuilder * self, DIScope * Context, LLVMStringRef Name, LLVMStringRef LinkageName, DIFile * File, unsigned int LineNo, DIType * Ty, bool isLocalToUnit, DIExpression * Expr, MDNode * Decl) {
+SWIGEXPORT DIGlobalVariableExpression * DIBuilder_createGlobalVariableExpression3(llvm::DIBuilder * self, DIScope * Context, LLVMStringRef Name, LLVMStringRef LinkageName, DIFile * File, unsigned int LineNo, DIType * Ty, bool IsLocalToUnit, bool isDefined, DIExpression * Expr) {
   llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
   DIScope *arg2 = (DIScope *) 0 ;
   StringRef arg3 ;
@@ -2434,8 +2600,8 @@ SWIGEXPORT DIGlobalVariableExpression * DIBuilder_createGlobalVariableExpression
   unsigned int arg6 ;
   DIType *arg7 = (DIType *) 0 ;
   bool arg8 ;
-  DIExpression *arg9 = (DIExpression *) 0 ;
-  MDNode *arg10 = (MDNode *) 0 ;
+  bool arg9 ;
+  DIExpression *arg10 = (DIExpression *) 0 ;
   DIGlobalVariableExpression *result = 0 ;
   DIGlobalVariableExpression * cresult ;
   
@@ -2446,16 +2612,16 @@ SWIGEXPORT DIGlobalVariableExpression * DIBuilder_createGlobalVariableExpression
   arg5 = *(DIFile **)&File; 
   arg6 = (unsigned int)LineNo; 
   arg7 = *(DIType **)&Ty; 
-  arg8 = isLocalToUnit ? true : false; 
-  arg9 = *(DIExpression **)&Expr; 
-  arg10 = *(MDNode **)&Decl; 
+  arg8 = IsLocalToUnit ? true : false; 
+  arg9 = isDefined ? true : false; 
+  arg10 = *(DIExpression **)&Expr; 
   result = (DIGlobalVariableExpression *)(arg1)->createGlobalVariableExpression(arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9,arg10);
   *(DIGlobalVariableExpression **)&cresult = result; 
   return cresult;
 }
 
 
-SWIGEXPORT DIGlobalVariableExpression * DIBuilder_createGlobalVariableExpression3(llvm::DIBuilder * self, DIScope * Context, LLVMStringRef Name, LLVMStringRef LinkageName, DIFile * File, unsigned int LineNo, DIType * Ty, bool isLocalToUnit, DIExpression * Expr) {
+SWIGEXPORT DIGlobalVariableExpression * DIBuilder_createGlobalVariableExpression4(llvm::DIBuilder * self, DIScope * Context, LLVMStringRef Name, LLVMStringRef LinkageName, DIFile * File, unsigned int LineNo, DIType * Ty, bool IsLocalToUnit, bool isDefined) {
   llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
   DIScope *arg2 = (DIScope *) 0 ;
   StringRef arg3 ;
@@ -2464,7 +2630,7 @@ SWIGEXPORT DIGlobalVariableExpression * DIBuilder_createGlobalVariableExpression
   unsigned int arg6 ;
   DIType *arg7 = (DIType *) 0 ;
   bool arg8 ;
-  DIExpression *arg9 = (DIExpression *) 0 ;
+  bool arg9 ;
   DIGlobalVariableExpression *result = 0 ;
   DIGlobalVariableExpression * cresult ;
   
@@ -2475,15 +2641,15 @@ SWIGEXPORT DIGlobalVariableExpression * DIBuilder_createGlobalVariableExpression
   arg5 = *(DIFile **)&File; 
   arg6 = (unsigned int)LineNo; 
   arg7 = *(DIType **)&Ty; 
-  arg8 = isLocalToUnit ? true : false; 
-  arg9 = *(DIExpression **)&Expr; 
+  arg8 = IsLocalToUnit ? true : false; 
+  arg9 = isDefined ? true : false; 
   result = (DIGlobalVariableExpression *)(arg1)->createGlobalVariableExpression(arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9);
   *(DIGlobalVariableExpression **)&cresult = result; 
   return cresult;
 }
 
 
-SWIGEXPORT DIGlobalVariableExpression * DIBuilder_createGlobalVariableExpression4(llvm::DIBuilder * self, DIScope * Context, LLVMStringRef Name, LLVMStringRef LinkageName, DIFile * File, unsigned int LineNo, DIType * Ty, bool isLocalToUnit) {
+SWIGEXPORT DIGlobalVariableExpression * DIBuilder_createGlobalVariableExpression5(llvm::DIBuilder * self, DIScope * Context, LLVMStringRef Name, LLVMStringRef LinkageName, DIFile * File, unsigned int LineNo, DIType * Ty, bool IsLocalToUnit) {
   llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
   DIScope *arg2 = (DIScope *) 0 ;
   StringRef arg3 ;
@@ -2502,14 +2668,14 @@ SWIGEXPORT DIGlobalVariableExpression * DIBuilder_createGlobalVariableExpression
   arg5 = *(DIFile **)&File; 
   arg6 = (unsigned int)LineNo; 
   arg7 = *(DIType **)&Ty; 
-  arg8 = isLocalToUnit ? true : false; 
+  arg8 = IsLocalToUnit ? true : false; 
   result = (DIGlobalVariableExpression *)(arg1)->createGlobalVariableExpression(arg2,arg3,arg4,arg5,arg6,arg7,arg8);
   *(DIGlobalVariableExpression **)&cresult = result; 
   return cresult;
 }
 
 
-SWIGEXPORT DIGlobalVariable * DIBuilder_createTempGlobalVariableFwdDecl(llvm::DIBuilder * self, DIScope * Context, LLVMStringRef Name, LLVMStringRef LinkageName, DIFile * File, unsigned int LineNo, DIType * Ty, bool isLocalToUnit, MDNode * Decl, MDTuple * templateParams, uint32_t AlignInBits) {
+SWIGEXPORT DIGlobalVariable * DIBuilder_createTempGlobalVariableFwdDecl(llvm::DIBuilder * self, DIScope * Context, LLVMStringRef Name, LLVMStringRef LinkageName, DIFile * File, unsigned int LineNo, DIType * Ty, bool IsLocalToUnit, MDNode * Decl, MDTuple * TemplateParams, uint32_t AlignInBits) {
   llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
   DIScope *arg2 = (DIScope *) 0 ;
   StringRef arg3 ;
@@ -2531,9 +2697,9 @@ SWIGEXPORT DIGlobalVariable * DIBuilder_createTempGlobalVariableFwdDecl(llvm::DI
   arg5 = *(DIFile **)&File; 
   arg6 = (unsigned int)LineNo; 
   arg7 = *(DIType **)&Ty; 
-  arg8 = isLocalToUnit ? true : false; 
+  arg8 = IsLocalToUnit ? true : false; 
   arg9 = *(MDNode **)&Decl; 
-  arg10 = *(MDTuple **)&templateParams; 
+  arg10 = *(MDTuple **)&TemplateParams; 
   arg11 = (uint32_t)AlignInBits; 
   result = (DIGlobalVariable *)(arg1)->createTempGlobalVariableFwdDecl(arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9,arg10,arg11);
   *(DIGlobalVariable **)&cresult = result; 
@@ -2541,7 +2707,7 @@ SWIGEXPORT DIGlobalVariable * DIBuilder_createTempGlobalVariableFwdDecl(llvm::DI
 }
 
 
-SWIGEXPORT DIGlobalVariable * DIBuilder_createTempGlobalVariableFwdDecl1(llvm::DIBuilder * self, DIScope * Context, LLVMStringRef Name, LLVMStringRef LinkageName, DIFile * File, unsigned int LineNo, DIType * Ty, bool isLocalToUnit, MDNode * Decl, MDTuple * templateParams) {
+SWIGEXPORT DIGlobalVariable * DIBuilder_createTempGlobalVariableFwdDecl1(llvm::DIBuilder * self, DIScope * Context, LLVMStringRef Name, LLVMStringRef LinkageName, DIFile * File, unsigned int LineNo, DIType * Ty, bool IsLocalToUnit, MDNode * Decl, MDTuple * TemplateParams) {
   llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
   DIScope *arg2 = (DIScope *) 0 ;
   StringRef arg3 ;
@@ -2562,16 +2728,16 @@ SWIGEXPORT DIGlobalVariable * DIBuilder_createTempGlobalVariableFwdDecl1(llvm::D
   arg5 = *(DIFile **)&File; 
   arg6 = (unsigned int)LineNo; 
   arg7 = *(DIType **)&Ty; 
-  arg8 = isLocalToUnit ? true : false; 
+  arg8 = IsLocalToUnit ? true : false; 
   arg9 = *(MDNode **)&Decl; 
-  arg10 = *(MDTuple **)&templateParams; 
+  arg10 = *(MDTuple **)&TemplateParams; 
   result = (DIGlobalVariable *)(arg1)->createTempGlobalVariableFwdDecl(arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9,arg10);
   *(DIGlobalVariable **)&cresult = result; 
   return cresult;
 }
 
 
-SWIGEXPORT DIGlobalVariable * DIBuilder_createTempGlobalVariableFwdDecl2(llvm::DIBuilder * self, DIScope * Context, LLVMStringRef Name, LLVMStringRef LinkageName, DIFile * File, unsigned int LineNo, DIType * Ty, bool isLocalToUnit, MDNode * Decl) {
+SWIGEXPORT DIGlobalVariable * DIBuilder_createTempGlobalVariableFwdDecl2(llvm::DIBuilder * self, DIScope * Context, LLVMStringRef Name, LLVMStringRef LinkageName, DIFile * File, unsigned int LineNo, DIType * Ty, bool IsLocalToUnit, MDNode * Decl) {
   llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
   DIScope *arg2 = (DIScope *) 0 ;
   StringRef arg3 ;
@@ -2591,7 +2757,7 @@ SWIGEXPORT DIGlobalVariable * DIBuilder_createTempGlobalVariableFwdDecl2(llvm::D
   arg5 = *(DIFile **)&File; 
   arg6 = (unsigned int)LineNo; 
   arg7 = *(DIType **)&Ty; 
-  arg8 = isLocalToUnit ? true : false; 
+  arg8 = IsLocalToUnit ? true : false; 
   arg9 = *(MDNode **)&Decl; 
   result = (DIGlobalVariable *)(arg1)->createTempGlobalVariableFwdDecl(arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9);
   *(DIGlobalVariable **)&cresult = result; 
@@ -2599,7 +2765,7 @@ SWIGEXPORT DIGlobalVariable * DIBuilder_createTempGlobalVariableFwdDecl2(llvm::D
 }
 
 
-SWIGEXPORT DIGlobalVariable * DIBuilder_createTempGlobalVariableFwdDecl3(llvm::DIBuilder * self, DIScope * Context, LLVMStringRef Name, LLVMStringRef LinkageName, DIFile * File, unsigned int LineNo, DIType * Ty, bool isLocalToUnit) {
+SWIGEXPORT DIGlobalVariable * DIBuilder_createTempGlobalVariableFwdDecl3(llvm::DIBuilder * self, DIScope * Context, LLVMStringRef Name, LLVMStringRef LinkageName, DIFile * File, unsigned int LineNo, DIType * Ty, bool IsLocalToUnit) {
   llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
   DIScope *arg2 = (DIScope *) 0 ;
   StringRef arg3 ;
@@ -2618,7 +2784,7 @@ SWIGEXPORT DIGlobalVariable * DIBuilder_createTempGlobalVariableFwdDecl3(llvm::D
   arg5 = *(DIFile **)&File; 
   arg6 = (unsigned int)LineNo; 
   arg7 = *(DIType **)&Ty; 
-  arg8 = isLocalToUnit ? true : false; 
+  arg8 = IsLocalToUnit ? true : false; 
   result = (DIGlobalVariable *)(arg1)->createTempGlobalVariableFwdDecl(arg2,arg3,arg4,arg5,arg6,arg7,arg8);
   *(DIGlobalVariable **)&cresult = result; 
   return cresult;
@@ -3559,7 +3725,57 @@ SWIGEXPORT DINamespace * DIBuilder_createNameSpace(llvm::DIBuilder * self, DISco
 }
 
 
-SWIGEXPORT DIModule * DIBuilder_createModule(llvm::DIBuilder * self, DIScope * Scope, LLVMStringRef Name, LLVMStringRef ConfigurationMacros, LLVMStringRef IncludePath, LLVMStringRef ISysRoot) {
+SWIGEXPORT DIModule * DIBuilder_createModule(llvm::DIBuilder * self, DIScope * Scope, LLVMStringRef Name, LLVMStringRef ConfigurationMacros, LLVMStringRef IncludePath, LLVMStringRef APINotesFile, DIFile * File, unsigned int LineNo) {
+  llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
+  DIScope *arg2 = (DIScope *) 0 ;
+  StringRef arg3 ;
+  StringRef arg4 ;
+  StringRef arg5 ;
+  StringRef arg6 ;
+  DIFile *arg7 = (DIFile *) 0 ;
+  unsigned int arg8 ;
+  DIModule *result = 0 ;
+  DIModule * cresult ;
+  
+  arg1 = *(llvm::DIBuilder **)&self; 
+  arg2 = *(DIScope **)&Scope; 
+  arg3 = StringRef(Name->Data,Name->Length);
+  arg4 = StringRef(ConfigurationMacros->Data,ConfigurationMacros->Length);
+  arg5 = StringRef(IncludePath->Data,IncludePath->Length);
+  arg6 = StringRef(APINotesFile->Data,APINotesFile->Length);
+  arg7 = *(DIFile **)&File; 
+  arg8 = (unsigned int)LineNo; 
+  result = (DIModule *)(arg1)->createModule(arg2,arg3,arg4,arg5,arg6,arg7,arg8);
+  *(DIModule **)&cresult = result; 
+  return cresult;
+}
+
+
+SWIGEXPORT DIModule * DIBuilder_createModule1(llvm::DIBuilder * self, DIScope * Scope, LLVMStringRef Name, LLVMStringRef ConfigurationMacros, LLVMStringRef IncludePath, LLVMStringRef APINotesFile, DIFile * File) {
+  llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
+  DIScope *arg2 = (DIScope *) 0 ;
+  StringRef arg3 ;
+  StringRef arg4 ;
+  StringRef arg5 ;
+  StringRef arg6 ;
+  DIFile *arg7 = (DIFile *) 0 ;
+  DIModule *result = 0 ;
+  DIModule * cresult ;
+  
+  arg1 = *(llvm::DIBuilder **)&self; 
+  arg2 = *(DIScope **)&Scope; 
+  arg3 = StringRef(Name->Data,Name->Length);
+  arg4 = StringRef(ConfigurationMacros->Data,ConfigurationMacros->Length);
+  arg5 = StringRef(IncludePath->Data,IncludePath->Length);
+  arg6 = StringRef(APINotesFile->Data,APINotesFile->Length);
+  arg7 = *(DIFile **)&File; 
+  result = (DIModule *)(arg1)->createModule(arg2,arg3,arg4,arg5,arg6,arg7);
+  *(DIModule **)&cresult = result; 
+  return cresult;
+}
+
+
+SWIGEXPORT DIModule * DIBuilder_createModule2(llvm::DIBuilder * self, DIScope * Scope, LLVMStringRef Name, LLVMStringRef ConfigurationMacros, LLVMStringRef IncludePath, LLVMStringRef APINotesFile) {
   llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
   DIScope *arg2 = (DIScope *) 0 ;
   StringRef arg3 ;
@@ -3574,8 +3790,28 @@ SWIGEXPORT DIModule * DIBuilder_createModule(llvm::DIBuilder * self, DIScope * S
   arg3 = StringRef(Name->Data,Name->Length);
   arg4 = StringRef(ConfigurationMacros->Data,ConfigurationMacros->Length);
   arg5 = StringRef(IncludePath->Data,IncludePath->Length);
-  arg6 = StringRef(ISysRoot->Data,ISysRoot->Length);
+  arg6 = StringRef(APINotesFile->Data,APINotesFile->Length);
   result = (DIModule *)(arg1)->createModule(arg2,arg3,arg4,arg5,arg6);
+  *(DIModule **)&cresult = result; 
+  return cresult;
+}
+
+
+SWIGEXPORT DIModule * DIBuilder_createModule3(llvm::DIBuilder * self, DIScope * Scope, LLVMStringRef Name, LLVMStringRef ConfigurationMacros, LLVMStringRef IncludePath) {
+  llvm::DIBuilder *arg1 = (llvm::DIBuilder *) 0 ;
+  DIScope *arg2 = (DIScope *) 0 ;
+  StringRef arg3 ;
+  StringRef arg4 ;
+  StringRef arg5 ;
+  DIModule *result = 0 ;
+  DIModule * cresult ;
+  
+  arg1 = *(llvm::DIBuilder **)&self; 
+  arg2 = *(DIScope **)&Scope; 
+  arg3 = StringRef(Name->Data,Name->Length);
+  arg4 = StringRef(ConfigurationMacros->Data,ConfigurationMacros->Length);
+  arg5 = StringRef(IncludePath->Data,IncludePath->Length);
+  result = (DIModule *)(arg1)->createModule(arg2,arg3,arg4,arg5);
   *(DIModule **)&cresult = result; 
   return cresult;
 }

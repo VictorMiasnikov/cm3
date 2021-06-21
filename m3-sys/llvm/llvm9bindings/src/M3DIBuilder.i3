@@ -169,6 +169,9 @@ TYPE
                                     * profile collection.
        * \param NameTableKind  Whether to emit .debug_gnu_pubnames,
                             * .debug_pubnames, or no pubnames at all.
+       * \param SysRoot       The clang system root (value of -isysroot).
+       * \param SDK           The SDK name. On Darwin, this is the last component
+                            * of the sysroot.
        *)
 
       createCompileUnit (         Lang       : uint;
@@ -181,8 +184,10 @@ TYPE
                                   Kind       : INTEGER;
                                   DWOId      : uint64_t;
                          SplitDebugInlining, DebugInfoForProfiling: BOOLEAN;
-                         NameTableKind    : INTEGER;
-                         RangesBaseAddress: BOOLEAN; ): DICompileUnit;
+                                  NameTableKind    : INTEGER;
+                                  RangesBaseAddress: BOOLEAN;
+                         READONLY SysRoot, SDK     : StringRef; ):
+                         DICompileUnit;
 
       (** A CompileUnit provides an anchor for all debugging
        * information generated during this instance of compilation.
@@ -208,9 +213,98 @@ TYPE
                                     * profile collection.
        * \param NameTableKind  Whether to emit .debug_gnu_pubnames,
                             * .debug_pubnames, or no pubnames at all.
+       * \param SysRoot       The clang system root (value of -isysroot).
+       * \param SDK           The SDK name. On Darwin, this is the last component
+                            * of the sysroot.
        *)
 
       createCompileUnit1 (         Lang       : uint;
+                                   File       : DIFile;
+                          READONLY Producer   : StringRef;
+                                   isOptimized: BOOLEAN;
+                          READONLY Flags      : StringRef;
+                                   RV         : uint;
+                          READONLY SplitName  : StringRef;
+                                   Kind       : INTEGER;
+                                   DWOId      : uint64_t;
+                          SplitDebugInlining, DebugInfoForProfiling: BOOLEAN;
+                                   NameTableKind    : INTEGER;
+                                   RangesBaseAddress: BOOLEAN;
+                          READONLY SysRoot          : StringRef; ):
+                          DICompileUnit;
+
+      (** A CompileUnit provides an anchor for all debugging
+       * information generated during this instance of compilation.
+       * \param Lang          Source programming language, eg. dwarf::DW_LANG_C99
+       * \param File          File info.
+       * \param Producer      Identify the producer of debugging information
+                            * and code.  Usually this is a compiler
+                            * version string.
+       * \param isOptimized   A boolean flag which indicates whether optimization
+                            * is enabled or not.
+       * \param Flags         This string lists command line options. This
+                            * string is directly embedded in debug info
+                            * output which may be used by a tool
+                            * analyzing generated debugging information.
+       * \param RV            This indicates runtime version for languages like
+                            * Objective-C.
+       * \param SplitName     The name of the file that we'll split debug info
+                            * out into.
+       * \param Kind          The kind of debug information to generate.
+       * \param DWOId         The DWOId if this is a split skeleton compile unit.
+       * \param SplitDebugInlining    Whether to emit inline debug info.
+       * \param DebugInfoForProfiling Whether to emit extra debug info for
+                                    * profile collection.
+       * \param NameTableKind  Whether to emit .debug_gnu_pubnames,
+                            * .debug_pubnames, or no pubnames at all.
+       * \param SysRoot       The clang system root (value of -isysroot).
+       * \param SDK           The SDK name. On Darwin, this is the last component
+                            * of the sysroot.
+       *)
+
+      createCompileUnit2 (         Lang       : uint;
+                                   File       : DIFile;
+                          READONLY Producer   : StringRef;
+                                   isOptimized: BOOLEAN;
+                          READONLY Flags      : StringRef;
+                                   RV         : uint;
+                          READONLY SplitName  : StringRef;
+                                   Kind       : INTEGER;
+                                   DWOId      : uint64_t;
+                          SplitDebugInlining, DebugInfoForProfiling: BOOLEAN;
+                          NameTableKind    : INTEGER;
+                          RangesBaseAddress: BOOLEAN; ): DICompileUnit;
+
+      (** A CompileUnit provides an anchor for all debugging
+       * information generated during this instance of compilation.
+       * \param Lang          Source programming language, eg. dwarf::DW_LANG_C99
+       * \param File          File info.
+       * \param Producer      Identify the producer of debugging information
+                            * and code.  Usually this is a compiler
+                            * version string.
+       * \param isOptimized   A boolean flag which indicates whether optimization
+                            * is enabled or not.
+       * \param Flags         This string lists command line options. This
+                            * string is directly embedded in debug info
+                            * output which may be used by a tool
+                            * analyzing generated debugging information.
+       * \param RV            This indicates runtime version for languages like
+                            * Objective-C.
+       * \param SplitName     The name of the file that we'll split debug info
+                            * out into.
+       * \param Kind          The kind of debug information to generate.
+       * \param DWOId         The DWOId if this is a split skeleton compile unit.
+       * \param SplitDebugInlining    Whether to emit inline debug info.
+       * \param DebugInfoForProfiling Whether to emit extra debug info for
+                                    * profile collection.
+       * \param NameTableKind  Whether to emit .debug_gnu_pubnames,
+                            * .debug_pubnames, or no pubnames at all.
+       * \param SysRoot       The clang system root (value of -isysroot).
+       * \param SDK           The SDK name. On Darwin, this is the last component
+                            * of the sysroot.
+       *)
+
+      createCompileUnit3 (         Lang       : uint;
                                    File       : DIFile;
                           READONLY Producer   : StringRef;
                                    isOptimized: BOOLEAN;
@@ -246,9 +340,12 @@ TYPE
                                     * profile collection.
        * \param NameTableKind  Whether to emit .debug_gnu_pubnames,
                             * .debug_pubnames, or no pubnames at all.
+       * \param SysRoot       The clang system root (value of -isysroot).
+       * \param SDK           The SDK name. On Darwin, this is the last component
+                            * of the sysroot.
        *)
 
-      createCompileUnit2 (         Lang       : uint;
+      createCompileUnit4 (         Lang       : uint;
                                    File       : DIFile;
                           READONLY Producer   : StringRef;
                                    isOptimized: BOOLEAN;
@@ -284,9 +381,12 @@ TYPE
                                     * profile collection.
        * \param NameTableKind  Whether to emit .debug_gnu_pubnames,
                             * .debug_pubnames, or no pubnames at all.
+       * \param SysRoot       The clang system root (value of -isysroot).
+       * \param SDK           The SDK name. On Darwin, this is the last component
+                            * of the sysroot.
        *)
 
-      createCompileUnit3 (         Lang              : uint;
+      createCompileUnit5 (         Lang              : uint;
                                    File              : DIFile;
                           READONLY Producer          : StringRef;
                                    isOptimized       : BOOLEAN;
@@ -322,9 +422,12 @@ TYPE
                                     * profile collection.
        * \param NameTableKind  Whether to emit .debug_gnu_pubnames,
                             * .debug_pubnames, or no pubnames at all.
+       * \param SysRoot       The clang system root (value of -isysroot).
+       * \param SDK           The SDK name. On Darwin, this is the last component
+                            * of the sysroot.
        *)
 
-      createCompileUnit4 (         Lang       : uint;
+      createCompileUnit6 (         Lang       : uint;
                                    File       : DIFile;
                           READONLY Producer   : StringRef;
                                    isOptimized: BOOLEAN;
@@ -359,9 +462,12 @@ TYPE
                                     * profile collection.
        * \param NameTableKind  Whether to emit .debug_gnu_pubnames,
                             * .debug_pubnames, or no pubnames at all.
+       * \param SysRoot       The clang system root (value of -isysroot).
+       * \param SDK           The SDK name. On Darwin, this is the last component
+                            * of the sysroot.
        *)
 
-      createCompileUnit5 (         Lang       : uint;
+      createCompileUnit7 (         Lang       : uint;
                                    File       : DIFile;
                           READONLY Producer   : StringRef;
                                    isOptimized: BOOLEAN;
@@ -395,9 +501,12 @@ TYPE
                                     * profile collection.
        * \param NameTableKind  Whether to emit .debug_gnu_pubnames,
                             * .debug_pubnames, or no pubnames at all.
+       * \param SysRoot       The clang system root (value of -isysroot).
+       * \param SDK           The SDK name. On Darwin, this is the last component
+                            * of the sysroot.
        *)
 
-      createCompileUnit6 (         Lang       : uint;
+      createCompileUnit8 (         Lang       : uint;
                                    File       : DIFile;
                           READONLY Producer   : StringRef;
                                    isOptimized: BOOLEAN;
@@ -430,9 +539,12 @@ TYPE
                                     * profile collection.
        * \param NameTableKind  Whether to emit .debug_gnu_pubnames,
                             * .debug_pubnames, or no pubnames at all.
+       * \param SysRoot       The clang system root (value of -isysroot).
+       * \param SDK           The SDK name. On Darwin, this is the last component
+                            * of the sysroot.
        *)
 
-      createCompileUnit7 (         Lang       : uint;
+      createCompileUnit9 (         Lang       : uint;
                                    File       : DIFile;
                           READONLY Producer   : StringRef;
                                    isOptimized: BOOLEAN;
@@ -687,13 +799,30 @@ TYPE
        * \param File        File where this type is defined.
        * \param LineNo      Line number.
        * \param Context     The surrounding context for the typedef.
+       * \param AlignInBits Alignment. (optional)
        *)
 
-      createTypedef (         Ty     : DIType;
-                     READONLY Name   : StringRef;
-                              File   : DIFile;
-                              LineNo : uint;
-                              Context: DIScope;   ): DIDerivedType;
+      createTypedef (         Ty         : DIType;
+                     READONLY Name       : StringRef;
+                              File       : DIFile;
+                              LineNo     : uint;
+                              Context    : DIScope;
+                              AlignInBits: uint32_t;  ): DIDerivedType;
+
+      (** Create debugging information entry for a typedef.
+       * \param Ty          Original type.
+       * \param Name        Typedef name.
+       * \param File        File where this type is defined.
+       * \param LineNo      Line number.
+       * \param Context     The surrounding context for the typedef.
+       * \param AlignInBits Alignment. (optional)
+       *)
+
+      createTypedef1 (         Ty     : DIType;
+                      READONLY Name   : StringRef;
+                               File   : DIFile;
+                               LineNo : uint;
+                               Context: DIScope;   ): DIDerivedType;
 
       (** Create debugging information entry for a 'friend'.
       *)
@@ -1228,11 +1357,13 @@ TYPE
        * \param Scope        Scope in which this type is defined.
        * \param Name         Type parameter name.
        * \param Ty           Parameter type.
+       * \param IsDefault    Parameter is default or not
        *)
 
-      createTemplateTypeParameter (         Scope: DIScope;
-                                   READONLY Name : StringRef;
-                                            Ty   : DIType;    ):
+      createTemplateTypeParameter (         Scope    : DIScope;
+                                   READONLY Name     : StringRef;
+                                            Ty       : DIType;
+                                            IsDefault: BOOLEAN;   ):
                                    DITemplateTypeParameter;
 
       (** Create debugging information for template
@@ -1240,13 +1371,15 @@ TYPE
        * \param Scope        Scope in which this type is defined.
        * \param Name         Value parameter name.
        * \param Ty           Parameter type.
+       * \param IsDefault    Parameter is default or not
        * \param Val          Constant parameter value.
        *)
 
-      createTemplateValueParameter (         Scope: DIScope;
-                                    READONLY Name : StringRef;
-                                             Ty   : DIType;
-                                             Val  : DIConstant; ):
+      createTemplateValueParameter (         Scope    : DIScope;
+                                    READONLY Name     : StringRef;
+                                             Ty       : DIType;
+                                             IsDefault: BOOLEAN;
+                                             Val      : DIConstant; ):
                                     DITemplateValueParameter;
 
       (** Create debugging information for a template template parameter.
@@ -1571,6 +1704,8 @@ TYPE
       getOrCreateSubrange (Lo, Count: int64_t; ): DISubrange;
       getOrCreateSubrange1 (Lo: int64_t; CountNode: MetadataRef; ):
                             DISubrange;
+      getOrCreateSubrange2 (Count, LowerBound, UpperBound, Stride: MetadataRef; ):
+                            DISubrange;
 
       (** Create a new descriptor for the specified variable.
        * \param Context     Variable scope.
@@ -1579,7 +1714,7 @@ TYPE
        * \param File        File where this variable is defined.
        * \param LineNo      Line number.
        * \param Ty          Variable Type.
-       * \param isLocalToUnit Boolean flag indicate whether this variable is
+       * \param IsLocalToUnit Boolean flag indicate whether this variable is
                             * externally visible or not.
        * \param Expr        The location of the global relative to the attached
                           * GlobalVariable.
@@ -1590,13 +1725,13 @@ TYPE
 
       createGlobalVariableExpression (Context: DIScope;
                                       READONLY Name, LinkageName: StringRef;
-                                      File          : DIFile;
-                                      LineNo        : uint;
-                                      Ty            : DIType;
-                                      isLocalToUnit : BOOLEAN;
+                                      File                    : DIFile;
+                                      LineNo                  : uint;
+                                      Ty                      : DIType;
+                                      IsLocalToUnit, isDefined: BOOLEAN;
                                       Expr          : DIExpression;
                                       Decl          : MDNode;
-                                      templateParams: MDTuple;
+                                      TemplateParams: MDTuple;
                                       AlignInBits   : uint32_t;     ):
                                       DIGlobalVariableExpression;
 
@@ -1607,7 +1742,7 @@ TYPE
        * \param File        File where this variable is defined.
        * \param LineNo      Line number.
        * \param Ty          Variable Type.
-       * \param isLocalToUnit Boolean flag indicate whether this variable is
+       * \param IsLocalToUnit Boolean flag indicate whether this variable is
                             * externally visible or not.
        * \param Expr        The location of the global relative to the attached
                           * GlobalVariable.
@@ -1618,13 +1753,13 @@ TYPE
 
       createGlobalVariableExpression1 (Context: DIScope;
                                        READONLY Name, LinkageName: StringRef;
-                                       File          : DIFile;
-                                       LineNo        : uint;
-                                       Ty            : DIType;
-                                       isLocalToUnit : BOOLEAN;
+                                       File                    : DIFile;
+                                       LineNo                  : uint;
+                                       Ty                      : DIType;
+                                       IsLocalToUnit, isDefined: BOOLEAN;
                                        Expr          : DIExpression;
                                        Decl          : MDNode;
-                                       templateParams: MDTuple;      ):
+                                       TemplateParams: MDTuple;      ):
                                        DIGlobalVariableExpression;
 
       (** Create a new descriptor for the specified variable.
@@ -1634,7 +1769,7 @@ TYPE
        * \param File        File where this variable is defined.
        * \param LineNo      Line number.
        * \param Ty          Variable Type.
-       * \param isLocalToUnit Boolean flag indicate whether this variable is
+       * \param IsLocalToUnit Boolean flag indicate whether this variable is
                             * externally visible or not.
        * \param Expr        The location of the global relative to the attached
                           * GlobalVariable.
@@ -1645,12 +1780,12 @@ TYPE
 
       createGlobalVariableExpression2 (Context: DIScope;
                                        READONLY Name, LinkageName: StringRef;
-                                       File         : DIFile;
-                                       LineNo       : uint;
-                                       Ty           : DIType;
-                                       isLocalToUnit: BOOLEAN;
-                                       Expr         : DIExpression;
-                                       Decl         : MDNode;       ):
+                                       File                    : DIFile;
+                                       LineNo                  : uint;
+                                       Ty                      : DIType;
+                                       IsLocalToUnit, isDefined: BOOLEAN;
+                                       Expr: DIExpression;
+                                       Decl: MDNode;       ):
                                        DIGlobalVariableExpression;
 
       (** Create a new descriptor for the specified variable.
@@ -1660,7 +1795,7 @@ TYPE
        * \param File        File where this variable is defined.
        * \param LineNo      Line number.
        * \param Ty          Variable Type.
-       * \param isLocalToUnit Boolean flag indicate whether this variable is
+       * \param IsLocalToUnit Boolean flag indicate whether this variable is
                             * externally visible or not.
        * \param Expr        The location of the global relative to the attached
                           * GlobalVariable.
@@ -1671,11 +1806,11 @@ TYPE
 
       createGlobalVariableExpression3 (Context: DIScope;
                                        READONLY Name, LinkageName: StringRef;
-                                       File         : DIFile;
-                                       LineNo       : uint;
-                                       Ty           : DIType;
-                                       isLocalToUnit: BOOLEAN;
-                                       Expr         : DIExpression; ):
+                                       File                    : DIFile;
+                                       LineNo                  : uint;
+                                       Ty                      : DIType;
+                                       IsLocalToUnit, isDefined: BOOLEAN;
+                                       Expr: DIExpression; ):
                                        DIGlobalVariableExpression;
 
       (** Create a new descriptor for the specified variable.
@@ -1685,7 +1820,7 @@ TYPE
        * \param File        File where this variable is defined.
        * \param LineNo      Line number.
        * \param Ty          Variable Type.
-       * \param isLocalToUnit Boolean flag indicate whether this variable is
+       * \param IsLocalToUnit Boolean flag indicate whether this variable is
                             * externally visible or not.
        * \param Expr        The location of the global relative to the attached
                           * GlobalVariable.
@@ -1696,10 +1831,34 @@ TYPE
 
       createGlobalVariableExpression4 (Context: DIScope;
                                        READONLY Name, LinkageName: StringRef;
+                                       File                    : DIFile;
+                                       LineNo                  : uint;
+                                       Ty                      : DIType;
+                                       IsLocalToUnit, isDefined: BOOLEAN; ):
+                                       DIGlobalVariableExpression;
+
+      (** Create a new descriptor for the specified variable.
+       * \param Context     Variable scope.
+       * \param Name        Name of the variable.
+       * \param LinkageName Mangled  name of the variable.
+       * \param File        File where this variable is defined.
+       * \param LineNo      Line number.
+       * \param Ty          Variable Type.
+       * \param IsLocalToUnit Boolean flag indicate whether this variable is
+                            * externally visible or not.
+       * \param Expr        The location of the global relative to the attached
+                          * GlobalVariable.
+       * \param Decl        Reference to the corresponding declaration.
+       * \param AlignInBits Variable alignment(or 0 if no alignment attr was
+                          * specified)
+       *)
+
+      createGlobalVariableExpression5 (Context: DIScope;
+                                       READONLY Name, LinkageName: StringRef;
                                        File         : DIFile;
                                        LineNo       : uint;
                                        Ty           : DIType;
-                                       isLocalToUnit: BOOLEAN; ):
+                                       IsLocalToUnit: BOOLEAN; ):
                                        DIGlobalVariableExpression;
 
       (** Identical to createGlobalVariable
@@ -1711,9 +1870,9 @@ TYPE
                                        File          : DIFile;
                                        LineNo        : uint;
                                        Ty            : DIType;
-                                       isLocalToUnit : BOOLEAN;
+                                       IsLocalToUnit : BOOLEAN;
                                        Decl          : MDNode;
-                                       templateParams: MDTuple;
+                                       TemplateParams: MDTuple;
                                        AlignInBits   : uint32_t; ):
                                        DIGlobalVariable;
 
@@ -1726,9 +1885,9 @@ TYPE
                                         File          : DIFile;
                                         LineNo        : uint;
                                         Ty            : DIType;
-                                        isLocalToUnit : BOOLEAN;
+                                        IsLocalToUnit : BOOLEAN;
                                         Decl          : MDNode;
-                                        templateParams: MDTuple; ):
+                                        TemplateParams: MDTuple; ):
                                         DIGlobalVariable;
 
       (** Identical to createGlobalVariable
@@ -1740,7 +1899,7 @@ TYPE
                                         File         : DIFile;
                                         LineNo       : uint;
                                         Ty           : DIType;
-                                        isLocalToUnit: BOOLEAN;
+                                        IsLocalToUnit: BOOLEAN;
                                         Decl         : MDNode;  ):
                                         DIGlobalVariable;
 
@@ -1753,7 +1912,7 @@ TYPE
                                         File         : DIFile;
                                         LineNo       : uint;
                                         Ty           : DIType;
-                                        isLocalToUnit: BOOLEAN; ):
+                                        IsLocalToUnit: BOOLEAN; ):
                                         DIGlobalVariable;
 
       (** Create a new descriptor for an auto variable.  This is a local variable
@@ -2439,12 +2598,76 @@ TYPE
                           * A space-separated shell-quoted list of -D macro
                           * definitions as they would appear on a command line.
        * \param IncludePath The path to the module map file.
-       * \param ISysRoot    The clang system root (value of -isysroot).
+       * \param APINotesFile The path to an API notes file for this module.
+       * \param File        Source file of the module declaration. Used for
+                          * Fortran modules.
+       * \param LineNo      Source line number of the  module declaration.
+                          * Used for Fortran modules.
        *)
 
       createModule (Scope: DIScope;
                     READONLY Name, ConfigurationMacros, IncludePath,
-                               ISysRoot: StringRef; ): DIModule;
+                               APINotesFile: StringRef;
+                    File  : DIFile;
+                    LineNo: uint;   ): DIModule;
+
+      (** This creates new descriptor for a module with the specified
+       * parent scope.
+       * \param Scope       Parent scope
+       * \param Name        Name of this module
+       * \param ConfigurationMacros
+                          * A space-separated shell-quoted list of -D macro
+                          * definitions as they would appear on a command line.
+       * \param IncludePath The path to the module map file.
+       * \param APINotesFile The path to an API notes file for this module.
+       * \param File        Source file of the module declaration. Used for
+                          * Fortran modules.
+       * \param LineNo      Source line number of the  module declaration.
+                          * Used for Fortran modules.
+       *)
+
+      createModule1 (Scope: DIScope;
+                     READONLY Name, ConfigurationMacros, IncludePath,
+                                APINotesFile: StringRef;
+                     File: DIFile; ): DIModule;
+
+      (** This creates new descriptor for a module with the specified
+       * parent scope.
+       * \param Scope       Parent scope
+       * \param Name        Name of this module
+       * \param ConfigurationMacros
+                          * A space-separated shell-quoted list of -D macro
+                          * definitions as they would appear on a command line.
+       * \param IncludePath The path to the module map file.
+       * \param APINotesFile The path to an API notes file for this module.
+       * \param File        Source file of the module declaration. Used for
+                          * Fortran modules.
+       * \param LineNo      Source line number of the  module declaration.
+                          * Used for Fortran modules.
+       *)
+
+      createModule2 (Scope: DIScope;
+                     READONLY Name, ConfigurationMacros, IncludePath,
+                                APINotesFile: StringRef; ): DIModule;
+
+      (** This creates new descriptor for a module with the specified
+       * parent scope.
+       * \param Scope       Parent scope
+       * \param Name        Name of this module
+       * \param ConfigurationMacros
+                          * A space-separated shell-quoted list of -D macro
+                          * definitions as they would appear on a command line.
+       * \param IncludePath The path to the module map file.
+       * \param APINotesFile The path to an API notes file for this module.
+       * \param File        Source file of the module declaration. Used for
+                          * Fortran modules.
+       * \param LineNo      Source line number of the  module declaration.
+                          * Used for Fortran modules.
+       *)
+
+      createModule3 (Scope: DIScope;
+                     READONLY Name, ConfigurationMacros, IncludePath: StringRef; ):
+                     DIModule;
 
       (** This creates a descriptor for a lexical block with a new file
        * attached. This merely extends the existing

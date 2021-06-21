@@ -45,7 +45,8 @@ PROCEDURE DIBuilder_createCompileUnit
    DWOId                                    : C.unsigned_long_long;
    SplitDebugInlining, DebugInfoForProfiling: BOOLEAN;
    NameTableKind                            : C.int;
-   RangesBaseAddress                        : BOOLEAN;              ):
+   RangesBaseAddress                        : BOOLEAN;
+   SysRoot, SDK                             : ADDRESS;              ):
   ADDRESS;
 
 <* EXTERNAL DIBuilder_createCompileUnit1 *>
@@ -61,7 +62,9 @@ PROCEDURE DIBuilder_createCompileUnit1
    Kind                                     : C.int;
    DWOId                                    : C.unsigned_long_long;
    SplitDebugInlining, DebugInfoForProfiling: BOOLEAN;
-   NameTableKind                            : C.int;                ):
+   NameTableKind                            : C.int;
+   RangesBaseAddress                        : BOOLEAN;
+   SysRoot                                  : ADDRESS;              ):
   ADDRESS;
 
 <* EXTERNAL DIBuilder_createCompileUnit2 *>
@@ -76,11 +79,44 @@ PROCEDURE DIBuilder_createCompileUnit2
    SplitName                                : ADDRESS;
    Kind                                     : C.int;
    DWOId                                    : C.unsigned_long_long;
-   SplitDebugInlining, DebugInfoForProfiling: BOOLEAN;              ):
+   SplitDebugInlining, DebugInfoForProfiling: BOOLEAN;
+   NameTableKind                            : C.int;
+   RangesBaseAddress                        : BOOLEAN;              ):
   ADDRESS;
 
 <* EXTERNAL DIBuilder_createCompileUnit3 *>
-PROCEDURE DIBuilder_createCompileUnit3 (self       : ADDRESS;
+PROCEDURE DIBuilder_createCompileUnit3
+  (self                                     : ADDRESS;
+   Lang                                     : C.unsigned_int;
+   File                                     : ADDRESS;
+   Producer                                 : ADDRESS;
+   isOptimized                              : BOOLEAN;
+   Flags                                    : ADDRESS;
+   RV                                       : C.unsigned_int;
+   SplitName                                : ADDRESS;
+   Kind                                     : C.int;
+   DWOId                                    : C.unsigned_long_long;
+   SplitDebugInlining, DebugInfoForProfiling: BOOLEAN;
+   NameTableKind                            : C.int;                ):
+  ADDRESS;
+
+<* EXTERNAL DIBuilder_createCompileUnit4 *>
+PROCEDURE DIBuilder_createCompileUnit4
+  (self                                     : ADDRESS;
+   Lang                                     : C.unsigned_int;
+   File                                     : ADDRESS;
+   Producer                                 : ADDRESS;
+   isOptimized                              : BOOLEAN;
+   Flags                                    : ADDRESS;
+   RV                                       : C.unsigned_int;
+   SplitName                                : ADDRESS;
+   Kind                                     : C.int;
+   DWOId                                    : C.unsigned_long_long;
+   SplitDebugInlining, DebugInfoForProfiling: BOOLEAN;              ):
+  ADDRESS;
+
+<* EXTERNAL DIBuilder_createCompileUnit5 *>
+PROCEDURE DIBuilder_createCompileUnit5 (self       : ADDRESS;
                                         Lang       : C.unsigned_int;
                                         File       : ADDRESS;
                                         Producer   : ADDRESS;
@@ -93,8 +129,8 @@ PROCEDURE DIBuilder_createCompileUnit3 (self       : ADDRESS;
                                         SplitDebugInlining: BOOLEAN; ):
   ADDRESS;
 
-<* EXTERNAL DIBuilder_createCompileUnit4 *>
-PROCEDURE DIBuilder_createCompileUnit4
+<* EXTERNAL DIBuilder_createCompileUnit6 *>
+PROCEDURE DIBuilder_createCompileUnit6
   (self       : ADDRESS;
    Lang       : C.unsigned_int;
    File       : ADDRESS;
@@ -106,8 +142,8 @@ PROCEDURE DIBuilder_createCompileUnit4
    Kind       : C.int;
    DWOId      : C.unsigned_long_long; ): ADDRESS;
 
-<* EXTERNAL DIBuilder_createCompileUnit5 *>
-PROCEDURE DIBuilder_createCompileUnit5 (self       : ADDRESS;
+<* EXTERNAL DIBuilder_createCompileUnit7 *>
+PROCEDURE DIBuilder_createCompileUnit7 (self       : ADDRESS;
                                         Lang       : C.unsigned_int;
                                         File       : ADDRESS;
                                         Producer   : ADDRESS;
@@ -118,8 +154,8 @@ PROCEDURE DIBuilder_createCompileUnit5 (self       : ADDRESS;
                                         Kind       : C.int;          ):
   ADDRESS;
 
-<* EXTERNAL DIBuilder_createCompileUnit6 *>
-PROCEDURE DIBuilder_createCompileUnit6 (self       : ADDRESS;
+<* EXTERNAL DIBuilder_createCompileUnit8 *>
+PROCEDURE DIBuilder_createCompileUnit8 (self       : ADDRESS;
                                         Lang       : C.unsigned_int;
                                         File       : ADDRESS;
                                         Producer   : ADDRESS;
@@ -129,8 +165,8 @@ PROCEDURE DIBuilder_createCompileUnit6 (self       : ADDRESS;
                                         SplitName  : ADDRESS;        ):
   ADDRESS;
 
-<* EXTERNAL DIBuilder_createCompileUnit7 *>
-PROCEDURE DIBuilder_createCompileUnit7 (self       : ADDRESS;
+<* EXTERNAL DIBuilder_createCompileUnit9 *>
+PROCEDURE DIBuilder_createCompileUnit9 (self       : ADDRESS;
                                         Lang       : C.unsigned_int;
                                         File       : ADDRESS;
                                         Producer   : ADDRESS;
@@ -275,11 +311,19 @@ PROCEDURE DIBuilder_createReferenceType3
   (self: ADDRESS; Tag: C.unsigned_int; RTy: ADDRESS; ): ADDRESS;
 
 <* EXTERNAL DIBuilder_createTypedef *>
-PROCEDURE DIBuilder_createTypedef (self, Ty: ADDRESS;
-                                   Name    : ADDRESS;
-                                   File    : ADDRESS;
-                                   LineNo  : C.unsigned_int;
-                                   Context : ADDRESS;        ): ADDRESS;
+PROCEDURE DIBuilder_createTypedef (self, Ty   : ADDRESS;
+                                   Name       : ADDRESS;
+                                   File       : ADDRESS;
+                                   LineNo     : C.unsigned_int;
+                                   Context    : ADDRESS;
+                                   AlignInBits: C.unsigned_int; ): ADDRESS;
+
+<* EXTERNAL DIBuilder_createTypedef1 *>
+PROCEDURE DIBuilder_createTypedef1 (self, Ty: ADDRESS;
+                                    Name    : ADDRESS;
+                                    File    : ADDRESS;
+                                    LineNo  : C.unsigned_int;
+                                    Context : ADDRESS;        ): ADDRESS;
 
 <* EXTERNAL DIBuilder_createFriend *>
 PROCEDURE DIBuilder_createFriend (self, Ty, FriendTy: ADDRESS; ): ADDRESS;
@@ -539,11 +583,16 @@ PROCEDURE DIBuilder_createVariantPart1 (self, Scope: ADDRESS;
 
 <* EXTERNAL DIBuilder_createTemplateTypeParameter *>
 PROCEDURE DIBuilder_createTemplateTypeParameter
-  (self, Scope: ADDRESS; Name: ADDRESS; Ty: ADDRESS; ): ADDRESS;
+  (self, Scope: ADDRESS; Name: ADDRESS; Ty: ADDRESS; IsDefault: BOOLEAN; ):
+  ADDRESS;
 
 <* EXTERNAL DIBuilder_createTemplateValueParameter *>
-PROCEDURE DIBuilder_createTemplateValueParameter
-  (self, Scope: ADDRESS; Name: ADDRESS; Ty, Val: ADDRESS; ): ADDRESS;
+PROCEDURE DIBuilder_createTemplateValueParameter (self, Scope: ADDRESS;
+                                                  Name       : ADDRESS;
+                                                  Ty         : ADDRESS;
+                                                  IsDefault  : BOOLEAN;
+                                                  Val        : ADDRESS; ):
+  ADDRESS;
 
 <* EXTERNAL DIBuilder_createTemplateTemplateParameter *>
 PROCEDURE DIBuilder_createTemplateTemplateParameter
@@ -761,6 +810,10 @@ PROCEDURE DIBuilder_getOrCreateSubrange
 PROCEDURE DIBuilder_getOrCreateSubrange1
   (self: ADDRESS; Lo: C.long_long; CountNode: ADDRESS; ): ADDRESS;
 
+<* EXTERNAL DIBuilder_getOrCreateSubrange2 *>
+PROCEDURE DIBuilder_getOrCreateSubrange2
+  (self, Count, LowerBound, UpperBound, Stride: ADDRESS; ): ADDRESS;
+
 <* EXTERNAL DIBuilder_createGlobalVariableExpression *>
 PROCEDURE DIBuilder_createGlobalVariableExpression
   (self, Context             : ADDRESS;
@@ -768,8 +821,8 @@ PROCEDURE DIBuilder_createGlobalVariableExpression
    File                      : ADDRESS;
    LineNo                    : C.unsigned_int;
    Ty                        : ADDRESS;
-   isLocalToUnit             : BOOLEAN;
-   Expr, Decl, templateParams: ADDRESS;
+   IsLocalToUnit, isDefined  : BOOLEAN;
+   Expr, Decl, TemplateParams: ADDRESS;
    AlignInBits               : C.unsigned_int; ): ADDRESS;
 
 <* EXTERNAL DIBuilder_createGlobalVariableExpression1 *>
@@ -779,37 +832,46 @@ PROCEDURE DIBuilder_createGlobalVariableExpression1
    File                      : ADDRESS;
    LineNo                    : C.unsigned_int;
    Ty                        : ADDRESS;
-   isLocalToUnit             : BOOLEAN;
-   Expr, Decl, templateParams: ADDRESS;        ): ADDRESS;
+   IsLocalToUnit, isDefined  : BOOLEAN;
+   Expr, Decl, TemplateParams: ADDRESS;        ): ADDRESS;
 
 <* EXTERNAL DIBuilder_createGlobalVariableExpression2 *>
 PROCEDURE DIBuilder_createGlobalVariableExpression2
-  (self, Context    : ADDRESS;
-   Name, LinkageName: ADDRESS;
-   File             : ADDRESS;
-   LineNo           : C.unsigned_int;
-   Ty               : ADDRESS;
-   isLocalToUnit    : BOOLEAN;
-   Expr, Decl       : ADDRESS;        ): ADDRESS;
+  (self, Context           : ADDRESS;
+   Name, LinkageName       : ADDRESS;
+   File                    : ADDRESS;
+   LineNo                  : C.unsigned_int;
+   Ty                      : ADDRESS;
+   IsLocalToUnit, isDefined: BOOLEAN;
+   Expr, Decl              : ADDRESS;        ): ADDRESS;
 
 <* EXTERNAL DIBuilder_createGlobalVariableExpression3 *>
 PROCEDURE DIBuilder_createGlobalVariableExpression3
-  (self, Context    : ADDRESS;
-   Name, LinkageName: ADDRESS;
-   File             : ADDRESS;
-   LineNo           : C.unsigned_int;
-   Ty               : ADDRESS;
-   isLocalToUnit    : BOOLEAN;
-   Expr             : ADDRESS;        ): ADDRESS;
+  (self, Context           : ADDRESS;
+   Name, LinkageName       : ADDRESS;
+   File                    : ADDRESS;
+   LineNo                  : C.unsigned_int;
+   Ty                      : ADDRESS;
+   IsLocalToUnit, isDefined: BOOLEAN;
+   Expr                    : ADDRESS;        ): ADDRESS;
 
 <* EXTERNAL DIBuilder_createGlobalVariableExpression4 *>
 PROCEDURE DIBuilder_createGlobalVariableExpression4
+  (self, Context           : ADDRESS;
+   Name, LinkageName       : ADDRESS;
+   File                    : ADDRESS;
+   LineNo                  : C.unsigned_int;
+   Ty                      : ADDRESS;
+   IsLocalToUnit, isDefined: BOOLEAN;        ): ADDRESS;
+
+<* EXTERNAL DIBuilder_createGlobalVariableExpression5 *>
+PROCEDURE DIBuilder_createGlobalVariableExpression5
   (self, Context    : ADDRESS;
    Name, LinkageName: ADDRESS;
    File             : ADDRESS;
    LineNo           : C.unsigned_int;
    Ty               : ADDRESS;
-   isLocalToUnit    : BOOLEAN;        ): ADDRESS;
+   IsLocalToUnit    : BOOLEAN;        ): ADDRESS;
 
 <* EXTERNAL DIBuilder_createTempGlobalVariableFwdDecl *>
 PROCEDURE DIBuilder_createTempGlobalVariableFwdDecl
@@ -818,8 +880,8 @@ PROCEDURE DIBuilder_createTempGlobalVariableFwdDecl
    File                : ADDRESS;
    LineNo              : C.unsigned_int;
    Ty                  : ADDRESS;
-   isLocalToUnit       : BOOLEAN;
-   Decl, templateParams: ADDRESS;
+   IsLocalToUnit       : BOOLEAN;
+   Decl, TemplateParams: ADDRESS;
    AlignInBits         : C.unsigned_int; ): ADDRESS;
 
 <* EXTERNAL DIBuilder_createTempGlobalVariableFwdDecl1 *>
@@ -829,8 +891,8 @@ PROCEDURE DIBuilder_createTempGlobalVariableFwdDecl1
    File                : ADDRESS;
    LineNo              : C.unsigned_int;
    Ty                  : ADDRESS;
-   isLocalToUnit       : BOOLEAN;
-   Decl, templateParams: ADDRESS;        ): ADDRESS;
+   IsLocalToUnit       : BOOLEAN;
+   Decl, TemplateParams: ADDRESS;        ): ADDRESS;
 
 <* EXTERNAL DIBuilder_createTempGlobalVariableFwdDecl2 *>
 PROCEDURE DIBuilder_createTempGlobalVariableFwdDecl2
@@ -839,7 +901,7 @@ PROCEDURE DIBuilder_createTempGlobalVariableFwdDecl2
    File             : ADDRESS;
    LineNo           : C.unsigned_int;
    Ty               : ADDRESS;
-   isLocalToUnit    : BOOLEAN;
+   IsLocalToUnit    : BOOLEAN;
    Decl             : ADDRESS;        ): ADDRESS;
 
 <* EXTERNAL DIBuilder_createTempGlobalVariableFwdDecl3 *>
@@ -849,7 +911,7 @@ PROCEDURE DIBuilder_createTempGlobalVariableFwdDecl3
    File             : ADDRESS;
    LineNo           : C.unsigned_int;
    Ty               : ADDRESS;
-   isLocalToUnit    : BOOLEAN;        ): ADDRESS;
+   IsLocalToUnit    : BOOLEAN;        ): ADDRESS;
 
 <* EXTERNAL DIBuilder_createAutoVariable *>
 PROCEDURE DIBuilder_createAutoVariable (self, Scope   : ADDRESS;
@@ -1173,8 +1235,29 @@ PROCEDURE DIBuilder_createNameSpace
 
 <* EXTERNAL DIBuilder_createModule *>
 PROCEDURE DIBuilder_createModule
-  (self, Scope                                     : ADDRESS;
-   Name, ConfigurationMacros, IncludePath, ISysRoot: ADDRESS; ): ADDRESS;
+  (self, Scope                                         : ADDRESS;
+   Name, ConfigurationMacros, IncludePath, APINotesFile: ADDRESS;
+   File                                                : ADDRESS;
+   LineNo                                              : C.unsigned_int; ):
+  ADDRESS;
+
+<* EXTERNAL DIBuilder_createModule1 *>
+PROCEDURE DIBuilder_createModule1
+  (self, Scope                                         : ADDRESS;
+   Name, ConfigurationMacros, IncludePath, APINotesFile: ADDRESS;
+   File                                                : ADDRESS; ):
+  ADDRESS;
+
+<* EXTERNAL DIBuilder_createModule2 *>
+PROCEDURE DIBuilder_createModule2
+  (self, Scope                                         : ADDRESS;
+   Name, ConfigurationMacros, IncludePath, APINotesFile: ADDRESS; ):
+  ADDRESS;
+
+<* EXTERNAL DIBuilder_createModule3 *>
+PROCEDURE DIBuilder_createModule3
+  (self, Scope: ADDRESS; Name, ConfigurationMacros, IncludePath: ADDRESS; ):
+  ADDRESS;
 
 <* EXTERNAL DIBuilder_createLexicalBlockFile *>
 PROCEDURE DIBuilder_createLexicalBlockFile

@@ -52,43 +52,53 @@ public class DIBuilder : IDisposable {
 
     finalizeSubprogram(DISubprogram SP) M3DIBuilderRaw.DIBuilder_finalizeSubprogram(swigCPtr,   = *(DISubprogram **)&SP; )
 
+   DICompileUnit createCompileUnit(CARDINAL Lang, DIFile File, StringRef Producer, BOOLEAN isOptimized, StringRef Flags, CARDINAL RV, StringRef SplitName, DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId, BOOLEAN SplitDebugInlining, BOOLEAN DebugInfoForProfiling, DICompileUnit::DebugNameTableKind NameTableKind, BOOLEAN RangesBaseAddress, StringRef SysRoot, StringRef SDK) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createCompileUnit0(swigCPtr,   = (unsigned int)Lang; ,   = *(DIFile **)&File; ,  = StringRef(Producer->Data,Producer->Length);,   = isOptimized ? true : false; ,  = StringRef(Flags->Data,Flags->Length);,   = (unsigned int)RV; ,  = StringRef(SplitName->Data,SplitName->Length);,  = Kind;,   = (uint64_t)DWOId; ,   = SplitDebugInlining ? true : false; ,   = DebugInfoForProfiling ? true : false; ,  = NameTableKind;,   = RangesBaseAddress ? true : false; ,  = StringRef(SysRoot->Data,SysRoot->Length);,  = StringRef(SDK->Data,SDK->Length););
+    RETURN (cPtr = IntPtr.Zero) ? null : NEW(DICompileUnit, cPtr, false);
+
+
+   DICompileUnit createCompileUnit(CARDINAL Lang, DIFile File, StringRef Producer, BOOLEAN isOptimized, StringRef Flags, CARDINAL RV, StringRef SplitName, DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId, BOOLEAN SplitDebugInlining, BOOLEAN DebugInfoForProfiling, DICompileUnit::DebugNameTableKind NameTableKind, BOOLEAN RangesBaseAddress, StringRef SysRoot) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createCompileUnit1(swigCPtr,   = (unsigned int)Lang; ,   = *(DIFile **)&File; ,  = StringRef(Producer->Data,Producer->Length);,   = isOptimized ? true : false; ,  = StringRef(Flags->Data,Flags->Length);,   = (unsigned int)RV; ,  = StringRef(SplitName->Data,SplitName->Length);,  = Kind;,   = (uint64_t)DWOId; ,   = SplitDebugInlining ? true : false; ,   = DebugInfoForProfiling ? true : false; ,  = NameTableKind;,   = RangesBaseAddress ? true : false; ,  = StringRef(SysRoot->Data,SysRoot->Length););
+    RETURN (cPtr = IntPtr.Zero) ? null : NEW(DICompileUnit, cPtr, false);
+
+
    DICompileUnit createCompileUnit(CARDINAL Lang, DIFile File, StringRef Producer, BOOLEAN isOptimized, StringRef Flags, CARDINAL RV, StringRef SplitName, DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId, BOOLEAN SplitDebugInlining, BOOLEAN DebugInfoForProfiling, DICompileUnit::DebugNameTableKind NameTableKind, BOOLEAN RangesBaseAddress) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createCompileUnit0(swigCPtr,   = (unsigned int)Lang; ,   = *(DIFile **)&File; ,  = StringRef(Producer->Data,Producer->Length);,   = isOptimized ? true : false; ,  = StringRef(Flags->Data,Flags->Length);,   = (unsigned int)RV; ,  = StringRef(SplitName->Data,SplitName->Length);,  = Kind;,   = (uint64_t)DWOId; ,   = SplitDebugInlining ? true : false; ,   = DebugInfoForProfiling ? true : false; ,  = NameTableKind;,   = RangesBaseAddress ? true : false; );
+    cPtr := M3DIBuilderRaw.DIBuilder_createCompileUnit2(swigCPtr,   = (unsigned int)Lang; ,   = *(DIFile **)&File; ,  = StringRef(Producer->Data,Producer->Length);,   = isOptimized ? true : false; ,  = StringRef(Flags->Data,Flags->Length);,   = (unsigned int)RV; ,  = StringRef(SplitName->Data,SplitName->Length);,  = Kind;,   = (uint64_t)DWOId; ,   = SplitDebugInlining ? true : false; ,   = DebugInfoForProfiling ? true : false; ,  = NameTableKind;,   = RangesBaseAddress ? true : false; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DICompileUnit, cPtr, false);
 
 
    DICompileUnit createCompileUnit(CARDINAL Lang, DIFile File, StringRef Producer, BOOLEAN isOptimized, StringRef Flags, CARDINAL RV, StringRef SplitName, DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId, BOOLEAN SplitDebugInlining, BOOLEAN DebugInfoForProfiling, DICompileUnit::DebugNameTableKind NameTableKind) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createCompileUnit1(swigCPtr,   = (unsigned int)Lang; ,   = *(DIFile **)&File; ,  = StringRef(Producer->Data,Producer->Length);,   = isOptimized ? true : false; ,  = StringRef(Flags->Data,Flags->Length);,   = (unsigned int)RV; ,  = StringRef(SplitName->Data,SplitName->Length);,  = Kind;,   = (uint64_t)DWOId; ,   = SplitDebugInlining ? true : false; ,   = DebugInfoForProfiling ? true : false; ,  = NameTableKind;);
+    cPtr := M3DIBuilderRaw.DIBuilder_createCompileUnit3(swigCPtr,   = (unsigned int)Lang; ,   = *(DIFile **)&File; ,  = StringRef(Producer->Data,Producer->Length);,   = isOptimized ? true : false; ,  = StringRef(Flags->Data,Flags->Length);,   = (unsigned int)RV; ,  = StringRef(SplitName->Data,SplitName->Length);,  = Kind;,   = (uint64_t)DWOId; ,   = SplitDebugInlining ? true : false; ,   = DebugInfoForProfiling ? true : false; ,  = NameTableKind;);
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DICompileUnit, cPtr, false);
 
 
    DICompileUnit createCompileUnit(CARDINAL Lang, DIFile File, StringRef Producer, BOOLEAN isOptimized, StringRef Flags, CARDINAL RV, StringRef SplitName, DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId, BOOLEAN SplitDebugInlining, BOOLEAN DebugInfoForProfiling) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createCompileUnit2(swigCPtr,   = (unsigned int)Lang; ,   = *(DIFile **)&File; ,  = StringRef(Producer->Data,Producer->Length);,   = isOptimized ? true : false; ,  = StringRef(Flags->Data,Flags->Length);,   = (unsigned int)RV; ,  = StringRef(SplitName->Data,SplitName->Length);,  = Kind;,   = (uint64_t)DWOId; ,   = SplitDebugInlining ? true : false; ,   = DebugInfoForProfiling ? true : false; );
+    cPtr := M3DIBuilderRaw.DIBuilder_createCompileUnit4(swigCPtr,   = (unsigned int)Lang; ,   = *(DIFile **)&File; ,  = StringRef(Producer->Data,Producer->Length);,   = isOptimized ? true : false; ,  = StringRef(Flags->Data,Flags->Length);,   = (unsigned int)RV; ,  = StringRef(SplitName->Data,SplitName->Length);,  = Kind;,   = (uint64_t)DWOId; ,   = SplitDebugInlining ? true : false; ,   = DebugInfoForProfiling ? true : false; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DICompileUnit, cPtr, false);
 
 
    DICompileUnit createCompileUnit(CARDINAL Lang, DIFile File, StringRef Producer, BOOLEAN isOptimized, StringRef Flags, CARDINAL RV, StringRef SplitName, DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId, BOOLEAN SplitDebugInlining) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createCompileUnit3(swigCPtr,   = (unsigned int)Lang; ,   = *(DIFile **)&File; ,  = StringRef(Producer->Data,Producer->Length);,   = isOptimized ? true : false; ,  = StringRef(Flags->Data,Flags->Length);,   = (unsigned int)RV; ,  = StringRef(SplitName->Data,SplitName->Length);,  = Kind;,   = (uint64_t)DWOId; ,   = SplitDebugInlining ? true : false; );
+    cPtr := M3DIBuilderRaw.DIBuilder_createCompileUnit5(swigCPtr,   = (unsigned int)Lang; ,   = *(DIFile **)&File; ,  = StringRef(Producer->Data,Producer->Length);,   = isOptimized ? true : false; ,  = StringRef(Flags->Data,Flags->Length);,   = (unsigned int)RV; ,  = StringRef(SplitName->Data,SplitName->Length);,  = Kind;,   = (uint64_t)DWOId; ,   = SplitDebugInlining ? true : false; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DICompileUnit, cPtr, false);
 
 
    DICompileUnit createCompileUnit(CARDINAL Lang, DIFile File, StringRef Producer, BOOLEAN isOptimized, StringRef Flags, CARDINAL RV, StringRef SplitName, DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createCompileUnit4(swigCPtr,   = (unsigned int)Lang; ,   = *(DIFile **)&File; ,  = StringRef(Producer->Data,Producer->Length);,   = isOptimized ? true : false; ,  = StringRef(Flags->Data,Flags->Length);,   = (unsigned int)RV; ,  = StringRef(SplitName->Data,SplitName->Length);,  = Kind;,   = (uint64_t)DWOId; );
+    cPtr := M3DIBuilderRaw.DIBuilder_createCompileUnit6(swigCPtr,   = (unsigned int)Lang; ,   = *(DIFile **)&File; ,  = StringRef(Producer->Data,Producer->Length);,   = isOptimized ? true : false; ,  = StringRef(Flags->Data,Flags->Length);,   = (unsigned int)RV; ,  = StringRef(SplitName->Data,SplitName->Length);,  = Kind;,   = (uint64_t)DWOId; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DICompileUnit, cPtr, false);
 
 
    DICompileUnit createCompileUnit(CARDINAL Lang, DIFile File, StringRef Producer, BOOLEAN isOptimized, StringRef Flags, CARDINAL RV, StringRef SplitName, DICompileUnit::DebugEmissionKind Kind) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createCompileUnit5(swigCPtr,   = (unsigned int)Lang; ,   = *(DIFile **)&File; ,  = StringRef(Producer->Data,Producer->Length);,   = isOptimized ? true : false; ,  = StringRef(Flags->Data,Flags->Length);,   = (unsigned int)RV; ,  = StringRef(SplitName->Data,SplitName->Length);,  = Kind;);
+    cPtr := M3DIBuilderRaw.DIBuilder_createCompileUnit7(swigCPtr,   = (unsigned int)Lang; ,   = *(DIFile **)&File; ,  = StringRef(Producer->Data,Producer->Length);,   = isOptimized ? true : false; ,  = StringRef(Flags->Data,Flags->Length);,   = (unsigned int)RV; ,  = StringRef(SplitName->Data,SplitName->Length);,  = Kind;);
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DICompileUnit, cPtr, false);
 
 
    DICompileUnit createCompileUnit(CARDINAL Lang, DIFile File, StringRef Producer, BOOLEAN isOptimized, StringRef Flags, CARDINAL RV, StringRef SplitName) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createCompileUnit6(swigCPtr,   = (unsigned int)Lang; ,   = *(DIFile **)&File; ,  = StringRef(Producer->Data,Producer->Length);,   = isOptimized ? true : false; ,  = StringRef(Flags->Data,Flags->Length);,   = (unsigned int)RV; ,  = StringRef(SplitName->Data,SplitName->Length););
+    cPtr := M3DIBuilderRaw.DIBuilder_createCompileUnit8(swigCPtr,   = (unsigned int)Lang; ,   = *(DIFile **)&File; ,  = StringRef(Producer->Data,Producer->Length);,   = isOptimized ? true : false; ,  = StringRef(Flags->Data,Flags->Length);,   = (unsigned int)RV; ,  = StringRef(SplitName->Data,SplitName->Length););
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DICompileUnit, cPtr, false);
 
 
    DICompileUnit createCompileUnit(CARDINAL Lang, DIFile File, StringRef Producer, BOOLEAN isOptimized, StringRef Flags, CARDINAL RV) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createCompileUnit7(swigCPtr,   = (unsigned int)Lang; ,   = *(DIFile **)&File; ,  = StringRef(Producer->Data,Producer->Length);,   = isOptimized ? true : false; ,  = StringRef(Flags->Data,Flags->Length);,   = (unsigned int)RV; );
+    cPtr := M3DIBuilderRaw.DIBuilder_createCompileUnit9(swigCPtr,   = (unsigned int)Lang; ,   = *(DIFile **)&File; ,  = StringRef(Producer->Data,Producer->Length);,   = isOptimized ? true : false; ,  = StringRef(Flags->Data,Flags->Length);,   = (unsigned int)RV; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DICompileUnit, cPtr, false);
 
 
@@ -216,8 +226,13 @@ public class DIBuilder : IDisposable {
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIDerivedType, cPtr, false);
 
 
+   DIDerivedType createTypedef(DIType Ty, StringRef Name, DIFile File, CARDINAL LineNo, DIScope Context, uint32_t AlignInBits) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createTypedef0(swigCPtr,   = *(DIType **)&Ty; ,  = StringRef(Name->Data,Name->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIScope **)&Context; ,   = (uint32_t)AlignInBits; );
+    RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIDerivedType, cPtr, false);
+
+
    DIDerivedType createTypedef(DIType Ty, StringRef Name, DIFile File, CARDINAL LineNo, DIScope Context) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createTypedef(swigCPtr,   = *(DIType **)&Ty; ,  = StringRef(Name->Data,Name->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIScope **)&Context; );
+    cPtr := M3DIBuilderRaw.DIBuilder_createTypedef1(swigCPtr,   = *(DIType **)&Ty; ,  = StringRef(Name->Data,Name->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIScope **)&Context; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIDerivedType, cPtr, false);
 
 
@@ -344,13 +359,13 @@ public class DIBuilder : IDisposable {
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DICompositeType, cPtr, false);
 
 
-   DITemplateTypeParameter createTemplateTypeParameter(DIScope Scope, StringRef Name, DIType Ty) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createTemplateTypeParameter(swigCPtr,   = *(DIScope **)&Scope; ,  = StringRef(Name->Data,Name->Length);,   = *(DIType **)&Ty; );
+   DITemplateTypeParameter createTemplateTypeParameter(DIScope Scope, StringRef Name, DIType Ty, BOOLEAN IsDefault) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createTemplateTypeParameter(swigCPtr,   = *(DIScope **)&Scope; ,  = StringRef(Name->Data,Name->Length);,   = *(DIType **)&Ty; ,   = IsDefault ? true : false; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DITemplateTypeParameter, cPtr, false);
 
 
-   DITemplateValueParameter createTemplateValueParameter(DIScope Scope, StringRef Name, DIType Ty, llvm::Constant Val) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createTemplateValueParameter(swigCPtr,   = *(DIScope **)&Scope; ,  = StringRef(Name->Data,Name->Length);,   = *(DIType **)&Ty; ,   = *(llvm::Constant **)&Val; );
+   DITemplateValueParameter createTemplateValueParameter(DIScope Scope, StringRef Name, DIType Ty, BOOLEAN IsDefault, llvm::Constant Val) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createTemplateValueParameter(swigCPtr,   = *(DIScope **)&Scope; ,  = StringRef(Name->Data,Name->Length);,   = *(DIType **)&Ty; ,   = IsDefault ? true : false; ,   = *(llvm::Constant **)&Val; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DITemplateValueParameter, cPtr, false);
 
 
@@ -515,48 +530,58 @@ public class DIBuilder : IDisposable {
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DISubrange, cPtr, false);
 
 
-   DIGlobalVariableExpression createGlobalVariableExpression(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN isLocalToUnit, DIExpression Expr, MDNode Decl, MDTuple templateParams, uint32_t AlignInBits) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression0(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = isLocalToUnit ? true : false; ,   = *(DIExpression **)&Expr; ,   = *(MDNode **)&Decl; ,   = *(MDTuple **)&templateParams; ,   = (uint32_t)AlignInBits; );
+   DISubrange getOrCreateSubrange(Metadata Count, Metadata LowerBound, Metadata UpperBound, Metadata Stride) 
+    cPtr := M3DIBuilderRaw.DIBuilder_getOrCreateSubrange2(swigCPtr,   = *(Metadata **)&Count; ,   = *(Metadata **)&LowerBound; ,   = *(Metadata **)&UpperBound; ,   = *(Metadata **)&Stride; );
+    RETURN (cPtr = IntPtr.Zero) ? null : NEW(DISubrange, cPtr, false);
+
+
+   DIGlobalVariableExpression createGlobalVariableExpression(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN IsLocalToUnit, BOOLEAN isDefined, DIExpression Expr, MDNode Decl, MDTuple TemplateParams, uint32_t AlignInBits) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression0(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = IsLocalToUnit ? true : false; ,   = isDefined ? true : false; ,   = *(DIExpression **)&Expr; ,   = *(MDNode **)&Decl; ,   = *(MDTuple **)&TemplateParams; ,   = (uint32_t)AlignInBits; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIGlobalVariableExpression, cPtr, false);
 
 
-   DIGlobalVariableExpression createGlobalVariableExpression(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN isLocalToUnit, DIExpression Expr, MDNode Decl, MDTuple templateParams) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression1(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = isLocalToUnit ? true : false; ,   = *(DIExpression **)&Expr; ,   = *(MDNode **)&Decl; ,   = *(MDTuple **)&templateParams; );
+   DIGlobalVariableExpression createGlobalVariableExpression(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN IsLocalToUnit, BOOLEAN isDefined, DIExpression Expr, MDNode Decl, MDTuple TemplateParams) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression1(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = IsLocalToUnit ? true : false; ,   = isDefined ? true : false; ,   = *(DIExpression **)&Expr; ,   = *(MDNode **)&Decl; ,   = *(MDTuple **)&TemplateParams; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIGlobalVariableExpression, cPtr, false);
 
 
-   DIGlobalVariableExpression createGlobalVariableExpression(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN isLocalToUnit, DIExpression Expr, MDNode Decl) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression2(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = isLocalToUnit ? true : false; ,   = *(DIExpression **)&Expr; ,   = *(MDNode **)&Decl; );
+   DIGlobalVariableExpression createGlobalVariableExpression(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN IsLocalToUnit, BOOLEAN isDefined, DIExpression Expr, MDNode Decl) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression2(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = IsLocalToUnit ? true : false; ,   = isDefined ? true : false; ,   = *(DIExpression **)&Expr; ,   = *(MDNode **)&Decl; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIGlobalVariableExpression, cPtr, false);
 
 
-   DIGlobalVariableExpression createGlobalVariableExpression(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN isLocalToUnit, DIExpression Expr) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression3(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = isLocalToUnit ? true : false; ,   = *(DIExpression **)&Expr; );
+   DIGlobalVariableExpression createGlobalVariableExpression(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN IsLocalToUnit, BOOLEAN isDefined, DIExpression Expr) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression3(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = IsLocalToUnit ? true : false; ,   = isDefined ? true : false; ,   = *(DIExpression **)&Expr; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIGlobalVariableExpression, cPtr, false);
 
 
-   DIGlobalVariableExpression createGlobalVariableExpression(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN isLocalToUnit) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression4(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = isLocalToUnit ? true : false; );
+   DIGlobalVariableExpression createGlobalVariableExpression(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN IsLocalToUnit, BOOLEAN isDefined) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression4(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = IsLocalToUnit ? true : false; ,   = isDefined ? true : false; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIGlobalVariableExpression, cPtr, false);
 
 
-   DIGlobalVariable createTempGlobalVariableFwdDecl(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN isLocalToUnit, MDNode Decl, MDTuple templateParams, uint32_t AlignInBits) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createTempGlobalVariableFwdDecl0(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = isLocalToUnit ? true : false; ,   = *(MDNode **)&Decl; ,   = *(MDTuple **)&templateParams; ,   = (uint32_t)AlignInBits; );
+   DIGlobalVariableExpression createGlobalVariableExpression(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN IsLocalToUnit) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createGlobalVariableExpression5(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = IsLocalToUnit ? true : false; );
+    RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIGlobalVariableExpression, cPtr, false);
+
+
+   DIGlobalVariable createTempGlobalVariableFwdDecl(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN IsLocalToUnit, MDNode Decl, MDTuple TemplateParams, uint32_t AlignInBits) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createTempGlobalVariableFwdDecl0(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = IsLocalToUnit ? true : false; ,   = *(MDNode **)&Decl; ,   = *(MDTuple **)&TemplateParams; ,   = (uint32_t)AlignInBits; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIGlobalVariable, cPtr, false);
 
 
-   DIGlobalVariable createTempGlobalVariableFwdDecl(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN isLocalToUnit, MDNode Decl, MDTuple templateParams) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createTempGlobalVariableFwdDecl1(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = isLocalToUnit ? true : false; ,   = *(MDNode **)&Decl; ,   = *(MDTuple **)&templateParams; );
+   DIGlobalVariable createTempGlobalVariableFwdDecl(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN IsLocalToUnit, MDNode Decl, MDTuple TemplateParams) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createTempGlobalVariableFwdDecl1(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = IsLocalToUnit ? true : false; ,   = *(MDNode **)&Decl; ,   = *(MDTuple **)&TemplateParams; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIGlobalVariable, cPtr, false);
 
 
-   DIGlobalVariable createTempGlobalVariableFwdDecl(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN isLocalToUnit, MDNode Decl) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createTempGlobalVariableFwdDecl2(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = isLocalToUnit ? true : false; ,   = *(MDNode **)&Decl; );
+   DIGlobalVariable createTempGlobalVariableFwdDecl(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN IsLocalToUnit, MDNode Decl) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createTempGlobalVariableFwdDecl2(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = IsLocalToUnit ? true : false; ,   = *(MDNode **)&Decl; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIGlobalVariable, cPtr, false);
 
 
-   DIGlobalVariable createTempGlobalVariableFwdDecl(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN isLocalToUnit) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createTempGlobalVariableFwdDecl3(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = isLocalToUnit ? true : false; );
+   DIGlobalVariable createTempGlobalVariableFwdDecl(DIScope Context, StringRef Name, StringRef LinkageName, DIFile File, CARDINAL LineNo, DIType Ty, BOOLEAN IsLocalToUnit) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createTempGlobalVariableFwdDecl3(swigCPtr,   = *(DIScope **)&Context; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(LinkageName->Data,LinkageName->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; ,   = *(DIType **)&Ty; ,   = IsLocalToUnit ? true : false; );
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIGlobalVariable, cPtr, false);
 
 
@@ -735,8 +760,23 @@ public class DIBuilder : IDisposable {
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DINamespace, cPtr, false);
 
 
-   DIModule createModule(DIScope Scope, StringRef Name, StringRef ConfigurationMacros, StringRef IncludePath, StringRef ISysRoot) 
-    cPtr := M3DIBuilderRaw.DIBuilder_createModule(swigCPtr,   = *(DIScope **)&Scope; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(ConfigurationMacros->Data,ConfigurationMacros->Length);,  = StringRef(IncludePath->Data,IncludePath->Length);,  = StringRef(ISysRoot->Data,ISysRoot->Length););
+   DIModule createModule(DIScope Scope, StringRef Name, StringRef ConfigurationMacros, StringRef IncludePath, StringRef APINotesFile, DIFile File, CARDINAL LineNo) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createModule0(swigCPtr,   = *(DIScope **)&Scope; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(ConfigurationMacros->Data,ConfigurationMacros->Length);,  = StringRef(IncludePath->Data,IncludePath->Length);,  = StringRef(APINotesFile->Data,APINotesFile->Length);,   = *(DIFile **)&File; ,   = (unsigned int)LineNo; );
+    RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIModule, cPtr, false);
+
+
+   DIModule createModule(DIScope Scope, StringRef Name, StringRef ConfigurationMacros, StringRef IncludePath, StringRef APINotesFile, DIFile File) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createModule1(swigCPtr,   = *(DIScope **)&Scope; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(ConfigurationMacros->Data,ConfigurationMacros->Length);,  = StringRef(IncludePath->Data,IncludePath->Length);,  = StringRef(APINotesFile->Data,APINotesFile->Length);,   = *(DIFile **)&File; );
+    RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIModule, cPtr, false);
+
+
+   DIModule createModule(DIScope Scope, StringRef Name, StringRef ConfigurationMacros, StringRef IncludePath, StringRef APINotesFile) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createModule2(swigCPtr,   = *(DIScope **)&Scope; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(ConfigurationMacros->Data,ConfigurationMacros->Length);,  = StringRef(IncludePath->Data,IncludePath->Length);,  = StringRef(APINotesFile->Data,APINotesFile->Length););
+    RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIModule, cPtr, false);
+
+
+   DIModule createModule(DIScope Scope, StringRef Name, StringRef ConfigurationMacros, StringRef IncludePath) 
+    cPtr := M3DIBuilderRaw.DIBuilder_createModule3(swigCPtr,   = *(DIScope **)&Scope; ,  = StringRef(Name->Data,Name->Length);,  = StringRef(ConfigurationMacros->Data,ConfigurationMacros->Length);,  = StringRef(IncludePath->Data,IncludePath->Length););
     RETURN (cPtr = IntPtr.Zero) ? null : NEW(DIModule, cPtr, false);
 
 
