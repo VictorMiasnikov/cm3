@@ -339,8 +339,8 @@ PROCEDURE InitWidechar (s: Builder.State) =
       THEN 
         NoteWidecharUni ();
       ELSE (* Hardcoded default of last resort: *) 
-        (* Default case: 16-bit WIDECHAR. *) 
-        NoteWidechar16 ();
+        (* Default case: Unicode WIDECHAR. I.e. -- in any case *)
+        NoteWidecharUni ();
       END; 
     END; 
   END InitWidechar; 

@@ -7,6 +7,7 @@
 %-------------------------------------------------------------------
 
 readonly TARGET = "I386_NT" % code generation target
+if not defined("Unicode_WIDECHAR") Unicode_WIDECHAR = "TRUE" end
 
 %-------------------------------------------------------------------
 
