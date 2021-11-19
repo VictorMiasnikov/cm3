@@ -371,7 +371,7 @@ CONST
      This could become FALSE again, if the backend learns of jmp_buf,
      and jmp_buf is again embedded in the larger structs and m3front
      does not do that layout. *)
-  Alloca_jmpbuf = TRUE;
+  Alloca_jmpbuf = FALSE;
 
   (* If Alloca_jmpbuf = FALSE, then this is the size of a jmp_buf.
      If Alloca_jmpbuf = TRUE, then this is not used. *)
