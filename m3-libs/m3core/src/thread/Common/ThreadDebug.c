@@ -59,10 +59,12 @@ static unsigned __int64
 __cdecl
 ReadTimeStampCounter(void)
 {
+    /* VVM: temporary disabled for I386_MINGW 
     __asm {
         _emit 0xF
         _emit 0x31
     }
+    */
 }
 #else
 static unsigned BogusTimeStampCounter;

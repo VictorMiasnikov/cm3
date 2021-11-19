@@ -512,9 +512,9 @@ m3back_flags += "-gstabs+"
 %
 % Don't depend on cygwin1.dll.
 %
-if equal(OS_TYPE, "WIN32")
-    m3back_flags += "-mno-cygwin"
-end
+%%% VVM: disabled for I386_MINGW %%%if equal(OS_TYPE, "WIN32")
+%%% VVM: disabled for I386_MINGW %%%    m3back_flags += "-mno-cygwin"
+%%% VVM: disabled for I386_MINGW %%%end
 
 m3back_optimize = [ ]
 m3back_optimize += "-O"

@@ -597,7 +597,7 @@ class PackageAction(WithCm3):
         ]
 
         if self.use_c_backend():
-            defines.append(f"-DM3_BACKEND_MODE=C")
+            defines.append(f"-DM3_BACKEND_MODE=0")
 
         return defines + self.cm3().defines()
 
