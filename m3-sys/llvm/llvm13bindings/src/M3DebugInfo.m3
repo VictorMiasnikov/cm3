@@ -415,6 +415,7 @@ PROCEDURE CreateEnumerationType (Builder    : BuilderRef;
     RETURN result;
   END CreateEnumerationType;
 
+(* VVM:
 PROCEDURE CreateSetType (Builder    : BuilderRef;
                          Scope      : MetadataRef;
                          Name       : TEXT;
@@ -435,7 +436,9 @@ PROCEDURE CreateSetType (Builder    : BuilderRef;
     M3toC.FreeSharedS(Name, arg3);
     RETURN result;
   END CreateSetType;
+*)
 
+(* VVM:
 PROCEDURE GetSubrangeConst (Builder          : BuilderRef;
                             Scope            : MetadataRef;
                             Name             : TEXT;
@@ -454,7 +457,9 @@ PROCEDURE GetSubrangeConst (Builder          : BuilderRef;
     M3toC.FreeSharedS(Name, arg3);
     RETURN result;
   END GetSubrangeConst;
+*)
 
+(* VVM:
 PROCEDURE GetSubrangeExpr (Builder                        : BuilderRef;
                            Scope                          : MetadataRef;
                            Name                           : TEXT;
@@ -472,6 +477,7 @@ PROCEDURE GetSubrangeExpr (Builder                        : BuilderRef;
     M3toC.FreeSharedS(Name, arg3);
     RETURN result;
   END GetSubrangeExpr;
+*)
 
 PROCEDURE CreateUnionType (Builder    : BuilderRef;
                            Scope      : MetadataRef;
@@ -517,6 +523,7 @@ PROCEDURE CreateArrayType (Builder      : BuilderRef;
              Builder, Size, AlignInBits, Ty, Subscripts, NumSubscripts);
   END CreateArrayType;
 
+(* VVM:
 PROCEDURE CreateDynamicArrayType
   (Builder                                  : BuilderRef;
    Size                                     : uint64_t;
@@ -531,6 +538,7 @@ PROCEDURE CreateDynamicArrayType
              Builder, Size, AlignInBits, Ty, Subscripts, NumSubscripts,
              DataLocation, Associated, Allocated, Rank);
   END CreateDynamicArrayType;
+*)
 
 PROCEDURE CreateVectorType (Builder      : BuilderRef;
                             Size         : uint64_t;
@@ -1212,13 +1220,14 @@ PROCEDURE LLVMGetMetadataKind (Metadata: MetadataRef; ): CARDINAL =
     RETURN M3DebugInfoRaw.LLVMGetMetadataKind(Metadata);
   END LLVMGetMetadataKind;
 
+(* VVM:
 PROCEDURE LLVMReplaceArrays (Builder    : BuilderRef;
                              T, Elements: UNTRACED REF MetadataRef;
                              NumElements: uint;                     ) =
   BEGIN
     M3DebugInfoRaw.LLVMReplaceArrays(Builder, T, Elements, NumElements);
   END LLVMReplaceArrays;
-
+*)
 
 BEGIN
 END M3DebugInfo.

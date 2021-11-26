@@ -204,6 +204,7 @@ PROCEDURE CreateEnumerationType (Builder, Scope: ADDRESS;
                                  ClassTy       : ADDRESS;              ):
   ADDRESS;
 
+(* VVM:
 <* EXTERNAL LLVMDIBuilderCreateSetType *>
 PROCEDURE CreateSetType (Builder, Scope: ADDRESS;
                          Name          : C.char_star;
@@ -213,20 +214,25 @@ PROCEDURE CreateSetType (Builder, Scope: ADDRESS;
                          SizeInBits    : C.unsigned_long_long;
                          AlignInBits   : C.unsigned_int;
                          BaseTy        : ADDRESS;              ): ADDRESS;
+*)
 
+(* VVM:
 <* EXTERNAL LLVMDIBuilderGetSubrangeConst *>
 PROCEDURE GetSubrangeConst (Builder, Scope   : ADDRESS;
                             Name             : C.char_star;
                             NameLen          : C.unsigned_int;
                             File, BaseTy     : ADDRESS;
                             LowerBound, Count: C.long_long;    ): ADDRESS;
+*)
 
+(* VVM:
 <* EXTERNAL LLVMDIBuilderGetSubrangeExpr *>
 PROCEDURE GetSubrangeExpr (Builder, Scope: ADDRESS;
                            Name          : C.char_star;
                            NameLen       : C.unsigned_int;
                            File, BaseTy, LowerBound, Count: ADDRESS; ):
   ADDRESS;
+*)
 
 <* EXTERNAL LLVMDIBuilderCreateUnionType *>
 PROCEDURE CreateUnionType (Builder, Scope: ADDRESS;
@@ -251,6 +257,7 @@ PROCEDURE CreateArrayType (Builder      : ADDRESS;
                            Subscripts   : ADDRESS;
                            NumSubscripts: C.unsigned_int;       ): ADDRESS;
 
+(* VVM:
 <* EXTERNAL LLVMDIBuilderCreateDynamicArrayType *>
 PROCEDURE CreateDynamicArrayType
   (Builder                                  : ADDRESS;
@@ -261,7 +268,8 @@ PROCEDURE CreateDynamicArrayType
    NumSubscripts                            : C.unsigned_int;
    DataLocation, Associated, Allocated, Rank: ADDRESS;              ):
   ADDRESS;
-
+*)
+ 
 <* EXTERNAL LLVMDIBuilderCreateVectorType *>
 PROCEDURE CreateVectorType (Builder      : ADDRESS;
                             Size         : C.unsigned_long_long;
@@ -607,8 +615,10 @@ PROCEDURE LLVMInstructionSetDebugLoc (Inst, Loc: ADDRESS; );
 <* EXTERNAL LLVMGetMetadataKind *>
 PROCEDURE LLVMGetMetadataKind (Metadata: ADDRESS; ): C.unsigned_int;
 
+(* VVM:
 <* EXTERNAL LLVMReplaceArrays *>
 PROCEDURE LLVMReplaceArrays
   (Builder: ADDRESS; T, Elements: ADDRESS; NumElements: C.unsigned_int; );
+*)
 
 END M3DebugInfoRaw.
