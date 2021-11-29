@@ -6494,12 +6494,10 @@ PROCEDURE DebugObject(self : U; o : ObjectDebug) : MetadataRef =
       INC(nextMemberNo);
     END;
 
-(* VVM:
    M3DIB.LLVMReplaceArrays(self.debugRef,
       T        := ADR(heapObjectDIT),
       Elements := paramsMetadata.Data,
       NumElements := nextMemberNo);
-*)
 
 (* this should work but no
     M3DIB.LLVMMetadataReplaceAllUsesWith(
