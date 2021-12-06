@@ -8,6 +8,8 @@
 
 readonly TARGET = "I386_NT" % code generation target
 
+M3_BACKEND_MODE = "StAloneLlvmObj"
+
 %-------------------------------------------------------------------
 
 include("NT386.common")

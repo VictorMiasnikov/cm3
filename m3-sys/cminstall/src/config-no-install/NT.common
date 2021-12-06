@@ -551,7 +551,7 @@ if not defined("m3llvm")
       local args = [ "-b" ] 
 
       if debug
-        args += "-g" 
+        %%% VVM: temp-ry disabled    args += "-g" 
       end
 
       % add the target to the m3llvm call.
@@ -595,7 +595,7 @@ if not defined("llvm_backend")
       if optimize
           args += llvmback_optimize
       else
-          args += "-O0"
+          args += llvmback_optimize    %VVM  ex.: args += "-O0"
       end
       if debug
           args += llvmback_debug
