@@ -660,7 +660,7 @@ Target = Target or getenv("CM3_TARGET") or Host
 _CBackend = "c" in LowercaseArgv or "+c" in LowercaseArgv or TargetOnlyHasCBackend(Target)
 
 if _CBackend:
-    CM3_FLAGS = CM3_FLAGS + " -DM3_BACKEND_MODE=C"
+    CM3_FLAGS = CM3_FLAGS + " -DM3_BACKEND_MODE=StAloneLlvmObj"
 
 #-----------------------------------------------------------------------------
 #
