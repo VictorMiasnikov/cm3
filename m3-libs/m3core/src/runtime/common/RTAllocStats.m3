@@ -114,7 +114,7 @@ PROCEDURE InsertSiteNum (ref: REFANY;  sitetag: INTEGER) =
     addr := LOOPHOLE (ref, ADDRESS);
     hdr  := LOOPHOLE (addr - BYTESIZE(RT0.RefHeader), RTHeapRep.RefHeader);
   BEGIN
-    RT0.SetSpare (hdr, sitetag);
+    hdr^.spare := sitetag;
   END InsertSiteNum;
 
 PROCEDURE GetSite (VAR(*OUT*) site: Site;  skip: CARDINAL) =

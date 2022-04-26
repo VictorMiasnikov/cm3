@@ -24,8 +24,7 @@ REVEAL
     uid         : INTEGER;
     scc_id      : INTEGER;
     rep_id      : INTEGER;
-    (*endian neutrality checkDepth : BITS 12 FOR [-2048..2047];*)
-    checkDepth  : [-2048..2047];
+    checkDepth  : BITS 12 FOR [-2048..2047];
     checked     : M3.Flag;
     errored     : M3.Flag;
     next        : TT;   (* linked list of all types in the same module *)

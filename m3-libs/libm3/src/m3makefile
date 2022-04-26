@@ -15,11 +15,8 @@ import ("m3core")
 %----------------------------------------------- machine dependent packages ---
 
 include_dir ("os")
-
-if not defined ("M3_BOOTSTRAP") % endian neutrality: avoid bitfields
-  include_dir ("random")
-  include_dir ("uid")
-end
+include_dir ("random")
+include_dir ("uid")
 
 %--------------------------------------------- machine independent packages ---
 
@@ -36,9 +33,7 @@ include_dir ("params")
 include_dir ("property")
 include_dir ("table")
 include_dir ("atom")
-if not defined ("M3_BOOTSTRAP") % endian neutrality: avoid bitfields
-  include_dir ("sortedtable")
-end
+include_dir ("sortedtable")
 include_dir ("sort")
 include_dir ("sequence")
 include_dir ("etimer")
@@ -47,17 +42,9 @@ include_dir ("perftool")
 include_dir ("pqueue")
 include_dir ("sqrt")
 %include_dir ("config") % see m3quake/MxConfig instead
-
-if not defined ("M3_BOOTSTRAP") % endian neutrality: avoid bitfields
-  include_dir ("pickle")
-end
-
+include_dir ("pickle")
 include_dir ("text")
-
-if not defined ("M3_BOOTSTRAP") % endian neutrality: avoid bitfields
-  include_dir ("hash")
-end
-
+include_dir ("hash")
 include_dir ("resource")
 
 % m3_option ("-times")
