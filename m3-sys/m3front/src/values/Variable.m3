@@ -50,9 +50,8 @@ REVEAL
         size        : INTEGER   := 0;
         align       : AlignVal  := 0;
         cg_align    : AlignVal  := 0;
-        (* 4 bits suffices, 8 bits provides endian neutral output of C++ backend *)
-        mem_type    : BITS (*4*)8 FOR CG.Type := FIRST (CG.Type);
-        stk_type    : BITS (*4*)8 FOR CG.Type := FIRST (CG.Type);
+        mem_type    : BITS 4 FOR CG.Type := FIRST (CG.Type);
+        stk_type    : BITS 4 FOR CG.Type := FIRST (CG.Type);
         indirect    : M3.Flag   := FALSE;
         open_ok     : M3.Flag   := FALSE;
         need_addr   : M3.Flag   := FALSE;

@@ -20,9 +20,6 @@ IMPORT Word, Thread, RTThread;
 IMPORT TextLiteral AS TextLit, RTLinker, Time;
 
 FROM RT0 IMPORT Typecode, TypeDefn;
-FROM RT0 IMPORT Forwarded, GetTypecode, Dirty, Gray, Weak, MarkA, MarkB,
-                SetForwarded, SetDirty, SetGray, SetWeak, SetMarkA,
-                SetMarkB;
 TYPE TK = RT0.TypeKind;
 
 (* The allocator/garbage collector for the traced heap is an adaptation of
@@ -337,7 +334,7 @@ PROCEDURE OpenArraySize (h: RefHeader; adef: RT0.ArrayTypeDefn): CARDINAL =
 PROCEDURE ReferentSize (h: RefHeader): CARDINAL =
   VAR
     res: INTEGER;
-    tc: Typecode := GetTypecode (h);
+    tc: Typecode := h.typecode;
     def: TypeDefn;
   BEGIN
     IF tc = Fill_1_type THEN RETURN 0; END;
@@ -410,8 +407,8 @@ PROCEDURE Move (<*UNUSED*> self: Mover;  cp: ADDRESS) =
 
     (* INLINE: hdr := HeaderOf(ref); *)
     hdr := LOOPHOLE(ref - ADRSIZE(Header), RefHeader);
-    IF GetTypecode (hdr) = RT0.TextLitTypecode THEN RETURN END;
-    IF Forwarded (hdr) THEN
+    IF hdr.typecode = RT0.TextLitTypecode THEN RETURN END;
+    IF hdr.forwarded THEN
       (* if already moved, just update the reference *)
       refref^ := LOOPHOLE(ref, UNTRACED REF RefReferent)^;
       RETURN;
@@ -428,7 +425,7 @@ PROCEDURE Move (<*UNUSED*> self: Mover;  cp: ADDRESS) =
 
     IF page.nb > 1 THEN
       (* if this is a large object, just promote the pages *)
-      WITH def = RTType.Get (GetTypecode (hdr)) DO
+      WITH def = RTType.Get(hdr.typecode) DO
         IF (def.gc_map = NIL) AND (def.kind # ORD(TK.Obj))
           THEN PromotePage(page, PromoteReason.LargePure);
           ELSE PromotePage(page, PromoteReason.LargeImpure);
@@ -439,7 +436,7 @@ PROCEDURE Move (<*UNUSED*> self: Mover;  cp: ADDRESS) =
 
     (* otherwise, move the object *)
     VAR
-      def      := RTType.Get (GetTypecode (hdr));
+      def      := RTType.Get(hdr.typecode);
       dataSize := ReferentSize(hdr);
       np       : RefReferent;
     BEGIN
@@ -452,8 +449,8 @@ PROCEDURE Move (<*UNUSED*> self: Mover;  cp: ADDRESS) =
         END;
         WITH nh = HeaderOf(np) DO
           RTMisc.Copy(hdr, nh, BYTESIZE(Header) + dataSize);
-          <*ASSERT NOT Gray (nh) *>
-          SetDirty (nh, TRUE);
+          <*ASSERT NOT nh.gray*>
+          nh.dirty := TRUE;
         END;
       ELSE
         np := AllocCopy(dataSize, def.dataAlignment, impureCopy);
@@ -464,15 +461,15 @@ PROCEDURE Move (<*UNUSED*> self: Mover;  cp: ADDRESS) =
         END;
         WITH nh = HeaderOf(np) DO
           RTMisc.Copy(hdr, nh, BYTESIZE(Header) + dataSize);
-          SetGray (nh, TRUE);
-          SetDirty (nh, FALSE);
+          nh.gray := TRUE;
+          nh.dirty := FALSE;
         END;
       END;
       IF def.kind = ORD (TK.Array) THEN
         (* open array: update the internal pointer *)
         LOOPHOLE(np, UNTRACED REF ADDRESS)^ := np + def.dataSize;
       END;
-      SetForwarded (hdr, TRUE);
+      hdr.forwarded := TRUE;
       LOOPHOLE(ref, UNTRACED REF RefReferent)^ := np;
       refref^ := np;
     END;
@@ -493,7 +490,7 @@ PROCEDURE Moved (ref: RefReferent): BOOLEAN =
 
     (* INLINE: hdr := HeaderOf(ref); *)
     hdr := LOOPHOLE(ref - ADRSIZE(Header), RefHeader);
-    IF GetTypecode (hdr) = RT0.TextLitTypecode THEN RETURN TRUE END;
+    IF hdr.typecode = RT0.TextLitTypecode THEN RETURN TRUE END;
 
     (* INLINE: p := ReferentToPage(ref); *)
     p := Word.RightShift (LOOPHOLE(ref, INTEGER), LogBytesPerPage);
@@ -506,7 +503,7 @@ PROCEDURE Moved (ref: RefReferent): BOOLEAN =
     IF page.desc.space # Space.Previous THEN RETURN TRUE END;
 
     (* check the forwarded bit *)
-    RETURN Forwarded (hdr);
+    RETURN hdr.forwarded;
   END Moved;
 
 (* When an allocated page is referenced by the stack, we have to move it to
@@ -599,11 +596,11 @@ PROCEDURE GrayBetween (h, he: RefHeader; r: PromoteReason) =
   BEGIN
     WHILE h < he DO
       <* ASSERT Word.And (LOOPHOLE (h, INTEGER), 3) = 0 *>
-      <* ASSERT NOT Forwarded (h) *>
+      <* ASSERT NOT h.forwarded *>
       IF h^ # FillHeader1 AND h^ # FillHeaderN THEN
-        IF r # PromoteReason.OldImpure OR Dirty (h) THEN
-          SetDirty (h, FALSE);
-          SetGray (h, TRUE);
+        IF r # PromoteReason.OldImpure OR h.dirty THEN
+          h.dirty := FALSE;
+          h.gray := TRUE;
         END;
       END;
       INC(h, ADRSIZE(Header) + ReferentSize(h));
@@ -1097,16 +1094,16 @@ PROCEDURE CleanBetween (h, he: RefHeader; clean: BOOLEAN) =
   BEGIN
     WHILE h < he DO
       <* ASSERT Word.And (LOOPHOLE (h, INTEGER), 3) = 0 *>
-      <* ASSERT NOT Forwarded (h) *>
+      <* ASSERT NOT h.forwarded *>
       IF h^ # FillHeader1 AND h^ # FillHeaderN THEN
-        IF Gray (h) THEN
-          <*ASSERT NOT Dirty (h) *>
-          SetMarkA (h, FALSE);
-          SetMarkB (h, FALSE);
+        IF h.gray THEN
+          <*ASSERT NOT h.dirty*>
+          h.marka := FALSE;
+          h.markb := FALSE;
           RTHeapMap.WalkRef (h, mover);
-          SetGray (h, FALSE);
+          h.gray := FALSE;
         END;
-        SetDirty (h, NOT clean);
+        h.dirty := NOT clean;
       END;
       INC(h, ADRSIZE(Header) + ReferentSize(h));
     END;
@@ -1156,20 +1153,20 @@ PROCEDURE PreHandleWeakRefs () =
             (* we haven't seen this WRNNC object before *)
             VAR header := HeaderOf(LOOPHOLE(entry.r, ADDRESS));
             BEGIN
-              IF NOT MarkA (header) THEN
-                <* ASSERT NOT MarkB (header) *>
+              IF NOT header.marka THEN
+                <* ASSERT NOT header.markb *>
                 (* visit all old-space objects reachable from it; promote
                    all other old-space WRNNC objects reachable from it;
                    promote all old-space objects reachable from it that
                    have "marka" set.  mark all visited nodes with
                    "markb". *)
                 WeakWalk1(s, entry.r);
-                <* ASSERT NOT MarkA (header) *>
-                <* ASSERT MarkB (header) *>
+                <* ASSERT NOT header.marka *>
+                <* ASSERT header.markb *>
                 (* then change all "markb" to "marka" *)
                 WeakWalk2(s, entry.r);
-                <* ASSERT MarkA (header) *>
-                <* ASSERT NOT MarkB (header) *>
+                <* ASSERT header.marka *>
+                <* ASSERT NOT header.markb *>
               END;
             END;
           END;
@@ -1192,14 +1189,14 @@ PROCEDURE WeakWalk1 (s: Stacker; ref: RefReferent) =
       IF NOT Moved(ref) THEN
         VAR header := HeaderOf(ref);
         BEGIN
-          IF MarkA (header) THEN
-            <* ASSERT NOT MarkB (header) *>
+          IF header.marka THEN
+            <* ASSERT NOT header.markb *>
             Move(NIL, ADR(ref));
-          ELSIF NOT MarkB (header) THEN
-            IF Weak (header) AND ref # ref0 THEN
+          ELSIF NOT header.markb THEN
+            IF header.weak AND ref # ref0 THEN
               Move(NIL, ADR(ref));
             ELSE
-              SetMarkB (header, TRUE);
+              header.markb := TRUE;
               RTHeapMap.WalkRef (header, s);
             END;
           END;
@@ -1220,9 +1217,9 @@ PROCEDURE WeakWalk2 (s: Stacker;  ref: RefReferent) =
       IF NOT Moved(ref) THEN
         VAR header := HeaderOf(ref);
         BEGIN
-          IF MarkB (header) THEN
-            SetMarkB (header, FALSE);
-            SetMarkA (header, TRUE);
+          IF header.markb THEN
+            header.markb := FALSE;
+            header.marka := TRUE;
             RTHeapMap.WalkRef (header, s);
           END;
         END;
@@ -1255,7 +1252,7 @@ PROCEDURE PostHandleWeakRefs () =
             (* the weak ref is dead; there are no cleanups *)
             VAR header := HeaderOf(LOOPHOLE(entry.r, ADDRESS));
             BEGIN
-              SetWeak (header, FALSE);
+              header.weak := FALSE;
             END;
             (* move the entry from the weakLive0 list into the weakDead0 or
                weakFree0 list *)
@@ -1668,9 +1665,9 @@ PROCEDURE SanityCheck (<*UNUSED*> self: MonitorClosure) =
             BEGIN
               WHILE h < he DO
                 (* check the references in the object *)
-                <* ASSERT NOT Gray (h) *>
+                <* ASSERT NOT h.gray *>
                 IF d.clean THEN
-                  <*ASSERT NOT Dirty (h) *>
+                  <*ASSERT NOT h.dirty*>
                   RTHeapMap.WalkRef (h, cleanCheck);
                 ELSE
                   RTHeapMap.WalkRef (h, refCheck);
@@ -1715,7 +1712,7 @@ PROCEDURE RefSanityCheck (<*UNUSED*>v: RTHeapMap.Visitor;  cp  : ADDRESS) =
     IF ref # NIL THEN
       VAR
         h  := HeaderOf(ref);
-        tc := GetTypecode (h);
+        tc := h.typecode;
       BEGIN
         (* the compiler generates Text.T that are not in the traced heap *)
         IF tc # RT0.TextLitTypecode THEN
@@ -1737,7 +1734,7 @@ PROCEDURE CleanOlderRefSanityCheck (<*UNUSED*> v: RTHeapMap.Visitor;
     IF ref # NIL THEN
       VAR
         h  := HeaderOf(ref);
-        tc := GetTypecode (h);
+        tc := h.typecode;
       BEGIN
         (* the compiler generates Text.T that are not in the traced heap *)
         IF tc # RT0.TextLitTypecode THEN
@@ -1826,7 +1823,7 @@ PROCEDURE VisitAllRefs (v: RefVisitor) =
               he := page + BytesPerPage;
               WHILE h < he DO
                 size := ReferentSize(h);
-                tc := GetTypecode (h);
+                tc := h.typecode;
                 IF tc # Fill_1_type AND tc # Fill_N_type THEN
                   IF NOT v.visit(tc, LOOPHOLE(h + ADRSIZE(Header), REFANY),
                                  size) THEN
@@ -2068,8 +2065,8 @@ PROCEDURE WeakRefFromRef (r: REFANY; p: WeakRefCleanUpProc := NIL): WeakRef =
         (* mark the object as having a weak ref with non-nil cleanup *)
         VAR header := HeaderOf(LOOPHOLE(r, ADDRESS));
         BEGIN
-          <* ASSERT NOT Weak (header) *>
-          SetWeak (header, TRUE);
+          <* ASSERT NOT header^.weak *>
+          header^.weak := TRUE;
         END;
       END;
       (* allocate a new entry *)
@@ -2240,7 +2237,7 @@ PROCEDURE CheckLoadTracedRef (ref: REFANY) =
   BEGIN
     INC(checkLoadTracedRef);		 (* race, so only approximate *)
     WITH h = HeaderOf (LOOPHOLE(ref, RefReferent)), page = PageToRef(p) DO
-      <*ASSERT GetTypecode (h) # RT0.TextLitTypecode*>
+      <*ASSERT h.typecode # RT0.TextLitTypecode*>
       TRY
         RTOS.LockHeap();
         CollectorOn();
@@ -2264,13 +2261,13 @@ PROCEDURE CheckStoreTraced (dst: REFANY) =
     WITH h = HeaderOf (LOOPHOLE(dst, RefReferent)), page = PageToRef(p) DO
       TRY
         RTOS.LockHeap();
-        <*ASSERT GetTypecode (h) # RT0.TextLitTypecode*>
-        <*ASSERT NOT Gray (h) *>
+        <*ASSERT h.typecode # RT0.TextLitTypecode*>
+        <*ASSERT NOT h.gray*>
         WITH d = page.desc DO
-          IF RT0.Dirty (h) THEN
+          IF h.dirty THEN
             <*ASSERT NOT d.clean*>
           ELSE
-            RT0.SetDirty (h, TRUE);
+            h.dirty := TRUE;
             IF d.clean THEN
               d.clean := FALSE;
               IF perfOn THEN PerfChange(page); END;

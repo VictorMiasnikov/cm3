@@ -14,8 +14,7 @@ INTERFACE M3;
 IMPORT M3Buf, Jmpbufs, M3ID;
 
 TYPE
-  (* Flag = BITS 1 FOR BOOLEAN; endian neutrality *)
-  Flag = BOOLEAN;
+  Flag = BITS 1 FOR BOOLEAN;
 
   (* an optionally module qualified name (qualified identifier) *)
   QID = RECORD

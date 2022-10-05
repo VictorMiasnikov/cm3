@@ -155,15 +155,13 @@ TYPE
 CONST
   (* 1 word filler *)
   Fill_1_type: Typecode = 0; (* = NilTypecode, for zero-filled pages *)
-VAR
-  FillHeader1: Header;
+  FillHeader1 = Header{typecode := Fill_1_type, dirty := FALSE};
 
 CONST
   (* multi-word filler, the second word is the total size of the object,
      in bytes *)
   Fill_N_type: Typecode = LAST(Typecode);
-VAR
-  FillHeaderN: Header;
+  FillHeaderN = Header{typecode := Fill_N_type, dirty := FALSE};
 
 PROCEDURE InsertFiller(start: RefHeader; n: INTEGER);
 
