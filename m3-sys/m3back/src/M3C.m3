@@ -39,6 +39,7 @@ VAR CaseDefaultAssertFalse := FALSE;
    C and the error messages reference C line numbers *)
   CONST output_line_directives = TRUE;
   CONST output_extra_newlines = FALSE;
+  CONST inline_extract = FALSE;
 
 (* ztype: zero extended type -- a "larger" type that is a multiple of 32 bits in size
  *                              a type to store in registers, a type
@@ -226,6 +227,11 @@ T = M3CG_DoNothing.T OBJECT
         call_direct := call_direct;
         start_call_indirect := start_call_indirect;
         call_indirect := call_indirect;
+        start_try := start_try;
+        end_try := end_try;
+        invoke_direct := invoke_direct;
+        invoke_indirect := invoke_indirect;
+        landing_pad := landing_pad;
         pop_param := pop_param;
         pop_struct := pop_struct;
         pop_static_link := pop_static_link;
@@ -1912,6 +1918,7 @@ CONST IntegerToTypeid = SignExtend32;
 CONST UID_INTEGER = 16_195C2A74; (* INTEGER *)
 CONST UID_LONGINT = 16_05562176; (* LONGINT *)
 VAR UID_WORD := IntegerToTypeid(16_97E237E2); (* CARDINAL *)
+(*VAR UID_LONGWORD := IntegerToTypeid(16_9CED36E7); LONGCARD *)
 CONST UID_REEL = 16_48E16572; (* REAL *)
 VAR UID_LREEL := IntegerToTypeid(16_94FE32F6); (* LONGREAL *)
 VAR UID_XREEL := IntegerToTypeid(16_9EE024E3); (* EXTENDED *)
@@ -1924,7 +1931,27 @@ VAR UID_UNTRACED_ROOT := IntegerToTypeid(16_898EA789); (* UNTRACED ROOT *)
 VAR UID_ROOT := IntegerToTypeid(16_9D8FB489); (* ROOT *)
 CONST UID_REFANY = 16_1C1C45E6; (* REFANY *)
 CONST UID_ADDR = 16_08402063; (* ADDRESS *)
+(*VAR UID_RANGE_0_31 := 16_2DA6581D; [0..31] *)
+(*VAR UID_RANGE_0_63 := 16_2FA3581D; [0..63] *)
+VAR UID_PROC1 := IntegerToTypeid(16_9C9DE465); (* PROCEDURE (x, y: INTEGER): INTEGER *)
+CONST UID_PROC2 = 16_20AD399F; (* PROCEDURE (x, y: INTEGER): BOOLEAN *)
+(*CONST UID_PROC3 = 16_3CE4D13B;*) (* PROCEDURE (x: INTEGER): INTEGER *)
+VAR UID_PROC4 :=  IntegerToTypeid(16_FA03E372); (* PROCEDURE (x, n: INTEGER): INTEGER *)
+CONST UID_PROC5 = 16_509E4C68; (* PROCEDURE (x: INTEGER;  n: [0..31]): INTEGER *)
+VAR UID_PROC6 := IntegerToTypeid(16_DC1B3625); (* PROCEDURE (x: INTEGER;  n: [0..63]): INTEGER *)
+VAR UID_PROC7 := IntegerToTypeid(16_EE17DF2C); (* PROCEDURE (x: INTEGER;  i, n: CARDINAL): INTEGER *)
+VAR UID_PROC8 := IntegerToTypeid(16_B740EFD0); (* PROCEDURE (x, y: INTEGER;  i, n: CARDINAL): INTEGER *)
 CONST UID_NULL = 16_48EC756E; (* NULL *) (* Occurs in elego/graphicutils/src/RsrcFilter.m3 *)
+
+(* Ctypes.i3.c suggests:
+CONST UID_INT8   = 16_66A2A904;
+CONST UID_INT16  = 16_7300E1E8;
+ VAR UID_INT32  := IntegerToTypeid(16_ADC6066D);
+ VAR UID_INT64  := IntegerToTypeid(16_839F750E);
+CONST UID_UINT8  = 16_B5B30AA;
+ VAR UID_UINT16 := IntegerToTypeid(16_A4B285DE);
+CONST UID_UINT32 = 16_6FA2E87D; only on 64bit system, else use UID_INT32 or UID_WORD
+*)
 
 TYPE ExprType = {
     Invalid,
@@ -2210,7 +2237,6 @@ TYPE Var_t = M3CG.Var OBJECT
     name: Name := 0;
     name_in_frame: Name := 0; (* if up_level, e.g. ".block1.foo" *)
     cgtype: CGType;
-    type: Type_t := NIL;
     typeid: TypeUID := -1;
     points_to_cgtype: CGType; (* future *)
     type_text: TEXT := NIL; (* TODO replace with type:Type_t.text *)
@@ -2224,9 +2250,6 @@ TYPE Var_t = M3CG.Var OBJECT
     next_in_block: Var_t := NIL;
     proc: Proc_t := NIL;
     block: Block_t := NIL;
-    initAll := FALSE;
-    store   := FALSE; (* has a store been seen, i.e. before a load? *)
-    loadBeforeStore := FALSE;
 
     METHODS
         Declare(): TEXT := Var_Declare;
@@ -2461,31 +2484,22 @@ CONST Prefix = ARRAY OF TEXT {
 "#define m3_xor(T, x, y) (((T)(x)) ^ ((T)(y)))",
 
 (* Helper needed by `loophole` because m3front does not guarantee that
- * `u` will be an rvalue.
- * Class vs. typename, C-style cast vs. reinterpret_cast to cater
- * to older compilers. (The main value of targeting C++ instead of C
- * is portable optimized exception handling.)
- *)
-"template<class T, class U> inline T m3_loophole(U u) { return *(T*)&u; }",
+`u` will be an rvalue. *)
+"template<typename T, typename U> inline T m3_loophole(U u) { return *reinterpret_cast<T*>(&u); }",
 
 "#ifdef _MSC_VER",
 "#define _CRT_SECURE_NO_DEPRECATE 1",
 "#define _CRT_NONSTDC_NO_DEPRECATE 1",
-"// pragma warming(error) is documented as turning a diagnostic into an error but as of year2022 it does not work.",
-"// Error 4739 catches m3front problems. See M3CG_MultiPass.TypeVersusSize.",
-"#pragma warning(error:4739)   // reference to variable exceeds its storage space",
 "#pragma warning(disable:4616) /* there is no warning x (unavoidable if targeting multiple compiler versions) */",
 "#pragma warning(disable:4619) /* there is no warning x (unavoidable if targeting multiple compiler versions) */",
 "#pragma warning(disable:4100) /* unused parameter */",
 "#pragma warning(disable:4115) /* named type definition in parentheses */",
 "#pragma warning(disable:4127) /* conditional expression is constant */",
-"#pragma warning(disable:4146) /* unary minus operator applied to unsigned type, result still unsigned */",
 "#pragma warning(disable:4201) /* nonstandard extension: nameless struct/union */",
 "#pragma warning(disable:4214) /* nonstandard extension: bitfield other than int */",
 "#pragma warning(disable:4209) /* nonstandard extension: benign re-typedef */",
 "#pragma warning(disable:4226) /* nonstandard extension: __export */",
 "#pragma warning(disable:4242) /* 'return': conversion from '' to '', possible loss of data */",
-"#pragma warning(disable:4244) /* 'return': conversion from '' to '', possible loss of data */",
 "#pragma warning(disable:4255) /* () change to (void) */",
 "#pragma warning(disable:4310) /* cast truncates constant value */", (* TODO fix these UINT64/INT64 confusion *)
 "#pragma warning(disable:4514) /* unused inline function removed */",
@@ -2495,9 +2509,6 @@ CONST Prefix = ARRAY OF TEXT {
 "#pragma warning(disable:4716) /* must return a value */",
 "#pragma warning(disable:4820) /* padding inserted */",
 "#pragma warning(disable:5045) /* Compiler will insert Spectre mitigation for memory load if /Qspectre switch specified */", (* TODO fix *)
-"",
-"#pragma warning(error:4700)   // unitialized local variable used",
-"",
 "#endif",
 (* TODO ideally these are char* for K&R or ideally absent when strong
    typing and setjmp work done *)
@@ -2584,13 +2595,13 @@ CONST Prefix = ARRAY OF TEXT {
 "extern \"C\" {",
 "#endif",
 
-(* see m3core.h for more about cdecl/stdcall *)
-"#if !defined(_WIN32) && !defined(__CYGWIN__)",
-"#undef __cdecl",
-"#undef __stdcall",
+"#if !defined(_MSC_VER) && !defined(__cdecl)",
 "#define __cdecl /* nothing */",
+"#endif",
+"#if !defined(_MSC_VER) && !defined(__stdcall)",
 "#define __stdcall /* nothing */",
 "#endif",
+
 "#define STRUCT(n) struct_##n##_t", (* TODO prune if not used *)
 (* TODO struct1 and struct2 should not be needed.
    struct4 and struct8 can go away when we make open arrays and jmpbufs
@@ -2972,10 +2983,6 @@ BEGIN
     type.base_text := "INTEGER"; (* more readable output (fewer hashes) *)
     type.text := "INTEGER"; (* more readable output (fewer hashes) *)
 
-    (* TODO: We do not have to define UID_WORD ourselves. m3front describes
-     * it as a subrange of INTEGER. But we rename it or readability,
-     * and maybe we have the signedness wrong.
-     *)
     type := NEW (Integer_t, class := "Integer_t", self := self, state := Type_State.CanBeDefined, cgtype := Target.Word.cg_type, typeid := UID_WORD);
     self.Type_Init (type);
     EVAL declare_typename_no_replace (self, type.typeid, M3ID.Add ("WORD_T")); (* TODO rename this? *)
@@ -3011,10 +3018,7 @@ BEGIN
     type.base_text := "double"; (* more readable output (fewer hashes) *)
     type.text := "double"; (* more readable output (fewer hashes) *)
 
-    (* TODO: We do not have to predeclare BOOLEAN, m3front provides it.
-     * But after it is declared, we should find it and rename it.
-     * We might need to rename the members, or do not let them be defined.
-     *)
+(* Enum_t? *)
     type := NEW (Integer_t, class := "Integer_t", self := self, state := Type_State.CanBeDefined, cgtype := Target.Word8.cg_type, typeid := UID_BOOLEAN (* ,max := IntToTarget(self, 1), *));
     self.Type_Init (type);
     EVAL declare_typename_replace (self, type.typeid, M3ID.Add ("BOOLEAN"));
@@ -3022,10 +3026,6 @@ BEGIN
     type.base_text := "BOOLEAN"; (* more readable output (fewer hashes) *)
     type.text := "BOOLEAN"; (* more readable output (fewer hashes) *)
 
-    (* TODO: We do not have to predeclare CHAR, m3front provides it.
-     * We should tolerate enums that get no elements defined.
-     * But after it is declared, we should find it and rename it.
-     *)
     type := NEW(Integer_t, class := "Integer_t", self := self, state := Type_State.CanBeDefined, cgtype := Target.Word8.cg_type, typeid := UID_CHAR (* ,max := IntToTarget(self, 16_FF), *));
     self.Type_Init (type);
     EVAL declare_typename_replace (self, type.typeid, M3ID.Add("UCHAR"));
@@ -3049,25 +3049,33 @@ BEGIN
       END;
     END;
 
-    (* TODO: We do not have to predeclare WIDECHAR, m3front provides it.
-     * We should tolerate enums that get no elements defined.
-     * But after it is declared, we should find it and rename it.
-     *)
+(* Enum_t? *)
     type := NEW (Integer_t, class := "Integer_t", self := self, state := Type_State.CanBeDefined, cgtype := widechar_target_type,
                  typeid := UID_WIDECHAR, (* max := IntToTarget(self, widechar_last), *) text := "WIDECHAR");
     self.Type_Init (type);
+
+    (* self.declareTypes.declare_subrange(UID_RANGE_0_31, UID_INTEGER, TInt.Zero, IntToTarget(self, 31), Target.Integer.size); *)
+    (* self.declareTypes.declare_subrange(UID_RANGE_0_63, UID_INTEGER, TInt.Zero, IntToTarget(self, 63), Target.Integer.size); *)
 
     TYPE AddressTypeInit_t = RECORD
         typeid: TypeUID := 0;
         text: TEXT := NIL;
     END;
-    VAR addressTypes := ARRAY [0..6] OF AddressTypeInit_t {
+    VAR addressTypes := ARRAY [0..13] OF AddressTypeInit_t {
         AddressTypeInit_t {UID_MUTEX, "MUTEX"},
         AddressTypeInit_t {UID_TEXT, "TEXT"},
         AddressTypeInit_t {UID_ROOT, "ROOT"},
         AddressTypeInit_t {UID_UNTRACED_ROOT, "UNTRACED_ROOT"},
         AddressTypeInit_t {UID_REFANY, "REFANY"},
         AddressTypeInit_t {UID_ADDR, Text_address},
+        AddressTypeInit_t {UID_PROC1, "PROC1"},
+        AddressTypeInit_t {UID_PROC2, "PROC2"},
+        (*AddressTypeInit_t {UID_PROC3, "PROC3"},*)
+        AddressTypeInit_t {UID_PROC4, "PROC4"},
+        AddressTypeInit_t {UID_PROC5, "PROC5"},
+        AddressTypeInit_t {UID_PROC6, "PROC6"},
+        AddressTypeInit_t {UID_PROC7, "PROC7"},
+        AddressTypeInit_t {UID_PROC8, "PROC8"},
         AddressTypeInit_t {UID_NULL, "M3_NULL_T"}
     };
     BEGIN
@@ -3972,7 +3980,7 @@ BEGIN
         "#include <setjmp.h>\n" &
         "#if defined(_WIN32) || defined(__CYGWIN__) || defined(__MINGW__)\n" &
         "#define m3_setjmp(env) (setjmp(env))\n" &
-        "#elif defined(__sun) || defined(__DJGPP__)\n" &
+        "#elif defined(__sun)\n" &
         "#define m3_setjmp(env) (sigsetjmp((env), 0))\n" &
         "#else\n" &
         "#define m3_setjmp(env) (_setjmp(env))\n" &
@@ -4198,59 +4206,9 @@ BEGIN
     RETURN var;
 END DeclareGlobal;
 
-(* pass: MarkUsed
- *
- * frontend creates unreferenced labels, that gcc -Wall complains about;
- * the point of this pass is to mark which labels are actually used,
- * so that later set_label ignores unused labels
- *
- * frontend creates unreferenced variables, that gcc -Wall complains about;
- * the point of this pass is to mark which variables are actually used,
- * so that later code ignores unused variables
- *
- * pass: ReadBeforeWrite, merged with MarkUsed
- *
- * Some variables are read before they are written.
- * This is not as bad as it sounds. It is related to bitfields.
- * Entire variable is read, bits inserted, and then later
- * only those bits are read. So at the bit level, there
- * is no use of uninitialized data.
- *
- * For now, we initialize such variables to avoid warning/error
- * from C++ compiler.
- *
- * In future we should model Modula3 bitfields as C++ bitfields.
- *
- * i.e.
- * prior:
- *   const unsigned width = 20;
- *   const unsigned offset = 0;
- *   unsigned foo;
- *   foo = insert(other, foo, width, offset);
- *   extract(foo, width, offset)
- *
- * currently:
- *   unsigned foo={0}; //workaround
- *   foo = insert(other, foo, width, offset); //same
- *   extract(foo, width, offset) // same
- *
- * later:
- *   struct {
- *     unsigned value:width;
- *   } foo;
- *
- *   foo.value = other;
- *   foo;
- *
- * TODO: Doing this only for packed types would make sense but did not work.
- * This knowingly imagines the IR runs in order, without branches around.
- *)
-PROCEDURE MarkUsed_var(var: Var_t) =
+PROCEDURE MarkUsed_var(var: M3CG.Var) =
 BEGIN
-    var.used := TRUE;
-    IF NOT var.store THEN
-      var.loadBeforeStore := TRUE;
-    END;
+    NARROW(var, Var_t).used := TRUE;
 END MarkUsed_var;
 
 PROCEDURE MarkUsed_load(
@@ -4268,23 +4226,16 @@ PROCEDURE MarkUsed_load_address(
     var: M3CG.Var;
     <*UNUSED*>offset: ByteOffset) =
 BEGIN
-    (* LoadAddress is ambiguous as to if heading for load or a store.
-     * We unfortunately conservatively assume load.
-     * TODO: IR should have load_address_for_store and load_address_for_load.
-     * though really loadBeforeStore should be removed.
-     *)
     MarkUsed_var(var);
 END MarkUsed_load_address;
 
 PROCEDURE MarkUsed_store(
     <*UNUSED*>self: MarkUsed_t;
-    v: M3CG.Var;
+    var: M3CG.Var;
     <*UNUSED*>offset: ByteOffset;
     <*UNUSED*>ztype: ZType;
     <*UNUSED*>mtype: MType) =
-VAR var := NARROW(v, Var_t);
 BEGIN
-    var.store := TRUE;
     MarkUsed_var(var);
 END MarkUsed_store;
 
@@ -4301,11 +4252,20 @@ TYPE MarkUsed_t = M3CG_DoNothing.T OBJECT
     labels_min := LAST(Label);
     labels_max := FIRST(Label);
 OVERRIDES
+(* frontend creates unreferenced labels, that gcc -Wall complains about;
+   the point of this pass is to mark which labels are actually used,
+   so that later set_label ignores unused labels
+*)
     jump := MarkUsed_label;
     if_true := MarkUsed_if_true;
     if_false := MarkUsed_if_true;
     if_compare := MarkUsed_if_compare;
     case_jump := MarkUsed_case_jump;
+
+(* frontend creates unreferenced variables, that gcc -Wall complains about;
+   the point of this pass is to mark which variables are actually used,
+   so that later code ignores unused variables
+*)
     load := MarkUsed_load;
     load_address := MarkUsed_load_address;
     store := MarkUsed_store;
@@ -4423,8 +4383,6 @@ BEGIN
 
    x.comment("end: mark used");
 END MarkUsed;
-
-(* endpass: MarkUsed *)
 
 TYPE Segments_t = M3CG_DoNothing.T OBJECT
 (* The goal of this pass is to build up segments/globals before they are used.
@@ -4586,15 +4544,15 @@ BEGIN
 END HelperFunctions;
 
 (* Helper functions are only output if needed, to avoid warnings about unused functions.
- * This pass determines which helper functions are needed and outputs them. *)
+ * This pass determines which helper functions are neded and outputs them. *)
 TYPE HelperFunctions_t = M3CG_DoNothing.T OBJECT
     self: T := NIL;
     data: RECORD
         pos, floor, ceil, fence,
-        set_le, set_lt, extract := FALSE;
+        set_le, set_lt, extract_inline := FALSE;
         cvt_int := ARRAY ConvertOp OF BOOLEAN{FALSE, ..};
         shift, rotate, rotate_left, rotate_right, div, mod, min, max, abs,
-        insert, sign_extend, pop, check_range, xor := SET OF CGType{};
+        extract, insert, sign_extend, pop, check_range, xor := SET OF CGType{};
         compare := ARRAY CompareOp OF SET OF CGType{ SET OF CGType{}, .. };
     END;
 METHODS
@@ -4757,7 +4715,7 @@ PROCEDURE HelperFunctions_cvt_int(self: HelperFunctions_t; <*UNUSED*>rtype: RTyp
 CONST text = ARRAY ConvertOp OF TEXT{
 
     "#ifndef m3_round\n#define m3_round m3_round\n"
-    & "#ifdef _WIN32 /* temporary workaround */\n"
+    & "#ifdef _WIN64 /* temporary workaround */\n"
     & "static INT64 __stdcall m3_round(EXTENDED f) { return (INT64)f; }\n"
     & "#else\n"
     & "INT64 __cdecl llroundl(long double);\nstatic INT64 __stdcall m3_round(EXTENDED f) { return (INT64)llroundl(f); }\n"
@@ -4814,10 +4772,15 @@ BEGIN
 END HelperFunctions_rotate_right;
 
 PROCEDURE HelperFunctions_extract(self: HelperFunctions_t; type: IType; sign_extend: BOOLEAN) =
-CONST text = "#define m3_extract(T, value, offset, count) ((((T)(value))>>((WORD_T)(offset)))&~(((~(T)0))<<((WORD_T)(count))))";
+CONST text = "#define m3_extract_T(T) static T __stdcall m3_extract_##T(T value,WORD_T offset,WORD_T count){return((value>>offset)&~(((~(T)0))<<count));}";
+CONST text_inline = "#define m3_extract(T, value, offset, count) ((((T)value)>>((WORD_T)offset))&~(((~(T)0))<<((WORD_T)count)))";
 CONST text_sign_extend = "#define m3_sign_extend_T(T) static T __stdcall m3_sign_extend_##T(T value,WORD_T count){return(value|((value&(((T)-1)<<(count-1)))?(((T)-1)<<(count-1)):0));}";
 BEGIN
-    HelperFunctions_helper_with_boolean(self, self.data.extract, text);
+    IF inline_extract THEN
+        HelperFunctions_helper_with_boolean(self, self.data.extract_inline, text_inline);
+    ELSE
+        HelperFunctions_helper_with_type(self, "extract", typeToUnsigned[type], self.data.extract, text);
+    END;
     IF sign_extend THEN
         HelperFunctions_helper_with_type(self, "sign_extend", type, self.data.sign_extend, text_sign_extend);
     END;
@@ -4943,9 +4906,6 @@ VAR x := self.self;
 BEGIN
     x.comment("AllocateTemps_common");
     WITH t = internal_declare_temp(x, CG_Bytes[type], CG_Bytes[type], type) DO
-        (* backend generated temporaries do not get initialized by m3front. Be conservative
-           and always initialize them. *)
-        t.initAll := TRUE;
         t.used := TRUE;
         x.temp_vars[x.op_index] := t;
     END;
@@ -5280,6 +5240,7 @@ PROCEDURE declare_local(
     up_level: BOOLEAN;
     typename := M3ID.NoID): Var_t =
 VAR var: Var_t := NIL;
+    type: Type_t := NIL;
 BEGIN
     IF debug_verbose THEN
         self.comment("declare_local name:" & TextOrNil(NameT(name))
@@ -5302,16 +5263,14 @@ BEGIN
     IF up_level THEN
         self.current_proc.uplevels := TRUE;
     END;
-
-    (* TODO: This belongs in var.init *)
-    IF ResolveType(self, typeid, var.type) AND var.type # NIL AND var.type.text # NIL THEN
-        var.type_text := var.type.text;
+    IF ResolveType(self, typeid, type) AND type # NIL AND type.text # NIL THEN
+        var.type_text := type.text;
     ELSE
         IF typeid # -1 AND typeid # 0 THEN
             Err(self, "declare_local: unknown typeid:" & TypeIDToText(typeid) & " type:" & cgtypeToText[cgtype] & "\n");
         ELSE
             (* RTIO.PutText("warning: declare_local: unknown typeid:" & TypeIDToText(typeid) & " type:" & cgtypeToText[cgtype] & "\n");
-            RTIO.Flush(); *) (* TODO: this occurs frequently *)
+            RTIO.Flush(); *) (* this occurs frequently *)
         END;
     END;
     self.current_proc.locals.addhi(var);
@@ -6166,31 +6125,12 @@ BEGIN
 
     print(self, function_prototype(proc, FunctionPrototype_t.Define) & "\n{\n");
 
-    (* declare and sometimes zero non-uplevel locals (including temporaries) *)
+    (* declare and zero non-uplevel locals (including temporaries) *)
 
     FOR i := 0 TO proc.Locals_Size() - 1 DO
         WITH local = proc.Locals(i) DO
-
-            (* ASSERT local.type # NIL *) (* TODO: unfortunately not *)
-
             IF (NOT local.up_level) AND local.used THEN
-                (* backend generated locals need to be initialized
-                 * Temporarily maybe, TODO:? structs too.
-                 * TODO:? packed types need be initialized because
-                 * m3fronts reads before write.
-                 *)
-                print(self, local.Declare());
-                IF local.initAll THEN
-                  print(self, "={0};//initAll\n");
-                ELSIF local.cgtype = CGType.Struct THEN
-                  print(self, "={0};//struct\n");
-                ELSIF local.type # NIL AND local.type.isPacked() THEN
-                  print(self, "={0};//packed\n");
-                ELSIF local.loadBeforeStore THEN
-                  print(self, "={0};//loadBeforeStore\n");
-                ELSE
-                  print(self, ";\n"); (* ideal *)
-                END;
+                print(self, local.Declare() & " = { 0 };\n");
             END;
         END;
     END;
@@ -7237,7 +7177,11 @@ BEGIN
     END;
     <* ASSERT sign_extend = FALSE *>
     pop(self, 3);
-    push(self, type, CTextToExpr("m3_extract(\n " & cgtypeToText[typeToUnsigned[type]] & ",\n " & value.CText() & ",\n " & offset.CText() & ",\n " & count.CText() & ")"));
+    IF inline_extract THEN
+        push(self, type, CTextToExpr("m3_extract(\n " & cgtypeToText[typeToUnsigned[type]] & ",\n " & value.CText() & ",\n " & offset.CText() & ",\n " & count.CText() & ")"));
+    ELSE
+        push(self, type, CTextToExpr("m3_extract_" & cgtypeToText[typeToUnsigned[type]] & "(\n " & value.CText() & ",\n " & offset.CText() & ",\n " & count.CText() & ")"));
+    END;
 END extract;
 
 PROCEDURE extract_n(self: T; type: IType; sign_extend: BOOLEAN; count: CARDINAL) =
@@ -7928,6 +7872,45 @@ BEGIN
     call_helper (self, type, "((" & cgtypeToText[type] & " (__cdecl*)(" & param_types & "))" & s0.CText() & ")");
 
 END call_indirect;
+
+PROCEDURE start_try (self : T) =
+  BEGIN
+    IF debug THEN
+      self.comment("start_try");
+    END;
+  END start_try;
+
+PROCEDURE end_try (self : T) =
+  BEGIN
+    IF debug THEN
+      self.comment("end_try");
+    END;
+  END end_try;
+
+<*NOWARN*>PROCEDURE invoke_direct (self : T; p : M3CG.Proc; t : CGType; next,handler : Label) =
+  BEGIN
+    IF debug THEN
+      self.comment("invoke_direct");
+    END;
+    self.call_direct(p,t);
+  END invoke_direct;
+
+<*NOWARN*>PROCEDURE invoke_indirect (self : T; t : CGType; cc : CallingConvention; next,handler : Label) =
+  BEGIN
+    IF debug THEN
+      self.comment("invoke_indirect");
+    END;
+    self.call_indirect(t,cc);
+  END invoke_indirect;
+
+
+<*NOWARN*>PROCEDURE landing_pad (self : T; t : ZType; handler : Label; READONLY catches : ARRAY OF TypeUID) =
+  BEGIN
+    IF debug THEN
+      self.comment("landing_pad");
+    END;
+    push(self, CGType.Addr, CTextToExpr("0"));
+  END landing_pad;
 
 (*------------------------------------------- procedure and closure types ---*)
 
