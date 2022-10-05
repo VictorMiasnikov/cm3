@@ -13,7 +13,6 @@ IMPORT M3, M3ID, CG, Value, ValueRep, Type, Scope, Error, Host;
 IMPORT ProcType, Stmt, BlockStmt, Marker, Coverage, M3RT;
 IMPORT CallExpr, Token, Variable, ProcExpr, Tracer, RTIO, RTParams;
 IMPORT Scanner, Decl, ESet, ProcBody, Target, Expr, Formal, Jmpbufs;
-IMPORT Module;
 FROM Scanner IMPORT GetToken, Match, MatchID, cur;
 
 VAR debug := FALSE;
@@ -111,7 +110,6 @@ PROCEDURE ParseDecl (READONLY att: Decl.Attributes;
     Match (TK.tPROCEDURE);
     id := MatchID ();
     t := Create (id);
-    t.name := id;
     t.unused    := att.isUnused;
     t.obsolete  := att.isObsolete;
     IF (att.isExternal) THEN
@@ -154,7 +152,7 @@ PROCEDURE ParseDecl (READONLY att: Decl.Attributes;
       t.end_origin := Scanner.offset;
       final_id := MatchID ();
       IF (final_id # id) THEN
-        Error.ID (id, "Final procedure name must match Initial name (2.4.4).");
+        Error.ID (id, "Initial name doesn\'t match final name");
       END;
       Scope.PopNew ();
       ProcBody.Pop ();
@@ -293,10 +291,6 @@ PROCEDURE Check (p: T;  VAR cs: Value.CheckState) =
     (* NOTE: don't save the signature returned by Type.Check cause if
        you do, the formals will be reused by procedures with the
        same signature. *)
-
-    IF Module.IsInterface () THEN
-      Formal.NameDefaultConstructors (p.signature, p.name, cs);
-    END;
 
     Value.TypeCheck (p.intf_peer, cs);
 
@@ -754,17 +748,33 @@ PROCEDURE StartCall (t: T) =
 
 PROCEDURE EmitValueCall (t: T): CG.Val =
   VAR result := ProcType.CGResult (t.signature);
+      handler,handler_body : CG.Label;
+      info : CG.Var;
   BEGIN
     IF (t.impl_peer # NIL) THEN t := t.impl_peer; END;
-    CG.Call_direct (t.cg_proc, result);
+
+    IF Marker.NextHandler(handler,handler_body,info) THEN
+      CG.Invoke_direct (t.cg_proc, result, handler);
+      Marker.Invoked();
+    ELSE
+      CG.Call_direct (t.cg_proc, result);
+    END;
     RETURN Marker.EmitExceptionTest (t.signature, need_value := TRUE);
   END EmitValueCall;
 
 PROCEDURE EmitCall (t: T) =
   VAR result := ProcType.CGResult (t.signature);
+      handler,handler_body : CG.Label;
+      info : CG.Var;
   BEGIN
     IF (t.impl_peer # NIL) THEN t := t.impl_peer; END;
-    CG.Call_direct (t.cg_proc, result);
+
+    IF Marker.NextHandler(handler,handler_body,info) THEN
+      CG.Invoke_direct (t.cg_proc, result, handler);
+      Marker.Invoked();
+    ELSE
+      CG.Call_direct (t.cg_proc, result);
+    END;
     EVAL Marker.EmitExceptionTest (t.signature, need_value := FALSE);
   END EmitCall;
 

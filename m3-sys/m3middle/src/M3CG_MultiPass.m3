@@ -7,8 +7,6 @@ FROM M3CG IMPORT Frequency, CallingConvention, CompareOp, ConvertOp, AtomicOp;
 FROM M3CG IMPORT BitSize, ByteSize, BitOffset, ByteOffset, RuntimeError;
 FROM M3CG IMPORT MemoryOrder;
 FROM M3CG_Binary IMPORT Op;
-FROM Target IMPORT CGType;
-FROM TargetMap IMPORT CG_Bytes;
 
 TYPE var_t = Var OBJECT tag: INTEGER END;
 TYPE proc_t = Proc OBJECT tag: INTEGER END;
@@ -196,6 +194,11 @@ OVERRIDES
     call_direct := call_direct;
     start_call_indirect := start_call_indirect;
     call_indirect := call_indirect;
+    start_try := start_try;
+    end_try := end_try;
+    invoke_direct := invoke_direct;
+    invoke_indirect := invoke_indirect;
+    landing_pad := landing_pad;
     pop_param := pop_param;
     pop_struct := pop_struct;
     pop_static_link := pop_static_link;
@@ -362,30 +365,9 @@ self.Add(NEW(declare_constant_t, op := Op.declare_constant, name := name, byte_s
 RETURN var;
 END declare_constant;
 
-PROCEDURE TypeVersusSize (VAR cgtype: CGType; byte_size: ByteSize) =
-BEGIN
-  (* m3front asks for pointers of size 8, on 32bit platforms,
-   * leading to variable overflows. For example in MD5.m3.
-   *
-   * Possibly this generalizes to asking for pointers of arbitrary size
-   * leading to arbitrary overflows.
-   *
-   * This manifests at least sometimes as a warning from Visual C++.
-   *   void* foo;
-   *   * ( __int64* )&foo = 0; // warning C4739: reference to variable exceeds its storage space
-   *
-   * When type and size disagree, use the size.
-   * This a non-contradictory alternative to https://github.com/modula3/cm3/pull/836.
-   *)
-  IF cgtype # CGType.Struct AND byte_size # CG_Bytes [cgtype] THEN
-    cgtype := CGType.Struct;
-  END;
-END TypeVersusSize;
-
 PROCEDURE declare_local(self: T; name: Name; byte_size: ByteSize; alignment: Alignment; type: Type; typeid: TypeUID; in_memory, up_level: BOOLEAN; frequency: Frequency; <*UNUSED*>typename: Name): Var =
 VAR var := self.refs.NewVar();
 BEGIN
-TypeVersusSize (type, byte_size);
 self.Add(NEW(declare_local_t, op := Op.declare_local, name := name, byte_size := byte_size, alignment := alignment, type := type, typeid := typeid, in_memory := in_memory, up_level := up_level, frequency := frequency, tag := var.tag));
 RETURN var;
 END declare_local;
@@ -400,7 +382,6 @@ END declare_param;
 PROCEDURE declare_temp(self: T; byte_size: ByteSize; alignment: Alignment; type: Type; in_memory: BOOLEAN; <*UNUSED*>typename: Name): Var =
 VAR var := self.refs.NewVar();
 BEGIN
-TypeVersusSize (type, byte_size);
 self.Add(NEW(declare_temp_t, op := Op.declare_temp, byte_size := byte_size, alignment := alignment, type := type, in_memory := in_memory, tag := var.tag));
 RETURN var;
 END declare_temp;
@@ -1010,6 +991,33 @@ BEGIN
 self.Add(NEW(call_indirect_t, op := Op.call_indirect, type := type, callingConvention := callingConvention));
 END call_indirect;
 
+PROCEDURE start_try(self: T) =
+BEGIN
+self.Add(NEW(start_try_t, op := Op.start_try));
+END start_try;
+
+PROCEDURE end_try(self: T) =
+BEGIN
+self.Add(NEW(end_try_t, op := Op.end_try));
+END end_try;
+
+PROCEDURE invoke_direct(self: T; proc: Proc; type: Type; next,handler : Label) =
+BEGIN
+self.Add(NEW(invoke_direct_t, op := Op.invoke_direct, proc := NARROW(proc, proc_t).tag, type := type, next := next, handler := handler));
+END invoke_direct;
+
+PROCEDURE invoke_indirect(self: T; type: Type; callingConvention : CallingConvention; next,handler : Label) =
+BEGIN
+self.Add(NEW(invoke_indirect_t, op := Op.invoke_indirect, type := type, callingConvention := callingConvention, next := next, handler := handler));
+END invoke_indirect;
+
+PROCEDURE landing_pad(self: T; type: ZType; handler : Label; READONLY catches : ARRAY OF TypeUID) =
+VAR a := NEW(REF ARRAY OF TypeUID, NUMBER(catches));
+BEGIN
+a^ := catches;
+self.Add(NEW(landing_pad_t, op := Op.landing_pad, type := type, handler := handler, catches := a));
+END landing_pad;
+
 PROCEDURE load_procedure(self: T; proc: Proc) =
 BEGIN
 self.Add(NEW(load_procedure_t, op := Op.load_procedure, proc := NARROW(proc, proc_t).tag));
@@ -1333,6 +1341,11 @@ PROCEDURE replay_pop_param(self: pop_param_t; <*UNUSED*>replay: Replay_t; cg: cg
 PROCEDURE replay_pop_struct(self: pop_struct_t; <*UNUSED*>replay: Replay_t; cg: cg_t) = BEGIN cg.pop_struct(self.typeid, self.byte_size, self.alignment); END replay_pop_struct;
 PROCEDURE replay_pop_static_link(<*UNUSED*>self: pop_static_link_t; <*UNUSED*>replay: Replay_t; cg: cg_t) = BEGIN cg.pop_static_link(); END replay_pop_static_link;
 PROCEDURE replay_call_indirect(self: call_indirect_t; <*UNUSED*>replay: Replay_t; cg: cg_t) = BEGIN cg.call_indirect(self.type, self.callingConvention); END replay_call_indirect;
+PROCEDURE replay_start_try(self: start_try_t; replay: Replay_t; cg: cg_t) = BEGIN cg.start_try(); END replay_start_try;
+PROCEDURE replay_end_try(self: end_try_t; replay: Replay_t; cg: cg_t) = BEGIN cg.end_try(); END replay_end_try;
+PROCEDURE replay_invoke_direct(self: invoke_direct_t; replay: Replay_t; cg: cg_t) = BEGIN cg.invoke_direct(replay.GetProc(self.proc), self.type, self.next, self.handler); END replay_invoke_direct;
+PROCEDURE replay_invoke_indirect(self: invoke_indirect_t; <*UNUSED*>replay: Replay_t; cg: cg_t) = BEGIN cg.invoke_indirect(self.type, self.callingConvention, self.next, self.handler); END replay_invoke_indirect;
+PROCEDURE replay_landing_pad(self: landing_pad_t; <*UNUSED*>replay: Replay_t; cg: cg_t) = BEGIN cg.landing_pad(self.type, self.handler, self.catches^); END replay_landing_pad;
 PROCEDURE replay_comment(self: comment_t; <*UNUSED*>replay: Replay_t; cg: cg_t) = BEGIN cg.comment(self.a, self.b, self.c, self.d); END replay_comment;
 PROCEDURE replay_store_ordered(self: store_ordered_t; <*UNUSED*>replay: Replay_t; cg: cg_t) = BEGIN cg.store_ordered(self.ztype, self.mtype, self.order); END replay_store_ordered;
 PROCEDURE replay_load_ordered(self: load_ordered_t; <*UNUSED*>replay: Replay_t; cg: cg_t) = BEGIN cg.load_ordered(self.mtype, self.ztype, self.order); END replay_load_ordered;
