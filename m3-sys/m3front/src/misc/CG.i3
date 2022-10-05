@@ -346,6 +346,8 @@ PROCEDURE Begin_procedure (p: Proc);
 (* begin generating code for the procedure 'p'.  Sets "current procedure"
    to 'p'. *)
 
+PROCEDURE IsInsideProc () : BOOLEAN;
+
 PROCEDURE End_procedure (p: Proc);
 (* marks the end of the code for procedure 'p'.  Sets "current procedure"
    to NIL. *)
