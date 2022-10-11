@@ -10,7 +10,7 @@ on:
         required: false
         type: string
       release:
-        default: https://github.com/VictorMiasnikov/cm3/releases/tag/d5.11.9-ZZYYXX-20220907_04-27_Tag
+        default: https://github.com/VictorMiasnikov/cm3/releases/download/d5.11.9-ZZYYXX-20220208_13-48
         required: false
         type: string
       bootstrap:
