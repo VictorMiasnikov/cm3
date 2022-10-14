@@ -14,6 +14,7 @@ readonly NAMING_CONVENTIONS = "0"
 %  0=Unix                          =>  .o   .io    .mo       libXX.a
 %  1=Unix with a grumpy C compiler =>  .o   _i.o   _m.o      libXX.a
 %  2=Windows NT or Windows 95      =>  .obj .io    .mo       XX.lib
+%  3=C++ backend with Automake     =>  .o   .i3.io .m3.o     libXX.a
 %
 
 %------------------------------------------------ external system libraries ---
@@ -27,7 +28,7 @@ readonly NAMING_CONVENTIONS = "0"
 if not defined ("SYSTEM_LIBS")
 
 % This is for Linux and partly for FreeBSD, OpenBSD, NetBSD.
-% Other systems replace it entirely: Solaris, Interix, Cygwin, Darwin.
+% Other systems replace it entirely: Solaris, Interix, Cygwin, Darwin, HPUX.
 
 SYSTEM_LIBS =
 {
@@ -288,8 +289,10 @@ proc AdjustShared(shared) is
     % we changed the directory layout. Older compilers combined
     % with this config file need only support building a static compiler,
     % so this is ok.
-
     and defined("install_symbolic_link")
+
+    % HPUX switches not correct for non-gcc linker driver.
+    and not equal (TARGET_OS, "HPUX")
 end
 
 end
