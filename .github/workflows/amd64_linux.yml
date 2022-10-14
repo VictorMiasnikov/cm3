@@ -9,11 +9,11 @@ on:
         required: false
         type: string
       release:
-        default: https://github.com/VictorMiasnikov/cm3/releases/download/d5.11.9-ZZYYXX-20220907_04-27_Tag
+        default: https://github.com/VictorMiasnikov/cm3/releases/download/d5.11.9-ZZYYXX-20220208_13-48
         required: false
         type: string
       bootstrap:
-        default: cm3-boot-AMD64_LINUX-844d77c.tar.xz
+        default: cm3-boot-AMD64_LINUX-None.tar.xz
         required: false
         type: string
 
