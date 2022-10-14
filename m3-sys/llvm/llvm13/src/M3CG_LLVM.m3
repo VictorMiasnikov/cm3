@@ -11,6 +11,7 @@ UNSAFE MODULE M3CG_LLVM;
 opaque pointers in LLVM.i3
 *)
 
+(* m3core imports *)
 IMPORT Ctypes;
 IMPORT FileRd;
 IMPORT IntRefTbl;
@@ -21,19 +22,22 @@ IMPORT Pathname;
 IMPORT Process;
 IMPORT Rd;
 IMPORT RefSeq;
-IMPORT Text,TextExtras;
+IMPORT Text;
+IMPORT TextExtras;
 IMPORT TextRefTbl;
 IMPORT TextSeq;
 IMPORT Version;
 IMPORT Word;
 IMPORT Wr;
 
-IMPORT DwarfConst AS DC;
-IMPORT LLVM;
-IMPORT LLVMTypes;
-FROM LLVMTypes IMPORT int64_t , uint64_t , uint32_t, unsigned;
-FROM LLVMTypes IMPORT ArrayRefOfMetadataRef, MetadataRef, StringRef,ArrayRefOfint64_t;
+(* m3middle imports *)
 IMPORT M3Buf;
+IMPORT M3CG_Ops;
+IMPORT M3ID;
+IMPORT Target;
+IMPORT TargetMap;
+IMPORT TFloat;
+IMPORT TInt, TWord;
 IMPORT M3CG;
 FROM M3CG IMPORT Name, ByteOffset, TypeUID, CallingConvention;
 FROM M3CG IMPORT BitSize, ByteSize, Alignment, Frequency;
@@ -41,16 +45,14 @@ FROM M3CG IMPORT Var, Proc, Label, Sign, BitOffset;
 FROM M3CG IMPORT Type, ZType, AType, RType, IType, MType;
 FROM M3CG IMPORT CompareOp, ConvertOp, AtomicOp, RuntimeError;
 FROM M3CG IMPORT MemoryOrder;
-IMPORT M3CG_Ops;
-(*
-IMPORT M3DIBuilder AS M3DIB;
-*)
+
+(* llvmbinding imports *)
+IMPORT DwarfConst AS DC;
+IMPORT LLVM;
+IMPORT LLVMTypes;
+FROM LLVMTypes IMPORT int64_t , uint64_t , uint32_t, unsigned;
+FROM LLVMTypes IMPORT ArrayRefOfMetadataRef, MetadataRef, StringRef,ArrayRefOfint64_t;
 IMPORT M3DebugInfo AS M3DIB;
-IMPORT M3ID;
-IMPORT Target;
-IMPORT TargetMap;
-IMPORT TFloat;
-IMPORT TInt, TWord;
 
 <*FATAL ANY*>
 
@@ -1941,7 +1943,11 @@ PROCEDURE AllocVar(self : U; v : LvVar) =
     LLVM.LLVMSetAlignment(v.lv,v.align);
 
    (* calc the offset from the stack pointer for the unwinder *)
-   (* can delete this stuff if landing pad design works. *)
+   (* Leave this calc in but it is no longer used now that the landing_pad
+      generates the gcc_except_tables and since the front end is not
+      emitting the scope table we do not get an init_label and init_offset
+      This is arch dependant since dont know if the offset is positive
+      or negative from stack pointer and cannot be optimised. *)
    size := VAL(LLVM.LLVMStoreSizeOfType(targetData,v.lvType),INTEGER);
    INC(size,7);
    size := size - (size MOD 8);
@@ -5723,7 +5729,7 @@ PROCEDURE CalcPaths(self : U) : TEXT =
     ELSIF Text.Equal(Text.Sub(prefix,0,2), "..") THEN
       arcs := Pathname.Decompose(prefix);
       <*ASSERT arcs.getlo() = NIL *>
-      arcs := TextSeq.Sub(arcs,2); (* remove root and .. *)
+      arcs := TextSeq.Sub(arcs,2); (* remove root and ... *)
       arcs.addlo(NIL); (* add the root dir back *)
       prefix := Pathname.Compose(arcs);
       self.debDir := Pathname.Join(cwd,prefix);
@@ -5762,24 +5768,24 @@ PROCEDURE DebugInit(self: U) =
       DirectoryLen := Text.Length(self.debDir));
 
     self.cuRef := M3DIB.CreateCompileUnit(self.debugRef,
-                Lang        := M3DIB.LLVMDWARFSourceLanguage.DWARFSourceLanguageModula3,
-                FileRef     := self.fileRef,
-                Producer    := "cm3",
-                ProducerLen := 3,
-                isOptimized := FALSE,
-                Flags       := NIL,
-                FlagsLen    := 0,
-                RuntimeVer  := 0,
-                SplitName   := NIL,
-                SplitNameLen := 0,
-                Kind        := M3DIB.LLVMDWARFEmissionKind.DWARFEmissionFull,
-                DWOId       := 0,
-                SplitDebugInlining := TRUE,
-                DebugInfoForProfiling := FALSE,
-                SysRoot     := NIL,
-                SysRootLen  := 0,
-                SDK         := NIL,
-                SDKLen      := 0);
+      Lang        := M3DIB.LLVMDWARFSourceLanguage.DWARFSourceLanguageModula3,
+      FileRef     := self.fileRef,
+      Producer    := "cm3",
+      ProducerLen := 3,
+      isOptimized := FALSE,
+      Flags       := NIL,
+      FlagsLen    := 0,
+      RuntimeVer  := 0,
+      SplitName   := NIL,
+      SplitNameLen := 0,
+      Kind        := M3DIB.LLVMDWARFEmissionKind.DWARFEmissionFull,
+      DWOId       := 0,
+      SplitDebugInlining := TRUE,
+      DebugInfoForProfiling := FALSE,
+      SysRoot     := NIL,
+      SysRootLen  := 0,
+      SDK         := NIL,
+      SDKLen      := 0);
 
     CreateModuleFlags(self);
   END DebugInit;
@@ -6043,10 +6049,10 @@ a declare_local  _result *)
     END;
 
     funcTy := M3DIB.CreateSubroutineType(self.debugRef,
-      File           := self.fileRef,
-      ParameterTypes := paramsMetadata.Data,
+      File              := self.fileRef,
+      ParameterTypes    := paramsMetadata.Data,
       NumParameterTypes := numParams + 1,
-      Flags          := 0);
+      Flags             := 0);
 
     IF proc.parent # NIL THEN
       scope := proc.parent.funcScope.value;
@@ -6054,20 +6060,20 @@ a declare_local  _result *)
       scope := self.fileRef;
     END;
 
-   self.funcRef := M3DIB.CreateFunction(self.debugRef,
-       Scope         := scope,
-       Name          := procName,
-       NameLen       := Text.Length(procName),
-       LinkageName   := linkageName,
-       LinkageNameLen:= Text.Length(linkageName),
-       File          := self.fileRef,
-       LineNo        := self.curLine,
-       Ty            := funcTy,
-       IsLocalToUnit := TRUE,
-       IsDefinition  := TRUE,
-       ScopeLine     := self.curLine,
-       Flags         := 0,
-       IsOptimized   := FALSE);
+    self.funcRef := M3DIB.CreateFunction(self.debugRef,
+      Scope         := scope,
+      Name          := procName,
+      NameLen       := Text.Length(procName),
+      LinkageName   := linkageName,
+      LinkageNameLen:= Text.Length(linkageName),
+      File          := self.fileRef,
+      LineNo        := self.curLine,
+      Ty            := funcTy,
+      IsLocalToUnit := TRUE,
+      IsDefinition  := TRUE,
+      ScopeLine     := self.curLine,
+      Flags         := 0,
+      IsOptimized   := FALSE);
 
     proc.funcScope := NEW(BlockDebug, value := self.funcRef);
 
@@ -6103,9 +6109,9 @@ PROCEDURE DebugPushBlock(self : U) =
       (* this val has to be referred to by the var as the scope *)
 
       lexBlock := M3DIB.CreateLexicalBlock(self.debugRef,
-                   Scope := scope,
-                   File  := self.fileRef,
-                   Line  := self.curLine,
+                   Scope  := scope,
+                   File   := self.fileRef,
+                   Line   := self.curLine,
                    Column := 0);
       blockRef := NEW(BlockDebug, value:= lexBlock);
     END;
@@ -6145,11 +6151,11 @@ PROCEDURE DebugBasic(self : U; b : BaseDebug) : MetadataRef =
   BEGIN
     typeName := M3ID.ToText(b.typeName);
     RETURN M3DIB.CreateBasicType(self.debugRef,
-       Name       := typeName,
-       NameLen    := Text.Length(typeName),
-       SizeInBits := VAL(b.bitSize,uint64_t),
-       Encoding   := b.encoding,
-       Flags      := 0);
+      Name       := typeName,
+      NameLen    := Text.Length(typeName),
+      SizeInBits := VAL(b.bitSize,uint64_t),
+      Encoding   := b.encoding,
+      Flags      := 0);
   END DebugBasic;
 
 PROCEDURE DebugSubrange(self : U; subrange : SubrangeDebug)
@@ -6159,7 +6165,6 @@ PROCEDURE DebugSubrange(self : U; subrange : SubrangeDebug)
     MLBase : BaseDebug;
     baseName,srName : TEXT;
     card : BOOLEAN := FALSE;
-v13test : BOOLEAN := FALSE;
   BEGIN
     srName := M3ID.ToText(subrange.typeName);
     IF Text.Length(srName) = 0 THEN srName := "AnonSR"; END;
@@ -6188,15 +6193,14 @@ v13test : BOOLEAN := FALSE;
 
     (* cannot use MLBase type since we need the correct size and encoding *)
     baseType := M3DIB.CreateBasicType(self.debugRef,
-       Name       := baseName,
-       NameLen    := Text.Length(baseName),
-       SizeInBits := VAL(subrange.bitSize,uint64_t),
-       Encoding   := subrange.encoding,
-       Flags      := 0);
-(* temp until DebugInfo updated *)
-IF v13test THEN
-  RETURN baseType;
-END;
+      Name       := baseName,
+      NameLen    := Text.Length(baseName),
+      SizeInBits := VAL(subrange.bitSize,uint64_t),
+      Encoding   := subrange.encoding,
+      Flags      := 0);
+
+(* does not need llvm13 *)
+    RETURN baseType;
 
     IF MLBase = NIL AND card = FALSE THEN
       (* this case is for inbuilt integer longint char boolean widechar,
@@ -6212,16 +6216,16 @@ END;
       END;
     END;
 
-(* not in debuginfo yet *)
+(* needs llvm13 
     Result := M3DIB.GetSubrangeConst (self.debugRef,
-                 Scope := DebugScope(self,subrange),
-                 Name  := srName,
-                 NameLen := Text.Length(srName),
-                 File  := self.fileRef,
-                 BaseTy := baseType,
-                 LowerBound := TIntToint64_t(subrange.min),
-                 Count := TIntToint64_t(subrange.count));
-
+      Scope      := DebugScope(self,subrange),
+      Name       := srName,
+      NameLen    := Text.Length(srName),
+      File       := self.fileRef,
+      BaseTy     := baseType,
+      LowerBound := TIntToint64_t(subrange.min),
+      Count      := TIntToint64_t(subrange.count));
+*)
 
 (* REVIEW: How does llvm handle subranges for different signedness? *)
 (* FIXME: Someday, when llvm supports it, put MLBase into the subrange. *)
@@ -6237,12 +6241,12 @@ PROCEDURE DebugPointer(self : U; p : PointerDebug) : MetadataRef =
 
     typeName := M3ID.ToText(p.typeName);
     RETURN M3DIB.CreatePointerType(self.debugRef,
-               PointeeTy         := referentDIType,
-               SizeInBits        := VAL(p.bitSize,uint64_t),
-               AlignInBits       := VAL(p.align,uint32_t),
-               AddressSpace      := 0,
-               Name              := typeName,
-               NameLen           := Text.Length(typeName));
+      PointeeTy         := referentDIType,
+      SizeInBits        := VAL(p.bitSize,uint64_t),
+      AlignInBits       := VAL(p.align,uint32_t),
+      AddressSpace      := 0,
+      Name              := typeName,
+      NameLen           := Text.Length(typeName));
   END DebugPointer;
 
 PROCEDURE DebugIndirect(self : U; p : IndirectDebug) : MetadataRef =
@@ -6261,18 +6265,18 @@ PROCEDURE DebugArray(self : U; a : ArrayDebug) : MetadataRef =
     DebugLookupOrdinalBounds (self, a.index, (*OUT*)min, (*OUT*)count);
 
    subsVal := M3DIB.GetOrCreateSubrange(self.debugRef,
-        LowerBound := TIntToint64_t(min),
-        Count := TIntToint64_t(count));
+     LowerBound := TIntToint64_t(min),
+     Count      := TIntToint64_t(count));
 
     NewArrayRefOfMetadataRef(1, (*OUT*)paramsArr, (*OUT*)paramsMetadata);
     paramsArr[0] := subsVal;
 
     arrDIT := M3DIB.CreateArrayType(self.debugRef,
-        Size        := VAL(a.bitSize,uint64_t),
-        AlignInBits := VAL(a.align,uint32_t),
-        Ty          := eltVal,
-        Subscripts  := paramsMetadata.Data,
-        NumSubscripts := 1);
+      Size        := VAL(a.bitSize,uint64_t),
+      AlignInBits := VAL(a.align,uint32_t),
+      Ty          := eltVal,
+      Subscripts  := paramsMetadata.Data,
+      NumSubscripts := 1);
 
     RETURN arrDIT;
   END DebugArray;
@@ -6288,7 +6292,6 @@ PROCEDURE DebugOpenArray(self : U; a : OpenArrayDebug; ofs : CARDINAL := 0) : Me
     elts : MetadataRef;
     typeName : TEXT;
     srBaseType : MetadataRef;
-v13test : BOOLEAN := FALSE; (* temp until debuginfo has open array support *)
   BEGIN
     (* data location only really meaningful for outermost dimension *)
     IF ofs = 0 THEN
@@ -6312,51 +6315,49 @@ v13test : BOOLEAN := FALSE; (* temp until debuginfo has open array support *)
 
     srBaseType := DebugLookupLL(self,UID_INTEGER);
 
-IF v13test THEN
+(* does not need llvm13 *)
    subrange := M3DIB.GetOrCreateSubrange(self.debugRef,
-        LowerBound := TIntToint64_t(TInt.Zero),
-        Count := TIntToint64_t(TInt.One));
-ELSE
+     LowerBound := TIntToint64_t(TInt.Zero),
+     Count      := TIntToint64_t(TInt.One));
+
+(* needs llvm13 
     typeName := M3ID.ToText(a.typeName) & "_rng";
-(* not in v13 *)
-
     subrange := M3DIB.GetSubrangeExpr (self.debugRef,
-                 Scope := DebugScope(self,a),
-                 Name  := typeName,
-                 NameLen := Text.Length(typeName),
-                 File  := self.fileRef,
-                 BaseTy := srBaseType,
-                 LowerBound := low,
-                 Count := cnt);
-
-END;
+      Scope      := DebugScope(self,a),
+      Name       := typeName,
+      NameLen    := Text.Length(typeName),
+      File       := self.fileRef,
+      BaseTy     := srBaseType,
+      LowerBound := low,
+      Count      := cnt);
+*)
 
     NewArrayRefOfMetadataRef(1, (*OUT*)paramsArr, (*OUT*)paramsMetadata);
     paramsArr[0] := subrange;
 
-IF v13test THEN
+(* does not need llvm13 *)
     oarrDIT := M3DIB.CreateArrayType(self.debugRef,
-        Size        := VAL(a.bitSize,uint64_t),
-        AlignInBits := VAL(a.align,uint32_t),
-        Ty          := elts,
-        Subscripts  := paramsMetadata.Data,
-        NumSubscripts := 1);
-ELSE
-(* not in v13 actually not in DebugInfo since the guy who did 
-the fortran updates didnt do the C interface.*)
+      Size          := VAL(a.bitSize,uint64_t),
+      AlignInBits   := VAL(a.align,uint32_t),
+      Ty            := elts,
+      Subscripts    := paramsMetadata.Data,
+      NumSubscripts := 1);
+
+(* needs llvm13 
+ not in v13 actually not in DebugInfo since the guy who did
+the fortran updates didnt do the C interface.
 
     oarrDIT := M3DIB.CreateDynamicArrayType(self.debugRef,
-        Size         := 0L, (* we dont know the size *)
-        AlignInBits  := VAL(a.align,uint32_t),
-        Ty           := elts,
-        Subscripts   := paramsMetadata.Data,
-        NumSubscripts := 1,
-        DataLocation := dataLoc,
-        Associated   := NIL,
-        Allocated    := NIL,
-        Rank         := NIL); (* rank needed if genericsubrange used *)
-
-END;
+      Size          := 0L, (* we dont know the size *)
+      AlignInBits   := VAL(a.align,uint32_t),
+      Ty            := elts,
+      Subscripts    := paramsMetadata.Data,
+      NumSubscripts := 1,
+      DataLocation  := dataLoc,
+      Associated    := NIL,
+      Allocated     := NIL,
+      Rank          := NIL); (* rank needed if genericsubrange used *)
+*)
 
     a.diType := oarrDIT;
 
@@ -6368,27 +6369,23 @@ PROCEDURE DebugSet(self : U; s : SetDebug) : MetadataRef =
     baseType : MetadataRef;
     setDIT : MetadataRef;
     typeName : TEXT;
-v13test : BOOLEAN := FALSE; (* temp until set in debuginfo *)
   BEGIN
     baseType := DebugLookupLL(self,s.domain);
 
-(* not in  debuginfo *)
-IF v13test THEN
+(* does not need llvm13 *)
     setDIT := baseType;
-ELSE
+(* needs llvm13 
     typeName := M3ID.ToText(s.typeName);
-(* not in debuginfo yet *)
     setDIT := M3DIB.CreateSetType(self.debugRef,
-               Scope       := DebugScope(self,s),
-               Name        := typeName,
-               NameLen     := Text.Length(typeName),
-               File        := self.fileRef,
-               LineNumber  := self.curLine,
-               SizeInBits  := VAL(s.bitSize,uint64_t),
-               AlignInBits := VAL(s.align,uint32_t),
-               BaseTy      := baseType);
-
-END;
+      Scope       := DebugScope(self,s),
+      Name        := typeName,
+      NameLen     := Text.Length(typeName),
+      File        := self.fileRef,
+      LineNumber  := self.curLine,
+      SizeInBits  := VAL(s.bitSize,uint64_t),
+      AlignInBits := VAL(s.align,uint32_t),
+      BaseTy      := baseType);
+*)
     RETURN setDIT;
   END DebugSet;
 
@@ -6412,18 +6409,18 @@ PROCEDURE DebugEnum(self : U; e : EnumDebug) : MetadataRef =
       paramsArr[i] := eltVal;
     END;
 
-   typeName := M3ID.ToText(e.typeName);
-   RETURN M3DIB.CreateEnumerationType(self.debugRef,
-               Scope            := DebugScope(self,e),
-               Name             := typeName,
-               NameLen          := Text.Length(typeName),
-               File             := self.fileRef,
-               LineNumber       := self.curLine,
-               SizeInBits       := VAL(e.bitSize,uint64_t),
-               AlignInBits      := VAL(e.align,uint32_t),
-               Elements         := paramsMetadata.Data,
-               NumElements      := e.numElts,
-               ClassTy          := NIL);
+    typeName := M3ID.ToText(e.typeName);
+    RETURN M3DIB.CreateEnumerationType(self.debugRef,
+      Scope        := DebugScope(self,e),
+      Name         := typeName,
+      NameLen      := Text.Length(typeName),
+      File         := self.fileRef,
+      LineNumber   := self.curLine,
+      SizeInBits   := VAL(e.bitSize,uint64_t),
+      AlignInBits  := VAL(e.align,uint32_t),
+      Elements     := paramsMetadata.Data,
+      NumElements  := e.numElts,
+      ClassTy      := NIL);
 
   END DebugEnum;
 
@@ -6461,12 +6458,12 @@ FIXME^ - need to handle recursive proc type
 
     typeName := M3ID.ToText(p.typeName);
     PTy := M3DIB.CreatePointerType(self.debugRef,
-               PointeeTy         := tempTy,
-               SizeInBits        := VAL(p.bitSize,uint64_t),
-               AlignInBits       := VAL(p.align,uint32_t),
-               AddressSpace      := 0,
-               Name              := typeName,
-               NameLen           := Text.Length(typeName));
+      PointeeTy         := tempTy,
+      SizeInBits        := VAL(p.bitSize,uint64_t),
+      AlignInBits       := VAL(p.align,uint32_t),
+      AddressSpace      := 0,
+      Name              := typeName,
+      NameLen           := Text.Length(typeName));
     p.diType := PTy;
 *)
     IF p.numFormals > 0 THEN
@@ -6476,21 +6473,20 @@ FIXME^ - need to handle recursive proc type
       END;
     END;
 
-    LDISubprogTy
-      := M3DIB.CreateSubroutineType(self.debugRef,
-            File  := self.fileRef,
-            ParameterTypes := paramsMetadata.Data,
-            NumParameterTypes := p.numFormals + 1,
-            Flags := 0);
+    LDISubprogTy := M3DIB.CreateSubroutineType(self.debugRef,
+      File              := self.fileRef,
+      ParameterTypes    := paramsMetadata.Data,
+      NumParameterTypes := p.numFormals + 1,
+      Flags             := 0);
 
     typeName := M3ID.ToText(p.typeName);
     PTy := M3DIB.CreatePointerType(self.debugRef,
-               PointeeTy         := LDISubprogTy,
-               SizeInBits        := VAL(p.bitSize,uint64_t),
-               AlignInBits       := VAL(p.align,uint32_t),
-               AddressSpace      := 0,
-               Name              := typeName,
-               NameLen           := Text.Length(typeName));
+      PointeeTy         := LDISubprogTy,
+      SizeInBits        := VAL(p.bitSize,uint64_t),
+      AlignInBits       := VAL(p.align,uint32_t),
+      AddressSpace      := 0,
+      Name              := typeName,
+      NameLen           := Text.Length(typeName));
 
 (*
     does not work - a replacetypes similar to replacearrays
@@ -6521,17 +6517,17 @@ PROCEDURE DebugObject(self : U; o : ObjectDebug) : MetadataRef =
     IF o.opaque THEN
       className := "__OpaqueObject";
       opaqueObjectDIT := M3DIB.CreateForwardDecl (self.debugRef,
-            Tag          := DC.DW_TAG_class_type,
-            Name         := className,
-            NameLen      := Text.Length(className),
-            Scope        := DebugScope(self,o),
-            File         := self.fileRef,
-            Line         := self.curLine,
-            RuntimeLang  := 0,
-            SizeInBits   := 0L,
-            AlignInBits  := 0,
-            UniqueIdentifier := uniqueId,
-            UniqueIdentifierLen := Text.Length(uniqueId));
+        Tag                 := DC.DW_TAG_class_type,
+        Name                := className,
+        NameLen             := Text.Length(className),
+        Scope               := DebugScope(self,o),
+        File                := self.fileRef,
+        Line                := self.curLine,
+        RuntimeLang         := 0,
+        SizeInBits          := 0L,
+        AlignInBits         := 0,
+        UniqueIdentifier    := uniqueId,
+        UniqueIdentifierLen := Text.Length(uniqueId));
 
       o.objectType := opaqueObjectDIT;
 
@@ -6544,23 +6540,21 @@ PROCEDURE DebugObject(self : U; o : ObjectDebug) : MetadataRef =
        (*OUT*) paramsMetadata);
 
     typeName  := M3ID.ToText(o.typeName) & "__HeapObject";
-    heapObjectDIT
-      := M3DIB.CreateReplaceableCompositeType
-           (self.debugRef,
-            Tag          := DC.DW_TAG_class_type,
-            Name         := typeName,
-            NameLen      := Text.Length(typeName),
-            Scope        := DebugScope(self,o),
-            File         := self.fileRef,
-            Line         := self.curLine,
+    heapObjectDIT := M3DIB.CreateReplaceableCompositeType (self.debugRef,
+      Tag          := DC.DW_TAG_class_type,
+      Name         := typeName,
+      NameLen      := Text.Length(typeName),
+      Scope        := DebugScope(self,o),
+      File         := self.fileRef,
+      Line         := self.curLine,
 (* CHECK ^ the line number is pretty meaningless for the type since it is
  usually at the beginning of the module not at the type creation line. *)
-            RuntimeLang  := 0,
-            SizeInBits   := VAL(o.objSize + ptrBits,uint64_t),
-            AlignInBits  := VAL(o.align,uint32_t),
-            Flags        := 0,
-            UniqueIdentifier := uniqueId,
-            UniqueIdentifierLen := Text.Length(uniqueId));
+      RuntimeLang  := 0,
+      SizeInBits   := VAL(o.objSize + ptrBits,uint64_t),
+      AlignInBits  := VAL(o.align,uint32_t),
+      Flags        := 0,
+      UniqueIdentifier := uniqueId,
+      UniqueIdentifierLen := Text.Length(uniqueId));
 
     (* save for possible inherit node *)
     o.objectType := heapObjectDIT;
@@ -6571,12 +6565,12 @@ PROCEDURE DebugObject(self : U; o : ObjectDebug) : MetadataRef =
 
     typeName := M3ID.ToText(o.typeName);
     ptrDIT := M3DIB.CreatePointerType(self.debugRef,
-               PointeeTy         := heapObjectDIT,
-               SizeInBits        := VAL(ptrBits,uint64_t),
-               AlignInBits       := VAL(ptrBits,uint32_t),
-               AddressSpace      := 0,
-               Name              := typeName,
-               NameLen           := Text.Length(typeName));
+      PointeeTy         := heapObjectDIT,
+      SizeInBits        := VAL(ptrBits,uint64_t),
+      AlignInBits       := VAL(ptrBits,uint32_t),
+      AddressSpace      := 0,
+      Name              := typeName,
+      NameLen           := Text.Length(typeName));
 
     (* save for recursive lookups in fields *)
     o.diType := ptrDIT;
@@ -6596,17 +6590,15 @@ PROCEDURE DebugObject(self : U; o : ObjectDebug) : MetadataRef =
       superObj := NARROW(debugObj,ObjectDebug);
       EnsureDebugTypeName(superObj);
 
-      (* Create a DIBuilder inherit node connecting to the supertype
+     (* Create a DIBuilder inherit node connecting to the supertype
          and make it the first "param". *)
 
-     inheritDIT
-        := M3DIB.CreateInheritance
-           (self.debugRef,
-            Ty         := heapObjectDIT,
-            BaseTy     := superObj.objectType,
-            BaseOffset := VAL(0L,uint64_t),
-            VBPtrOffset := 0,
-            Flags      := 0);
+      inheritDIT := M3DIB.CreateInheritance (self.debugRef,
+        Ty          := heapObjectDIT,
+        BaseTy      := superObj.objectType,
+        BaseOffset  := VAL(0L,uint64_t),
+        VBPtrOffset := 0,
+        Flags       := 0);
       paramsArr[0] := inheritDIT;
     ELSE
       paramsArr[0] := NIL; (* Is this truly a C++ null? *)
@@ -6663,11 +6655,12 @@ PROCEDURE DebugObject(self : U; o : ObjectDebug) : MetadataRef =
     END;
 
 (* this works *)
+(* needs llvm13 
    M3DIB.LLVMReplaceArrays(self.debugRef,
       T        := ADR(heapObjectDIT),
       Elements := paramsMetadata.Data,
       NumElements := nextMemberNo);
-
+*)
 (* this should work but no.
     M3DIB.LLVMMetadataReplaceAllUsesWith(
       TempTargetMetadata := heapObjectDIT,
@@ -6692,20 +6685,19 @@ PROCEDURE DebugRecord(self : U; r : RecordDebug) : MetadataRef =
       (r.numFields, (*OUT*)paramsArr, (*OUT*)paramsMetadata);
 
     typeName  := M3ID.ToText(r.typeName);
-    structDIT
-      := M3DIB.CreateReplaceableCompositeType(self.debugRef,
-            Tag          := DC.DW_TAG_structure_type,
-            Name         := typeName,
-            NameLen      := Text.Length(typeName),
-            Scope        := DebugScope(self,r),
-            File         := self.fileRef,
-            Line         := self.curLine,
-            RuntimeLang  := 0,
-            SizeInBits   := VAL(r.bitSize,uint64_t),
-            AlignInBits  := VAL(r.align,uint32_t),
-            Flags        := 0,
-            UniqueIdentifier := uniqueId,
-            UniqueIdentifierLen := Text.Length(uniqueId));
+    structDIT := M3DIB.CreateReplaceableCompositeType(self.debugRef,
+      Tag          := DC.DW_TAG_structure_type,
+      Name         := typeName,
+      NameLen      := Text.Length(typeName),
+      Scope        := DebugScope(self,r),
+      File         := self.fileRef,
+      Line         := self.curLine,
+      RuntimeLang  := 0,
+      SizeInBits   := VAL(r.bitSize,uint64_t),
+      AlignInBits  := VAL(r.align,uint32_t),
+      Flags        := 0,
+      UniqueIdentifier := uniqueId,
+      UniqueIdentifierLen := Text.Length(uniqueId));
 
     r.diType := structDIT;
 
@@ -6761,23 +6753,22 @@ PROCEDURE DebugRecord(self : U; r : RecordDebug) : MetadataRef =
       paramsArr[i] := memberDIT;
     END;
 
-    resStructDIT
-      := M3DIB.CreateStructType(self.debugRef,
-            Name         := typeName,
-            NameLen      := Text.Length(typeName),
-            Scope        := DebugScope(self,r),
-            File         := self.fileRef,
-            LineNumber   := self.curLine,
-            SizeInBits   := VAL(r.bitSize,uint64_t),
-            AlignInBits  := VAL(r.align,uint32_t),
-            Flags        := 0,
-            DerivedFrom  := NIL,
-            Elements     := paramsMetadata.Data,
-            NumElements  := r.numFields,
-            RunTimeLang  := 0,
-            VTableHolder := NIL,
-            UniqueId := uniqueId,
-            UniqueIdLen := Text.Length(uniqueId));
+    resStructDIT := M3DIB.CreateStructType(self.debugRef,
+      Name         := typeName,
+      NameLen      := Text.Length(typeName),
+      Scope        := DebugScope(self,r),
+      File         := self.fileRef,
+      LineNumber   := self.curLine,
+      SizeInBits   := VAL(r.bitSize,uint64_t),
+      AlignInBits  := VAL(r.align,uint32_t),
+      Flags        := 0,
+      DerivedFrom  := NIL,
+      Elements     := paramsMetadata.Data,
+      NumElements  := r.numFields,
+      RunTimeLang  := 0,
+      VTableHolder := NIL,
+      UniqueId := uniqueId,
+      UniqueIdLen := Text.Length(uniqueId));
 
 (* This seems to work but better to use replace arrays as in object*)
     M3DIB.LLVMMetadataReplaceAllUsesWith(
