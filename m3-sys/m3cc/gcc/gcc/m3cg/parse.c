@@ -6352,10 +6352,8 @@ m3_parse_file (int)
   INT64 i = get_int ();
   if (i != M3CG_Version)
   {
-  /*  VVM: See https://github.com/modula3/cm3/issues/1102
     fatal_error (" *** bad M3CG version stamp (0x%x), expected 0x%x",
                  (UINT)i, M3CG_Version);
-   */
   }
 
   M3CG_opcode op = LAST_OPCODE;  
