@@ -10,7 +10,6 @@ MODULE PackedType;
 
 IMPORT M3, CG, Word, Type, TypeRep, Error, Expr, Target;
 IMPORT M3Buf, Token, IntegerExpr, Scanner, TipeDesc;
-IMPORT NamedType;
 
 CONST
   NO_SIZE = -1;
@@ -59,9 +58,7 @@ PROCEDURE New (size: INTEGER;  base: Type.T): Type.T =
 
 (* EXPORTED: *)
 PROCEDURE Is (t:Type.T): BOOLEAN =
-(* Including named packed type. *)
   BEGIN
-    t := NamedType.Strip(t);
     TYPECASE t OF
     | NULL => RETURN FALSE;
     | P => RETURN TRUE;
