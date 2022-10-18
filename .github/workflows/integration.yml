@@ -3,26 +3,26 @@ name: integration
 # Build and test starting from latest bootstrap release.
 
 on:
-  pull_request: {branches: d5.11.9-ZZYYXX-20221017_13-20}
+  pull_request: {branches: d5.11.9-ZZYYXX-20221017_13-21}
   push:
 
 concurrency: ci
 
 jobs:
-  AMD64_DARWIN:
-    uses: VictorMiasnikov/cm3/.github/workflows/amd64_darwin.yml@d5.11.9-ZZYYXX-20221017_13-20
+#  AMD64_DARWIN:
+#    uses: VictorMiasnikov/cm3/.github/workflows/amd64_darwin.yml@d5.11.9-ZZYYXX-20221017_13-21
 
-  AMD64_LINUX:
-    uses: VictorMiasnikov/cm3/.github/workflows/amd64_linux.yml@d5.11.9-ZZYYXX-20221017_13-20
+#  AMD64_LINUX:
+#    uses: VictorMiasnikov/cm3/.github/workflows/amd64_linux.yml@d5.11.9-ZZYYXX-20221017_13-21
 
   AMD64_MINGW:
-    uses: VictorMiasnikov/cm3/.github/workflows/amd64_mingw.yml@d5.11.9-ZZYYXX-20221017_13-20
+    uses: VictorMiasnikov/cm3/.github/workflows/amd64_mingw.yml@d5.11.9-ZZYYXX-20221017_13-21
 
   AMD64_NT:
-    uses: VictorMiasnikov/cm3/.github/workflows/amd64_nt.yml@d5.11.9-ZZYYXX-20221017_13-20
+    uses: VictorMiasnikov/cm3/.github/workflows/amd64_nt.yml@d5.11.9-ZZYYXX-20221017_13-21
 
-  I386_LINUX:
-    uses: VictorMiasnikov/cm3/.github/workflows/i386_linux.yml@d5.11.9-ZZYYXX-20221017_13-20
+#  I386_LINUX:
+#    uses: VictorMiasnikov/cm3/.github/workflows/i386_linux.yml@d5.11.9-ZZYYXX-20221017_13-21
 
   I386_NT:
-    uses: VictorMiasnikov/cm3/.github/workflows/i386_nt.yml@d5.11.9-ZZYYXX-20221017_13-20
+    uses: VictorMiasnikov/cm3/.github/workflows/i386_nt.yml@d5.11.9-ZZYYXX-20221017_13-21
