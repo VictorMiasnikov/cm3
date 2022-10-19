@@ -1,13 +1,33 @@
 readonly TARGET = "AMD64_LINUX" % code generation target
 readonly GNU_PLATFORM = "amd64-linux" % "cpu-os" string for GNU
 
-SYSTEM_CC = "gcc -g -m64 -fPIC" % C compiler
-SYSTEM_CXXC = "g++ -g -m64 -fPIC" % C++ compiler
+SYSTEM_CC = "gcc -m64 -fPIC -g" % C compiler
+SYSTEM_CXXC = "g++ -m64 -fPIC -g" % C++ compiler
+
+% Sometimes stabs are incorrect for C.
+% But Dwarf interferes with m3gdb.
+% https://gcc.gnu.org/bugzilla/show_bug.cgi?id=99457
+%
+if defined("M3_BACKEND_MODE")
+  if not equal(M3_BACKEND_MODE, "C")
+    SYSTEM_CC = SYSTEM_CC & "stabs+"
+    SYSTEM_CXXC = SYSTEM_CXXC & "stabs+"
+  end
+else
+  % It will likely not default to C.
+  SYSTEM_CC = SYSTEM_CC & "stabs+"
+  SYSTEM_CXXC = SYSTEM_CXXC & "stabs+"
+end
 
 readonly SYSTEM_ASM = "as --64" % Assembler
 
 %uncomment this define to use zero cost exception handling
 %M3_USE_STACK_WALKER = TRUE
+
+% PIE debugging requires gdb 7.1 or newer, even for C
+% see http://www.gnu.org/software/gdb/download/ANNOUNCEMENT
+%uncomment this define to use m3gdb
+%readonly POSITION_INDEPENDENT_EXECUTABLE = "-no-pie"
 
 include("AMD64.common")
 include("Linux.common")
