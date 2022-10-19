@@ -103,7 +103,7 @@ PROCEDURE Base (t: T): T =
 PROCEDURE IllegalRecursion (t: T) =
   BEGIN
     IF (NOT t.error) THEN
-      Error.ID (t.name, "illegal recursive declaration (2.4.8).");
+      Error.ID (t.name, "Illegal recursive declaration (2.4.8).");
       t.error := TRUE;
     END;
   END IllegalRecursion;
