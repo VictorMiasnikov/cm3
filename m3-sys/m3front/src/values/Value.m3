@@ -39,6 +39,7 @@ PROCEDURE TypeOf (t: T): Type.T =
   VAR x: Type.T;
   BEGIN
     IF (t = NIL) THEN RETURN ErrType.T END;
+    IF t.error THEN RETURN ErrType.T END;
     IF (t.inTypeOf) THEN IllegalRecursion (t);  RETURN ErrType.T  END;
     t.inTypeOf := TRUE;
     x := t.typeOf ();
@@ -50,6 +51,7 @@ PROCEDURE RepTypeOf (t: T): Type.T =
   VAR x: Type.T;
   BEGIN
     IF (t = NIL) THEN RETURN ErrType.T END;
+    IF t.error THEN RETURN ErrType.T END;
     IF (t.inTypeOf) THEN IllegalRecursion (t);  RETURN ErrType.T  END;
     t.inTypeOf := TRUE;
     x := t.repTypeOf ();
