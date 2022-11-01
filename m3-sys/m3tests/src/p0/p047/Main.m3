@@ -17,7 +17,9 @@ TYPE
 PROCEDURE Test() =
   VAR
     l : LONGINT;
+(*  re-enable after enable sub-test  a := LOOPHOLE(l1,ADDRESS);
     a : ADDRESS;
+*)
     r1 : REAL;
     l1 : LONGREAL;
     e1 : EXTENDED;
