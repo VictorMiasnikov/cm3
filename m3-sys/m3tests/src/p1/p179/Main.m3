@@ -52,7 +52,9 @@ TYPE
       occupied: BOOLEAN;
     END;
 
+(*
   Buckets = REF ARRAY OF EntryA;
+*)
 
 (* VVM 2023-04-18 13-33
 VAR BucketsVal := NEW (Buckets, 1);
