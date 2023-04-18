@@ -71,10 +71,8 @@ PROCEDURE Node(
                         formal_id));
                     formal_type := formal_id.sm_type_spec
                   END; (* if *)
-                  IF exp # NIL THEN
-                    CheckImplicitNarrow(exp, exp.sm_exp_type_spec,
-                                        formal_type);
-                  END;
+                  CheckImplicitNarrow(exp, exp.sm_exp_type_spec,
+                      formal_type);
                 END; (* while *)
               END;
             END;

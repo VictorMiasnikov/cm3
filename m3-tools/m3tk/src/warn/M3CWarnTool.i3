@@ -21,7 +21,7 @@ INTERFACE M3CWarnTool;
 
 IMPORT M3Args;
 
-PROCEDURE GetTool(): M3Args.T RAISES {};
+PROCEDURE Get(): M3Args.T RAISES {};
 (* return tool handle *)
 
 PROCEDURE Init() RAISES {};

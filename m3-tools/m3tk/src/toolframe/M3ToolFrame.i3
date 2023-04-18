@@ -56,7 +56,5 @@ The "Startup"  procedure is equivalent to the following code:
 
 *)
 
-PROCEDURE ResetPath(c: M3Context.T);
-(* Update the search path after initialisation *)
 
 END M3ToolFrame.

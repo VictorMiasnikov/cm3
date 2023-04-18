@@ -37,10 +37,10 @@ CONST
 VAR
   tool_g: M3Args.T;
 
-PROCEDURE GetTool(): M3Args.T RAISES {}=
+PROCEDURE Get(): M3Args.T RAISES {}=
   BEGIN
     RETURN tool_g;
-  END GetTool;
+  END Get;
 
 TYPE Extension = M3CGo.Extension OBJECT OVERRIDES extend := Extend END;
 
