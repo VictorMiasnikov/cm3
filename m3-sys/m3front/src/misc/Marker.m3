@@ -54,11 +54,11 @@ CONST
   };
 
 VAR
-  all_frames   : FramePtr := NIL;
-  n_frames     : INTEGER  := 0;
-  save_depth   : INTEGER  := 0;
-  tos          : INTEGER  := 0;
-  stack        : ARRAY [0..50] OF Frame;
+  all_frames           : FramePtr := NIL;
+  n_frames             : INTEGER  := 0;
+  save_depth           : INTEGER  := 0;
+  tos                  : INTEGER  := 0;
+  stack_of_Marker_m3   : ARRAY [0..50] OF Frame;
 
 (*---------------------------------------------------------- marker stack ---*)
 
@@ -66,7 +66,7 @@ PROCEDURE SaveFrame () =
   VAR p := NEW (FramePtr);
   BEGIN
     <*ASSERT save_depth >= 0*>
-    WITH z = stack [tos-1] DO
+    WITH z = stack_of_Marker_m3 [tos-1] DO
       z.saved := TRUE;  INC (save_depth);
       p^ := z;
       (*******
@@ -84,14 +84,14 @@ PROCEDURE SaveFrame () =
 <*INLINE*> PROCEDURE Pop () =
   BEGIN
     DEC (tos);
-    IF (stack[tos].saved) THEN DEC (save_depth) END;
+    IF (stack_of_Marker_m3[tos].saved) THEN DEC (save_depth) END;
     <*ASSERT save_depth >= 0*>
   END Pop;
 
 PROCEDURE PushFinally (l_start, l_stop, l_stopBody: CG.Label;  info: CG.Var) =
   BEGIN
     Push (Kind.zFINALLY, l_start, l_stop, info);
-    WITH z = stack[tos - 1] DO
+    WITH z = stack_of_Marker_m3[tos - 1] DO
       z.stopBody := l_stopBody
     END;
   END PushFinally;
@@ -100,7 +100,7 @@ PROCEDURE PushFinallyProc (l_start, l_stop: CG.Label;  info: CG.Var;
                            handler: CG.Proc;  h_level: INTEGER) =
   BEGIN
     Push (Kind.zFINALLYPROC, l_start, l_stop, info);
-    WITH z = stack[tos - 1] DO
+    WITH z = stack_of_Marker_m3[tos - 1] DO
       z.handler := handler;
       z.h_level := h_level;
     END;
@@ -109,8 +109,8 @@ PROCEDURE PushFinallyProc (l_start, l_stop: CG.Label;  info: CG.Var;
 PROCEDURE PopFinally (VAR(*OUT*) returnSeen, exitSeen: BOOLEAN) =
   BEGIN
     Pop ();
-    returnSeen := stack[tos].returnSeen;
-    exitSeen   := stack[tos].exitSeen;
+    returnSeen := stack_of_Marker_m3[tos].returnSeen;
+    exitSeen   := stack_of_Marker_m3[tos].exitSeen;
   END PopFinally;
 
 PROCEDURE PushLock (l_start, l_stop: CG.Label;  mutex: CG.Var) =
@@ -121,7 +121,7 @@ PROCEDURE PushLock (l_start, l_stop: CG.Label;  mutex: CG.Var) =
 PROCEDURE PushTry (l_start, l_stop, l_stopBody: CG.Label;  info: CG.Var;  ex: ESet.T) =
   BEGIN
     Push (Kind.zTRY, l_start, l_stop, info, ex);
-    WITH z = stack[tos - 1] DO
+    WITH z = stack_of_Marker_m3[tos - 1] DO
       z.stopBody := l_stopBody
     END;
   END PushTry;
@@ -129,7 +129,7 @@ PROCEDURE PushTry (l_start, l_stop, l_stopBody: CG.Label;  info: CG.Var;  ex: ES
 PROCEDURE PushTryElse (l_start, l_stop, l_stopBody: CG.Label;  info: CG.Var) =
   BEGIN
     Push (Kind.zTRYELSE, l_start, l_stop, info);
-    WITH z = stack[tos - 1] DO
+    WITH z = stack_of_Marker_m3[tos - 1] DO
       z.stopBody := l_stopBody
     END;
   END PushTryElse;
@@ -137,7 +137,7 @@ PROCEDURE PushTryElse (l_start, l_stop, l_stopBody: CG.Label;  info: CG.Var) =
 PROCEDURE PushExit (l_stop: CG.Label) =
   BEGIN
     Push (Kind.zEXIT, l_stop := l_stop);
-    WITH z = stack[tos - 1] DO
+    WITH z = stack_of_Marker_m3[tos - 1] DO
       z.stopBody := l_stop
     END;
   END PushExit;
@@ -151,7 +151,7 @@ PROCEDURE PushProcedure (t: Type.T; v: Variable.T; cc: CG.CallingConvention) =
   BEGIN
     <* ASSERT (t = NIL) = (v = NIL) *>
     Push (Kind.zPROC);
-    WITH z = stack[tos - 1] DO
+    WITH z = stack_of_Marker_m3[tos - 1] DO
       z.type     := t;
       z.variable := v;
       z.callConv := cc;
@@ -161,7 +161,7 @@ PROCEDURE PushProcedure (t: Type.T; v: Variable.T; cc: CG.CallingConvention) =
 PROCEDURE Push (k: Kind;  l_start, l_stop: CG.Label := CG.No_label;
                 info: CG.Var := NIL;  ex: ESet.T := NIL) =
   BEGIN
-    WITH z = stack[tos] DO
+    WITH z = stack_of_Marker_m3[tos] DO
       z.kind       := k;
       z.saved      := FALSE;
       z.outermost  := FALSE;
@@ -185,12 +185,12 @@ PROCEDURE Push (k: Kind;  l_start, l_stop: CG.Label := CG.No_label;
 
 PROCEDURE Invoked () =
   BEGIN
-    stack[tos - 1].invokeSeen := TRUE;
+    stack_of_Marker_m3[tos - 1].invokeSeen := TRUE;
   END Invoked;
 
 PROCEDURE InvokeSeen () : BOOLEAN =
   BEGIN
-    RETURN stack[tos - 1].invokeSeen;
+    RETURN stack_of_Marker_m3[tos - 1].invokeSeen;
   END InvokeSeen;
 
 (*--------------------------------------------- explicit frame operations ---*)
@@ -301,7 +301,7 @@ PROCEDURE CaptureState (frame: CG.Var;  jmpbuf: CG.Var;  handler: CG.Label) =
 PROCEDURE ExitOK (): BOOLEAN =
   BEGIN
     FOR i := tos - 1 TO 0 BY  -1 DO
-      WITH z = stack[i] DO
+      WITH z = stack_of_Marker_m3[i] DO
         IF (z.kind = Kind.zTRYELSE) THEN
           Error.Warn (1, "EXIT will be caught by TRY EXCEPT ELSE clause");
         END;
@@ -315,7 +315,7 @@ PROCEDURE ExitOK (): BOOLEAN =
 PROCEDURE ReturnOK (): BOOLEAN =
   BEGIN
     FOR i := tos - 1 TO 0 BY  -1 DO
-      WITH z = stack[i] DO
+      WITH z = stack_of_Marker_m3[i] DO
         IF (z.kind = Kind.zTRYELSE) THEN
           Error.Warn (1, "RETURN will be caught by TRY EXCEPT ELSE clause");
         END;
@@ -328,7 +328,7 @@ PROCEDURE ReturnOK (): BOOLEAN =
 PROCEDURE ReturnVar (VAR(*OUT*) t: Type.T;  VAR(*OUT*) v: Variable.T) =
   BEGIN
     FOR i := tos - 1 TO 0 BY  -1 DO
-      WITH z = stack[i] DO
+      WITH z = stack_of_Marker_m3[i] DO
         IF (z.kind = Kind.zPROC) THEN
           t := z.type;
           v := z.variable;
@@ -348,7 +348,7 @@ PROCEDURE EmitExit () =
     (* mark every frame out to the loop boundary as 'exitSeen' *)
     i := tos - 1;
     WHILE (i >= 0) DO
-      WITH z = stack[i] DO
+      WITH z = stack_of_Marker_m3[i] DO
         z.exitSeen := TRUE;
         IF (z.kind = Kind.zEXIT) OR (z.kind = Kind.zTRYELSE) THEN EXIT END;
       END;
@@ -367,7 +367,7 @@ PROCEDURE EmitExit1 () =
     (* unwind as far as possible *)
     i := tos - 1;
     WHILE (i >= 0) DO
-      WITH z = stack[i] DO
+      WITH z = stack_of_Marker_m3[i] DO
         CASE z.kind OF
         | Kind.zTRYELSE =>
             CG.Load_intt (Exit_exception);
@@ -402,7 +402,7 @@ PROCEDURE EmitExit2 () =
     (* unwind as far as possible *)
     i := tos - 1;
     WHILE (i >= 0) DO
-      WITH z = stack[i] DO
+      WITH z = stack_of_Marker_m3[i] DO
         CASE z.kind OF
         | Kind.zTRYELSE, Kind.zFINALLY =>
             PopFrame (z.info);
@@ -462,7 +462,7 @@ PROCEDURE AllocReturnTemp () =
        entire procedure. *)
         
     IF Host.direct_struct_assign THEN
-      WITH z = stack[tos-1] DO
+      WITH z = stack_of_Marker_m3[tos-1] DO
         <* ASSERT z.kind = Kind.zPROC *>
         IF ProcType.LargeResult (z.type) THEN
           EVAL Type.CheckInfo (z.type, ret_info);
@@ -487,7 +487,7 @@ PROCEDURE EmitReturn (expr: Expr.T;  fromFinally: BOOLEAN) =
     (* mark every frame out to the procedure boundary as 'returnSeen' *)
     i := tos - 1;
     WHILE (i >= 0) DO
-      WITH z = stack[i] DO
+      WITH z = stack_of_Marker_m3[i] DO
         z.returnSeen := TRUE;
         IF (z.kind = Kind.zPROC) OR (z.kind = Kind.zTRYELSE) THEN EXIT END;
       END;
@@ -500,7 +500,7 @@ PROCEDURE EmitReturn (expr: Expr.T;  fromFinally: BOOLEAN) =
          or munged by a finally handler *)
       i := tos-1;
       WHILE (i >= 0) DO
-        WITH z = stack[i] DO
+        WITH z = stack_of_Marker_m3[i] DO
           CASE z.kind OF
           | Kind.zTRYELSE =>
               Expr.Prep (expr);
@@ -519,7 +519,7 @@ PROCEDURE EmitReturn (expr: Expr.T;  fromFinally: BOOLEAN) =
       END;
 
       IF (expr # NIL) THEN
-        WITH z = stack[i] DO
+        WITH z = stack_of_Marker_m3[i] DO
           (* stuff the pending return value *)
           is_large := ProcType.LargeResult (z.type);
 
@@ -546,7 +546,7 @@ PROCEDURE EmitReturn (expr: Expr.T;  fromFinally: BOOLEAN) =
     END;
 
     IF i >= 0 THEN
-      WITH z = stack[i] DO
+      WITH z = stack_of_Marker_m3[i] DO
         IF Host.direct_struct_assign
           AND (fromFinally OR NOT simple)
           AND ProcType.LargeResult (z.type)
@@ -597,7 +597,7 @@ PROCEDURE EmitReturn1 (): INTEGER =
     (* now, unwind as far as possible *)
     i := tos - 1;
     WHILE (i >= 0) DO
-      WITH z = stack[i] DO
+      WITH z = stack_of_Marker_m3[i] DO
         CASE z.kind OF
         | Kind.zTRYELSE =>
             CG.Load_intt (Return_exception);
@@ -632,7 +632,7 @@ PROCEDURE EmitReturn2 (): INTEGER =
     (* now, unwind as far as possible *)
     i := tos - 1;
     WHILE (i >= 0) DO
-      WITH z = stack[i] DO
+      WITH z = stack_of_Marker_m3[i] DO
         CASE z.kind OF
         | Kind.zTRYELSE =>
             PopFrame (z.info);
@@ -737,7 +737,7 @@ PROCEDURE EmitExceptionTest (signature: Type.T;  need_value: BOOLEAN): CG.Val =
     i := tos - 1;
     LOOP
       IF (i < 0) THEN  RETURN value;  END;
-      WITH z = stack[i] DO
+      WITH z = stack_of_Marker_m3[i] DO
         CASE z.kind OF
         | Kind.zTRYELSE     => EXIT;
         | Kind.zFINALLYPROC => (* ignore the runtime does it *)
@@ -760,9 +760,9 @@ PROCEDURE EmitExceptionTest (signature: Type.T;  need_value: BOOLEAN): CG.Val =
     (* Dont really need this code after every call - to check if an exception
        raised. It only works with the old copy exception model.
  
-    CG.Load_addr (stack[i].info, M3RT.EA_exception, Target.Address.align);
+    CG.Load_addr (stack_of_Marker_m3[i].info, M3RT.EA_exception, Target.Address.align);
     CG.Load_nil ();
-    CG.If_compare (CG.Type.Addr, CG.Cmp.NE, stack[i].stop, CG.Never);
+    CG.If_compare (CG.Type.Addr, CG.Cmp.NE, stack_of_Marker_m3[i].stop, CG.Never);
     *)
     IF NOT need_value AND (value # NIL) THEN
       CG.Push (value);
@@ -796,7 +796,7 @@ PROCEDURE NextHandler (VAR(*OUT*) handler: CG.Label;
     i := tos - 1;
     LOOP
       IF (i < 0) THEN RETURN FALSE END;
-      WITH z = stack[i] DO
+      WITH z = stack_of_Marker_m3[i] DO
         CASE z.kind OF
         | Kind.zTRYELSE     => EXIT;
         | Kind.zFINALLYPROC => (* ignore the runtime does it *)
@@ -811,9 +811,9 @@ PROCEDURE NextHandler (VAR(*OUT*) handler: CG.Label;
       DEC (i);
     END;
 
-    handler_body := stack[i].stopBody;
-    handler := stack[i].stop;
-    info := stack[i].info;
+    handler_body := stack_of_Marker_m3[i].stopBody;
+    handler := stack_of_Marker_m3[i].stop;
+    info := stack_of_Marker_m3[i].info;
     RETURN TRUE;
   END NextHandler;
 
@@ -825,7 +825,7 @@ PROCEDURE Excepts() : ESet.EList =
     (* scan the frame stack getting each frames list of handled exceptions *)
     i := tos - 1;
     WHILE (i >= 0) DO
-      e := ESet.ListE(stack[i].e_set);
+      e := ESet.ListE(stack_of_Marker_m3[i].e_set);
       IF e # NIL THEN
         t := e;
         WHILE t.next # NIL DO t := t.next; END;

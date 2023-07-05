@@ -624,11 +624,11 @@ TYPE
 
 VAR (* for "Compiler.ThisException()" *)
   tos   : INTEGER := 0;
-  stack : ARRAY [0..50] OF HandlerInfo;
+  stack_of_TryStmt_m3 : ARRAY [0..50] OF HandlerInfo;
 
 PROCEDURE PushHandler (info: CG.Var;  offset: INTEGER;   direct: BOOLEAN) =
   BEGIN
-    WITH z = stack [tos] DO
+    WITH z = stack_of_TryStmt_m3 [tos] DO
       z.info   := info;
       z.offset := offset;
       z.direct := direct;
@@ -639,7 +639,7 @@ PROCEDURE PushHandler (info: CG.Var;  offset: INTEGER;   direct: BOOLEAN) =
 PROCEDURE PopHandler () =
   BEGIN
     DEC (tos);
-    stack[tos].info := NIL;
+    stack_of_TryStmt_m3[tos].info := NIL;
   END PopHandler;
 
 PROCEDURE InHandler (): BOOLEAN =
@@ -650,7 +650,7 @@ PROCEDURE InHandler (): BOOLEAN =
 PROCEDURE LoadInfoPtr () =
   BEGIN
     IF (tos <= 0) THEN  CG.Load_nil ();  RETURN;  END;
-    WITH z = stack[tos-1] DO
+    WITH z = stack_of_TryStmt_m3[tos-1] DO
       IF z.direct THEN
         CG.Load_addr_of (z.info, z.offset, Target.Address.align);
       ELSE
