@@ -11,6 +11,7 @@ UNSAFE MODULE M3CG_LLVM;
 opaque pointers in LLVM.i3
 *)
 
+(* m3core imports *)
 IMPORT Ctypes;
 IMPORT FileRd;
 IMPORT IntRefTbl;
@@ -21,19 +22,22 @@ IMPORT Pathname;
 IMPORT Process;
 IMPORT Rd;
 IMPORT RefSeq;
-IMPORT Text,TextExtras;
+IMPORT Text;
+IMPORT TextExtras;
 IMPORT TextRefTbl;
 IMPORT TextSeq;
 IMPORT Version;
 IMPORT Word;
 IMPORT Wr;
 
-IMPORT DwarfConst AS DC;
-IMPORT LLVM;
-IMPORT LLVMTypes;
-FROM LLVMTypes IMPORT int64_t , uint64_t , uint32_t, unsigned;
-FROM LLVMTypes IMPORT ArrayRefOfMetadataRef, MetadataRef, StringRef,ArrayRefOfint64_t;
+(* m3middle imports *)
 IMPORT M3Buf;
+IMPORT M3CG_Ops;
+IMPORT M3ID;
+IMPORT Target;
+IMPORT TargetMap;
+IMPORT TFloat;
+IMPORT TInt, TWord;
 IMPORT M3CG;
 FROM M3CG IMPORT Name, ByteOffset, TypeUID, CallingConvention;
 FROM M3CG IMPORT BitSize, ByteSize, Alignment, Frequency;
@@ -41,16 +45,14 @@ FROM M3CG IMPORT Var, Proc, Label, Sign, BitOffset;
 FROM M3CG IMPORT Type, ZType, AType, RType, IType, MType;
 FROM M3CG IMPORT CompareOp, ConvertOp, AtomicOp, RuntimeError;
 FROM M3CG IMPORT MemoryOrder;
-IMPORT M3CG_Ops;
-(*
-IMPORT M3DIBuilder AS M3DIB;
-*)
+
+(* llvmbinding imports *)
+IMPORT DwarfConst AS DC;
+IMPORT LLVM;
+IMPORT LLVMTypes;
+FROM LLVMTypes IMPORT int64_t , uint64_t , uint32_t, unsigned;
+FROM LLVMTypes IMPORT ArrayRefOfMetadataRef, MetadataRef, StringRef,ArrayRefOfint64_t;
 IMPORT M3DebugInfo AS M3DIB;
-IMPORT M3ID;
-IMPORT Target;
-IMPORT TargetMap;
-IMPORT TFloat;
-IMPORT TInt, TWord;
 
 <*FATAL ANY*>
 
@@ -91,6 +93,7 @@ REVEAL
 
     labelTable    : IntRefTbl.T := NIL;
     structTable   : IntRefTbl.T := NIL;
+    exceptsTable  : IntRefTbl.T := NIL;
 
     next_label_id := 1;
     next_var      := 1;
@@ -116,6 +119,8 @@ REVEAL
     callResultType : Type; (* Meaningful when inside a call. *)
     indirCallCC    : CallingConvention; (* Meaningful when inside an indirect call. *)
     staticLinkBB   : LLVM.BasicBlockRef; (* BB that contains a pop_static_link. *)
+    persFn         : LLVM.ValueRef; (* personality function not used *)
+    catchId        : INTEGER := 0;
 
    (* external set functions *)
     setUnion, setIntersection, setDifference, setSymDifference,
@@ -155,9 +160,11 @@ METHODS
     structType(size : ByteSize) : LLVM.TypeRef := StructType;
     divMod(t : IType; isDiv : BOOLEAN) : LLVM.ValueRef := DivMod;
     doCheck(a,b : LLVM.ValueRef; pred : LLVM.IntPredicate; code : RuntimeError) := DoCheck;
-    innerCallIndirect(proc: LLVM.ValueRef; t: Type; cc: CallingConvention; Nested: BOOLEAN) : LLVM.ValueRef := InnerCallIndirect;
     declSet(name : TEXT; fn : LLVM.ValueRef; numParams : INTEGER; hasReturn : BOOLEAN; setRange : BOOLEAN := FALSE) : LLVM.ValueRef := DeclSet;
     setCall(fn : LLVM.ValueRef; numParams : INTEGER; p1,p2,p3,p4 : LLVM.ValueRef := NIL) : LLVM.ValueRef := SetCall;
+    call_invoke_direct (p: Proc; t: Type; next,handler : Label;  call : BOOLEAN) := call_invoke_direct;
+    innerCallIndirect(proc: LLVM.ValueRef; t: Type; cc: CallingConvention; next,handler : Label; call : BOOLEAN; Nested: BOOLEAN; merge: LLVM.BasicBlockRef:=NIL) : LLVM.ValueRef := InnerCallIndirect;
+    call_invoke_indirect (t: Type; cc: CallingConvention; next,handler : Label;  call : BOOLEAN) := call_invoke_indirect;
 
 OVERRIDES
     next_label := next_label;
@@ -289,6 +296,11 @@ OVERRIDES
     call_direct := call_direct;
     start_call_indirect := start_call_indirect;
     call_indirect := call_indirect;
+    start_try := start_try;
+    end_try := end_try;
+    invoke_direct := invoke_direct;
+    invoke_indirect := invoke_indirect;
+    landing_pad := landing_pad;
     pop_param := pop_param;
     pop_struct := pop_struct;
     pop_static_link := pop_static_link;
@@ -469,6 +481,8 @@ TYPE
   LabelObj = OBJECT
     id : Label;
     barrier : BOOLEAN := FALSE;  (* set an exception handling scope *)
+    handler : BOOLEAN := FALSE;  (* this label is an exception handler *)
+    set : BOOLEAN := FALSE;      (* this label has been set *)
     function : LvProc;
     labBB : LLVM.BasicBlockRef;  (* jmps goto this bb *)
     elseBB : LLVM.BasicBlockRef; (* else bb for compares *)
@@ -682,14 +696,12 @@ VAR
      It will use 128 bit quad precision floating point if target upgrades*)
   ExtendedType : LLVM.TypeRef;
 
-(* cannot set this to true before llvm provides api to specify the
-byval type. The definition now looks like define func(%struct.0* byval %parm)
-but it should look like define func(%struct.0* byval(%struct.0) %parm)
-*)
   llvmByval := TRUE; (* whether we do the copy ourselves or add the 'byval'
                         attribute to functions so that llvm does the copy.
                         If we do it ourselves we sidestep the standard abi
                         and cannot be called from gcc compiled code *)
+
+  UseStackWalker := FALSE;
 
 (*--------------------------------------------------------------- Utility ---*)
 
@@ -749,7 +761,6 @@ PROCEDURE GetBBLastInstruction ( BB: LLVM.BasicBlockRef; expectedOp: LLVM.Opcode
 
 (*-------------------------simplify all the untraced array allocs for llvm ---*)
 
-(* simplify all the untraced array allocs for llvm *)
 TYPE
   ValueArrType = UNTRACED REF ARRAY OF LLVM.ValueRef;
   ValueRefType = UNTRACED REF LLVM.ValueRef;
@@ -833,6 +844,7 @@ PROCEDURE New
                 structTable := NEW (IntRefTbl.Default).init (20),
                 debugTable := NEW (IntRefTbl.Default).init (20),
                 labelTable := NEW (IntRefTbl.Default).init (20),
+                exceptsTable := NEW (IntRefTbl.Default).init (20),
                 globalTable := NEW (TextRefTbl.Default).init (20),
                 exprStack := NEW(RefSeq.T).init(),
                 callStack := NEW(RefSeq.T).init(),
@@ -1069,10 +1081,12 @@ PROCEDURE EmbedVersion() =
   VAR
     mdNode : LLVM.ValueRef;
     identMD : ARRAY[0..0] OF REFANY;
-    cm3Ver,llvmVer,ident : TEXT;
+    cm3Ver,llvmVer,walker,ident : TEXT;
   BEGIN
     cm3Ver := Version.CM3VER;
     llvmVer := Version.LLVMVER;
+    walker := Version.M3_STACK_WALKER;
+    IF Text.Equal(walker,"true") THEN UseStackWalker := TRUE; END;
     ident := "versions- cm3: " & cm3Ver & " llvm: " & llvmVer;
 
     identMD[0] := ident;
@@ -1251,6 +1265,11 @@ PROCEDURE BuildFunc(self : U; p : Proc) =
     (* create the llvm function *)
     mlProc.lvProc := LLVM.LLVMAddFunction(modRef, LT(procTextName), mlProc.procTy);
 
+    (* add the dso_local attr  check this since this sets thread_local
+       not dso
+    LLVM.LLVMSetThreadLocal(mlProc.lvProc,TRUE);
+    *)
+
     (* c funcs seem to have these attrs  - fix this *)
     LLVM.LLVMAddAttributeAtIndex(mlProc.lvProc, LLVM.AttributeFunctionIndex, EnumAttr("uwtable"));
 
@@ -1394,7 +1413,10 @@ PROCEDURE SetBBVolatile(bb : LLVM.BasicBlockRef) =
       opCode := LLVM.LLVMGetInstructionOpcode(instr);
       IF opCode = LLVM.Opcode.Store OR
          opCode = LLVM.Opcode.Load THEN
-        LLVM.LLVMSetVolatile(instr, TRUE);
+        (* set volatiles only if using sjlj exceptions *) 
+        IF NOT UseStackWalker THEN
+          LLVM.LLVMSetVolatile(instr, TRUE);
+        END;
       END;
       instr := LLVM.LLVMGetNextInstruction(instr);
     END;
@@ -1428,7 +1450,11 @@ PROCEDURE end_unit (self: U) =
 
       (* If a label specifies an exception barrier set volatile on
          all loads and stores in the bb to prevent optimisers moving
-         code *)
+         code. This is a kludge since code can be moved safely with the
+         zero cost exception model. ie using landing_pad etc. And we are
+         just copying what cm3cg does when maybe disabling code motion
+         passes would be a better option. That said we are still volatiling
+         things in the case of sjlj exceptions until further notice. *)
       IF label.barrier THEN
         SetBBVolatile(label.labBB);
         (* set the 'second' bb volatile as well. This is where locals
@@ -1456,6 +1482,7 @@ PROCEDURE end_unit (self: U) =
 (*------------------------------------------------ debugging line numbers ---*)
 
 PROCEDURE set_source_file (self: U;  file: TEXT) =
+  VAR procTy : LLVM.TypeRef;
   BEGIN
     IF modRef = NIL THEN
       self.curFile := file;
@@ -1463,6 +1490,11 @@ PROCEDURE set_source_file (self: U;  file: TEXT) =
       modRef := LLVM.LLVMModuleCreateWithNameInContext(moduleID,globContext);
       LLVM.LLVMSetDataLayout(modRef,LT(self.dataRep));
       LLVM.LLVMSetTarget(modRef,LT(self.targetTriple));
+
+      (* build a personality function. Not used but needed *)
+      procTy := LLVM.LLVMFunctionType(AdrTy, NIL, 0, FALSE);
+      self.persFn := LLVM.LLVMAddFunction(modRef, LT("__m3_personality_v0"), procTy);
+
       EmbedVersion();
       DebugInit(self);
     END;
@@ -1867,6 +1899,9 @@ PROCEDURE declare_global (self: U;  n: Name;  s: ByteSize;  a: Alignment; t: Typ
     v.lv := LLVM.LLVMAddGlobal(modRef, v.lvType, LT(globName));
     LLVM.LLVMSetInitializer(v.lv, LLVM.LLVMConstNull(v.lvType));
     LLVM.LLVMSetAlignment(v.lv, v.align);
+    (* maybe set dso_local check this its not dso_local whatever that is
+    LLVM.LLVMSetThreadLocal(v.lv,TRUE);
+    *)
 
     IF exported THEN
       LLVM.LLVMSetLinkage(v.lv,LLVM.Linkage.External);
@@ -1902,12 +1937,22 @@ PROCEDURE VName(v : LvVar; debug := FALSE) : TEXT =
 
 (* Generate llvm code to allocate v in the current basic block. *)
 PROCEDURE AllocVar(self : U; v : LvVar) =
+  VAR size : INTEGER;
   BEGIN
     v.lv := LLVM.LLVMBuildAlloca(builderIR, v.lvType, LT(VName(v)));
     LLVM.LLVMSetAlignment(v.lv,v.align);
 
    (* calc the offset from the stack pointer for the unwinder *)
-   INC(self.curProc.localOfs, VAL(LLVM.LLVMStoreSizeOfType(targetData,v.lvType),INTEGER));
+   (* Leave this calc in but it is no longer used now that the landing_pad
+      generates the gcc_except_tables and since the front end is not
+      emitting the scope table we do not get an init_label and init_offset
+      This is arch dependant since dont know if the offset is positive
+      or negative from stack pointer and cannot be optimised. *)
+   size := VAL(LLVM.LLVMStoreSizeOfType(targetData,v.lvType),INTEGER);
+   INC(size,7);
+   size := size - (size MOD 8);
+   INC(self.curProc.localOfs, size);
+(*^ CHECK is this the best way to calc offset *)
    (* this is negative for stacks growing down - what about other way *)
    v.ofs := -self.curProc.localOfs;
   END AllocVar;
@@ -2167,7 +2212,7 @@ PROCEDURE end_init (self: U;  v: Var) =
       | FloatVar(v) =>
           v.lvVal := ConvertFloat(v.prec, v.value);
       | LabelVar(v) =>
-          label := self.getLabel(v.value,"lab");
+          label := self.getLabel(v.value,"lab_" & ItoT(v.value));
           v.lvVal := LLVM.LLVMBlockAddress(label.function.lvProc,label.labBB);
       | OfsVar(v) =>
           var := NARROW(v.value,LvVar);
@@ -2611,6 +2656,8 @@ PROCEDURE end_procedure (self: U;  p: Proc) =
 
       LLVM.LLVMReplaceAllUsesWith (proc.outgoingDisplayLv, newDisplayLv);
       linkSize := BuildDisplay(self, newDisplayLv);
+      (* inc the local offset for the unwinder *)
+      INC(proc.localOfs, VAL(LLVM.LLVMStoreSizeOfType(targetData,proc.displayLty),INTEGER));
       DebugLine(self); (* resume debugging *)
     END;
     (* Remove the temporary proc.outgoingDisplayLv. *)
@@ -2714,11 +2761,13 @@ PROCEDURE set_label (self: U;  lab: Label;  barrier: BOOLEAN) =
   BEGIN
     DumpExprStack(self,"set_label");
 
-    curBB := LLVM.LLVMGetInsertBlock(builderIR);
-    label := self.getLabel(lab,"label_");
+    label := self.getLabel(lab,"label_" & ItoT(lab) & "_");
+    IF label.set THEN RETURN END; (* only set a label once *)
+    label.set := TRUE;
     label.barrier := barrier;
+    curBB := LLVM.LLVMGetInsertBlock(builderIR);
 
-    IF label.cmpInstr # NIL THEN
+    IF label.cmpInstr # NIL OR label.handler THEN
       LLVM.LLVMMoveBasicBlockAfter(label.labBB,curBB);
     END;
 
@@ -2726,7 +2775,12 @@ PROCEDURE set_label (self: U;  lab: Label;  barrier: BOOLEAN) =
     terminator := LLVM.LLVMGetBasicBlockTerminator(curBB);
     IF terminator = NIL THEN
       LLVM.LLVMPositionBuilderAtEnd(builderIR,curBB);
-      EVAL LLVM.LLVMBuildBr(builderIR,label.labBB);
+      (* if label is a landingpad then build unreachable instead *)
+      IF label.handler THEN
+        EVAL LLVM.LLVMBuildUnreachable(builderIR);
+      ELSE
+        EVAL LLVM.LLVMBuildBr(builderIR,label.labBB);
+      END;
       LLVM.LLVMPositionBuilderAtEnd(builderIR,label.labBB);
     END;
 
@@ -2782,7 +2836,7 @@ PROCEDURE BuildCmp(self: U; a,b : LLVM.ValueRef; t: ZType; op : CompareOp; l: La
   BEGIN
     cmpVal := CompareVal(a,b,op,t);
 
-    label := self.getLabel(l,"if_");
+    label := self.getLabel(l,"if_" & ItoT(l));
 
     label.cmpInstr := cmpVal;
     label.elseBB := LLVM.LLVMAppendBasicBlock(self.curProc.lvProc, LT("else_" & ItoT(l)));
@@ -2849,7 +2903,7 @@ PROCEDURE GetLabel(self : U; l : Label; name : TEXT) : LabelObj =
       EVAL self.labelTable.put(l,label);
     END;
     IF label.labBB = NIL THEN
-      label.labBB := LLVM.LLVMAppendBasicBlock(self.curProc.lvProc, LT(name & ItoT(l)));
+      label.labBB := LLVM.LLVMAppendBasicBlock(self.curProc.lvProc, LT(name));
     END;
     RETURN label;
   END GetLabel;
@@ -2907,7 +2961,7 @@ PROCEDURE exit_proc (self: U;  t: Type) =
         stackVal := LLVM.LLVMBuildBitCast(builderIR, stackVal, AdrTy, LT("exit_toadr"));
       END;
 
-      retRef := LLVM.LLVMBuildRet(builderIR,stackVal);
+      retRef := LLVM.LLVMBuildRet(builderIR, stackVal);
       (* need it to keep expression stack at 0 for labels calls and jmp *)
       Pop(self.exprStack);
     END;
@@ -3032,7 +3086,6 @@ PROCEDURE LoadExtend(val : LLVM.ValueRef; t : MType; u : ZType) : LLVM.ValueRef 
     RETURN val;
   END LoadExtend;
 
-(* consider adding range metadata if subrange - from debug info *)
 PROCEDURE load (self: U;  v: Var;  o: ByteOffset;  t: MType;  u: ZType) =
 (* push; s0.u := Mem [ ADR(v) + o ].t ; *)
   VAR
@@ -3178,7 +3231,7 @@ PROCEDURE load_address (self: U;  v: Var;  o: ByteOffset) =
     END;
 
     IF o # 0 THEN
-      srcVal := BuildGep(srcVal,o);
+      srcVal := BuildGep(srcVal,o,"load_adr");
     END;
 
     Push(self.exprStack,NEW(LvExpr,lVal := srcVal));
@@ -3197,7 +3250,7 @@ PROCEDURE load_indirect (self: U;  o: ByteOffset;  t: MType;  u: ZType) =
     srcTy := LLVM.LLVMPointerType(srcTy);
 
     IF o # 0 THEN
-      srcVal := BuildGep(srcVal,o);
+      srcVal := BuildGep(srcVal,o,"load_ind");
     END;
 
     srcVal := LLVM.LLVMBuildBitCast(builderIR, srcVal, srcTy, LT("loadind_ptr"));
@@ -3227,7 +3280,7 @@ PROCEDURE store_indirect (self: U;  o: ByteOffset;  t: ZType;  u: MType) =
     destPtrTy := LLVM.LLVMPointerType(destTy);
 
     IF o # 0 THEN
-      destVal := BuildGep(destVal,o);
+      destVal := BuildGep(destVal,o,"store_ind");
     END;
 
     IF TypeSize(u) < TypeSize(t) THEN
@@ -4813,8 +4866,18 @@ PROCEDURE ExtendScalar(v : LLVM.ValueRef; t : Type) : LLVM.ValueRef =
     RETURN v;
   END ExtendScalar;
 
-PROCEDURE call_direct (self: U; p: Proc; <*UNUSED*> t: Type) =
-  (* call the procedure 'p'.  It returns a value of type t. *)
+PROCEDURE start_try (<*UNUSED*> self : U) =
+  BEGIN
+    (* nothing to do *)
+  END start_try;
+
+PROCEDURE end_try (<*UNUSED*> self : U) =
+  BEGIN
+    (* nothing to do *)
+  END end_try;
+
+(* a common method for building a call or invoke *)
+PROCEDURE call_invoke_direct (self : U; p: Proc; <*UNUSED*> t: Type; next,handler : Label;  call : BOOLEAN) =
   VAR
     calleeProc : LvProc;
     fn, lVal, staticLinkActualLv (* i8* *) : LLVM.ValueRef;
@@ -4824,6 +4887,8 @@ PROCEDURE call_direct (self: U; p: Proc; <*UNUSED*> t: Type) =
     returnName : TEXT := NIL;
     passedParamsCt, codedActualsCt : INTEGER := 0;
     staticLinkCount : [0..1]  := 0;
+    catchLab : LabelObj;
+    then,then_tmp : LLVM.BasicBlockRef;
   BEGIN
     DumpExprStack(self,"call_direct");
 
@@ -4898,8 +4963,27 @@ PROCEDURE call_direct (self: U; p: Proc; <*UNUSED*> t: Type) =
     END;
     (* else void returns need null string *)
 
-    lVal := LLVM.LLVMBuildCall
-              (builderIR, fn, paramsRef, passedParamsCt, LT(returnName));
+    IF call THEN
+      lVal := LLVM.LLVMBuildCall
+                (builderIR, fn, paramsRef, passedParamsCt, LT(returnName));
+    ELSE
+      then_tmp := LLVM.LLVMCreateBasicBlockInContext(globContext, LT("invoke_tmp"));
+      catchLab := self.getLabel(handler,"catch_" & ItoT(handler));
+      (* tag the catch label so that no jumps can be made to it. See set_label
+         try raise e except pattern needs this flag *)
+      catchLab.handler := TRUE;
+
+      lVal := LLVM.LLVMBuildInvoke
+                (builderIR, fn, paramsRef, passedParamsCt,
+                 then_tmp, catchLab.labBB, LT(returnName));
+      (* the front end issues a set_label after invoke but we preempt it here
+         to avoid the extendscaler being generated between the invoke
+         and the set_label. *)
+      self.set_label(next,FALSE);
+      then := self.getLabel(next,"").labBB;
+      LLVM.LLVMReplaceAllUsesWith (LLVM.LLVMBasicBlockAsValue(then_tmp),
+                                   LLVM.LLVMBasicBlockAsValue(then));
+    END;
 
     IF calleeProc.returnType # Type.Void THEN
       lVal := ExtendScalar(lVal,calleeProc.returnType);
@@ -4907,8 +4991,68 @@ PROCEDURE call_direct (self: U; p: Proc; <*UNUSED*> t: Type) =
       Push(self.exprStack,NEW(LvExpr,lVal := lVal));
     END;
     self.callState := callStateTyp.outside;
-  END call_direct;
+  END call_invoke_direct;
 
+PROCEDURE call_direct (self : U; p: Proc; t: Type) =
+  BEGIN
+    self.call_invoke_direct(p, t, 0, 0, TRUE);
+ END call_direct;
+
+PROCEDURE invoke_direct (self : U; p: Proc; t: Type; next,handler : Label) =
+  BEGIN
+    self.call_invoke_direct(p, t, next, handler, FALSE);
+  END invoke_direct;
+
+PROCEDURE landing_pad (self : U; t: ZType; handler : Label;
+                       READONLY catches : ARRAY OF TypeUID) =
+  VAR
+    landingVal,catchVal,clauseVal,excPtrVal,uidVal : LLVM.ValueRef;
+    curBB,catchBB : LLVM.BasicBlockRef;
+    landingTy : LLVM.TypeRef;
+    typesArr : TypeArrType;
+    typesRef : TypeRefType;
+    name : TEXT;
+    excepts : REF ARRAY OF TypeUID;
+    exc : REFANY;
+    nn : INTEGER;
+  BEGIN
+    curBB := LLVM.LLVMGetInsertBlock(builderIR);
+    catchBB := self.getLabel(handler,"").labBB;
+    <*ASSERT curBB = catchBB *>
+    (* landing pad type *)
+    typesRef := NewTypeArr(typesArr,2);
+    (* this should always be i8* ie address *)
+    typesArr[0] := LLvmType(t);
+    typesArr[1] := LLVM.LLVMInt32Type();
+    landingTy := LLVM.LLVMStructType(typesRef, 2, FALSE);
+
+    landingVal := LLVM.LLVMBuildLandingPad (builderIR, landingTy, self.persFn, 1, LT("lpad"));
+
+    nn := NUMBER(catches);
+    <*ASSERT nn > 0 *>
+    excepts := NEW(REF ARRAY OF TypeUID, nn);
+    FOR i := FIRST(excepts^) TO LAST(excepts^) DO
+      IF NOT self.exceptsTable.get(excepts[i], exc) THEN
+        INC(self.catchId);
+        name := "__" & Pathname.LastBase(self.curFile) & "_Exc_" & ItoT(self.catchId);
+        catchVal := LLVM.LLVMAddGlobal(modRef, LLVM.LLVMInt64Type(), LT(name));
+        uidVal := LLVM.LLVMConstInt(LLVM.LLVMInt64Type(), VAL(excepts[i],LONGINT), TRUE);
+        LLVM.LLVMSetInitializer(catchVal, uidVal);
+        LLVM.LLVMSetGlobalConstant(catchVal, TRUE);
+        LLVM.LLVMSetLinkage(catchVal, LLVM.Linkage.Internal);
+        EVAL self.exceptsTable.put(excepts[i], NEW(LvExpr, lVal := catchVal));
+      ELSE
+        catchVal := NARROW(exc, LvExpr).lVal;
+      END;
+      clauseVal := LLVM.LLVMBuildBitCast (builderIR, catchVal, AdrTy, LT("clausecast"));
+      LLVM.LLVMAddClause(landingVal, clauseVal);
+    END;
+
+    excPtrVal := LLVM.LLVMBuildExtractValue(builderIR, landingVal, 0, LT("exc_ptr"));
+    Push(self.exprStack, NEW(LvExpr,lVal := excPtrVal));
+  END landing_pad;
+
+(* consider adding range metadata if subrange - from debug info *)
 PROCEDURE start_call_indirect
   (self: U; t: Type; cc: CallingConvention) =
   (* begin an indirect procedure call that will return a value of type 't'. *)
@@ -4947,8 +5091,8 @@ PROCEDURE IndirectFuncType
 
 PROCEDURE InnerCallIndirect
   (self: U; proc: LLVM.ValueRef; t: Type; <*UNUSED*> cc: CallingConvention;
-   Nested: BOOLEAN)
-  : LLVM.ValueRef =
+   next, handler : Label; call : BOOLEAN; Nested: BOOLEAN;
+   merge : LLVM.BasicBlockRef := NIL) : LLVM.ValueRef =
   (* Call the procedure whose llvm address is proc.
      The procedure returns a value of CG type t.
      Use the actual parameters on self.callStack (which will include a
@@ -4961,6 +5105,8 @@ PROCEDURE InnerCallIndirect
     paramsRef : ValueRefType := NIL;
     actual : LvExpr;
     funcTy, funcPtrTy : LLVM.TypeRef;
+    then,then_tmp : LLVM.BasicBlockRef;
+    catchLab : LabelObj;
     numFormals : INTEGER;
     returnName : TEXT := "";
     byvals : REF ARRAY OF BOOLEAN := NIL;
@@ -4998,8 +5144,32 @@ PROCEDURE InnerCallIndirect
     (* Need a pointer to function type for the call. *)
     funcPtrTy := LLVM.LLVMPointerType(funcTy);
     callVal := LLVM.LLVMBuildBitCast(builderIR, proc, funcPtrTy, LT("call_ind"));
-    resultVal := LLVM.LLVMBuildCall
-      (builderIR, callVal, paramsRef, numFormals, LT(returnName));
+    IF call THEN
+      resultVal := LLVM.LLVMBuildCall
+        (builderIR, callVal, paramsRef, numFormals, LT(returnName));
+    ELSE
+      catchLab := self.getLabel(handler,"catch_" & ItoT(handler));
+      (* tag the catch label so that no jumps can be made to it.
+          See set_label *)
+      catchLab.handler := TRUE;
+      IF merge # NIL THEN
+        resultVal := LLVM.LLVMBuildInvoke
+                      (builderIR, callVal, paramsRef, numFormals,
+                       merge, catchLab.labBB, LT(returnName));
+      ELSE
+        then_tmp := LLVM.LLVMCreateBasicBlockInContext(globContext, LT("invoke_tmp"));
+        resultVal := LLVM.LLVMBuildInvoke
+                      (builderIR, callVal, paramsRef, numFormals,
+                       then_tmp, catchLab.labBB, LT(returnName));
+        (* the front end issues a set_label after invoke but we preempt it here
+           to avoid the extendscaler being generated between the invoke
+           and the set_label. *)
+        self.set_label(next,FALSE);
+        then := self.getLabel(next,"").labBB;
+        LLVM.LLVMReplaceAllUsesWith (LLVM.LLVMBasicBlockAsValue(then_tmp),
+                                     LLVM.LLVMBasicBlockAsValue(then));
+      END;
+    END;
 
     (* Set 'nest' attribute of static link formal. *)
     IF Nested THEN
@@ -5031,7 +5201,7 @@ PROCEDURE InnerCallIndirect
     RETURN resultVal;
   END InnerCallIndirect;
 
-PROCEDURE call_indirect (self: U;  t: Type; cc: CallingConvention) =
+PROCEDURE call_invoke_indirect (self: U;  t: Type; cc: CallingConvention; next,handler : Label; call : BOOLEAN) =
   (* call the procedure whose address is in s0.A and pop s0.  The
      procedure returns a value of type t. *)
   VAR
@@ -5051,14 +5221,16 @@ PROCEDURE call_indirect (self: U;  t: Type; cc: CallingConvention) =
     currentBB := LLVM.LLVMGetInsertBlock (builderIR); (* Save. *)
     IF self.callState = callStateTyp . insideIndirect THEN
       (* ^There was no pop_static_link => statically known to call a global proc. *)
-      resultVal3 := self.innerCallIndirect (procExpr.lVal, t, cc, Nested:=FALSE);
+      resultVal3 := self.innerCallIndirect (procExpr.lVal, t, cc, next, handler,
+                                            call, Nested:=FALSE);
       IF t # Type.Void THEN (* push the return val onto exprStack*)
         resultVal3 := ExtendScalar(resultVal3,t);
         Push(self.exprStack,NEW(LvExpr,lVal := resultVal3));
       END
     ELSIF self.staticLinkBB = currentBB THEN
       (* same BB as the pop_static_link => statically known to call a nested proc. *)
-      resultVal3 := self.innerCallIndirect (procExpr.lVal, t, cc, Nested:=TRUE);
+      resultVal3 := self.innerCallIndirect (procExpr.lVal, t, cc, next, handler,
+                                            call, Nested:=TRUE);
       IF t # Type.Void THEN (* push the return val onto exprStack*)
         resultVal3 := ExtendScalar(resultVal3,t);
         Push(self.exprStack,NEW(LvExpr,lVal := resultVal3));
@@ -5108,9 +5280,11 @@ PROCEDURE call_indirect (self: U;  t: Type; cc: CallingConvention) =
             duplicates the earlier check, in the non-closure case, on the same
             pointer.  But it is needed in that case, because only it does an
             abort when it fails.  The CG code could really be reviewed here. *)
-      resultVal1 := self.innerCallIndirect (loadInst, t, cc, Nested:=TRUE);
-      EVAL LLVM.LLVMBuildBr(builderIR, mergeBB);
-
+      resultVal1 := self.innerCallIndirect (loadInst, t, cc, next, handler,
+                                            call, Nested:=TRUE, merge:=mergeBB);
+      IF call THEN
+        EVAL LLVM.LLVMBuildBr(builderIR, mergeBB);
+      END;
       (* If it has a result, prepare for a Phi at the top of the mergedBB. *)
       IF t # Type.Void THEN
         resultsRef := NewValueArr (resultsArr, 2);
@@ -5123,12 +5297,13 @@ PROCEDURE call_indirect (self: U;  t: Type; cc: CallingConvention) =
          of the no-SL version. *)
       LLVM.LLVMPositionBuilderAtEnd (builderIR, currentBB);
       Pop(self.callStack); (* Remove SL from left of actual param list. *)
-      (* PopRev(self.callStack); If the SL were on the right of actual param list this,
-                                 is how we would remove it. *)
       (* But leave the rest of the params on self.call_stack.
          They will be needed by InnerCallIndirect. *)
-      resultVal2 := self.innerCallIndirect (procExpr.lVal, t, cc, Nested:=FALSE);
-      EVAL LLVM.LLVMBuildBr(builderIR, mergeBB);
+      resultVal2 := self.innerCallIndirect (procExpr.lVal, t, cc, next, handler,
+                                            call, Nested:=FALSE, merge:=mergeBB);
+      IF call THEN
+        EVAL LLVM.LLVMBuildBr(builderIR, mergeBB);
+      END;
       LLVM.LLVMPositionBuilderAtEnd (builderIR, mergeBB);
 
       (* If it has a result, complete the Phi. *)
@@ -5148,7 +5323,17 @@ PROCEDURE call_indirect (self: U;  t: Type; cc: CallingConvention) =
     <*ASSERT self.callStack.size() = 0 *>
 
     self.callState := callStateTyp.outside;
+  END call_invoke_indirect;
+
+PROCEDURE call_indirect (self: U;  t: Type; cc: CallingConvention) =
+  BEGIN
+    self.call_invoke_indirect(t, cc, 0, 0, TRUE);
   END call_indirect;
+
+PROCEDURE invoke_indirect (self : U; t: Type; cc : CallingConvention; next,handler : Label) =
+  BEGIN
+    self.call_invoke_indirect(t, cc, next, handler, FALSE);
+  END invoke_indirect;
 
 PROCEDURE pop_param (self: U;  t: MType) =
   (* pop s0.t and make it the "next" parameter in the current call. *)
@@ -5180,9 +5365,9 @@ PROCEDURE pop_struct
   VAR
     s0 := Get(self.exprStack,0);
     expr : LvExpr;
+    copyRef : LvVar;
     structTy, refTy : LLVM.TypeRef;
-    origRef_lVal, copyRef_lVal, len_lVal : LLVM.ValueRef;
-    curBB : LLVM.BasicBlockRef;
+    origRef_lVal, len_lVal : LLVM.ValueRef;
   BEGIN
     expr := NARROW(s0,LvExpr);
 
@@ -5197,22 +5382,13 @@ PROCEDURE pop_struct
 
     IF NOT llvmByval THEN
       (* Allocate a temp for the copy in the entry BB *)
-      curBB := LLVM.LLVMGetInsertBlock(builderIR);
-      LLVM.LLVMPositionBuilderAtEnd(builderIR, self.curProc.entryBB);
-      copyRef_lVal := LLVM.LLVMBuildAlloca(builderIR, structTy, LT("ValueFormalCopyRef"));
-(* Maybe Not needed - Check ! *)
-      LLVM.LLVMSetAlignment
-      (copyRef_lVal, LLVM.LLVMPreferredAlignmentOfType(targetData, refTy));
-
-      LLVM.LLVMPositionBuilderAtEnd(builderIR, curBB);
-(* CHECK ^Is this really necessary? *)
-
+      copyRef := self.declare_temp (s, s, Type.Struct, TRUE);
       (* Generate the copy. *)
       len_lVal := LLVM.LLVMConstInt(IntPtrTy, VAL(s,LONGINT), TRUE);
-      DoMemCopy(expr.lVal,copyRef_lVal,len_lVal,align:=1,overlap:=FALSE);
+      DoMemCopy(expr.lVal,copyRef.lv,len_lVal,align:=1,overlap:=FALSE);
 
       (* Update things. *)
-      expr.lVal := copyRef_lVal;
+      expr.lVal := copyRef.lv;
     ELSE
       expr.lVal := origRef_lVal;
     END;
@@ -5228,8 +5404,6 @@ PROCEDURE pop_static_link (self: U) =
   BEGIN
     <* ASSERT self.callState = callStateTyp . insideIndirect *>
     Push(self.callStack,s0); (* Make SL the leftmost actual. *)
- (* PushRev(self.callStack,s0);  If we ever want to make SL rightmost, this is how. *)
-
     Pop(self.exprStack);
     self.staticLinkBB := LLVM.LLVMGetInsertBlock (builderIR);
     (* ^So can see if it changes by the time we see the call_indirect. *)
@@ -5446,7 +5620,7 @@ PROCEDURE fence (<*UNUSED*> self: U;  order: MemoryOrder) =
      MemoryOrder.AcquireRelease, MemoryOrder.Sequential} *)
     ordering := GetOrder(order);
     EVAL LLVM.LLVMBuildFence(builderIR, ordering, TRUE, LT(""));
-(* CHECK ^ is singlethreaded significant *)
+    (* CHECK ^ is singlethreaded significant *)
   END fence;
 
 PROCEDURE fetch_and_op (self: U;  op: AtomicOp; <*UNUSED*> t: MType; u: ZType; order: MemoryOrder) =
@@ -5492,7 +5666,7 @@ PROCEDURE fetch_and_op (self: U;  op: AtomicOp; <*UNUSED*> t: MType; u: ZType; o
   refs work
   recursive types partly work except for proc parms and p : ref p etc
   packed records work
-  dynamic arrays sort of work with 1 dim but cause gdb crash greater than 1
+  dynamic arrays sort of work 
   they also need llvm update for subranges
   set types work with llvm updates but need lang printer support. set lang m2 works
   segment and large global variables work
@@ -5555,7 +5729,7 @@ PROCEDURE CalcPaths(self : U) : TEXT =
     ELSIF Text.Equal(Text.Sub(prefix,0,2), "..") THEN
       arcs := Pathname.Decompose(prefix);
       <*ASSERT arcs.getlo() = NIL *>
-      arcs := TextSeq.Sub(arcs,2); (* remove root and .. *)
+      arcs := TextSeq.Sub(arcs,2); (* remove root and ... *)
       arcs.addlo(NIL); (* add the root dir back *)
       prefix := Pathname.Compose(arcs);
       self.debDir := Pathname.Join(cwd,prefix);
@@ -5594,24 +5768,24 @@ PROCEDURE DebugInit(self: U) =
       DirectoryLen := Text.Length(self.debDir));
 
     self.cuRef := M3DIB.CreateCompileUnit(self.debugRef,
-                Lang        := M3DIB.LLVMDWARFSourceLanguage.DWARFSourceLanguageModula3,
-                FileRef     := self.fileRef,
-                Producer    := "cm3",
-                ProducerLen := 3,
-                isOptimized := FALSE,
-                Flags       := NIL,
-                FlagsLen    := 0,
-                RuntimeVer  := 0,
-                SplitName   := NIL,
-                SplitNameLen := 0,
-                Kind        := M3DIB.LLVMDWARFEmissionKind.DWARFEmissionFull,
-                DWOId       := 0,
-                SplitDebugInlining := TRUE,
-                DebugInfoForProfiling := FALSE,
-                SysRoot     := NIL,
-                SysRootLen  := 0,
-                SDK         := NIL,
-                SDKLen      := 0);
+      Lang        := M3DIB.LLVMDWARFSourceLanguage.DWARFSourceLanguageModula3,
+      FileRef     := self.fileRef,
+      Producer    := "cm3",
+      ProducerLen := 3,
+      isOptimized := FALSE,
+      Flags       := NIL,
+      FlagsLen    := 0,
+      RuntimeVer  := 0,
+      SplitName   := NIL,
+      SplitNameLen := 0,
+      Kind        := M3DIB.LLVMDWARFEmissionKind.DWARFEmissionFull,
+      DWOId       := 0,
+      SplitDebugInlining := TRUE,
+      DebugInfoForProfiling := FALSE,
+      SysRoot     := NIL,
+      SysRootLen  := 0,
+      SDK         := NIL,
+      SDKLen      := 0);
 
     CreateModuleFlags(self);
   END DebugInit;
@@ -5875,10 +6049,10 @@ a declare_local  _result *)
     END;
 
     funcTy := M3DIB.CreateSubroutineType(self.debugRef,
-      File           := self.fileRef,
-      ParameterTypes := paramsMetadata.Data,
+      File              := self.fileRef,
+      ParameterTypes    := paramsMetadata.Data,
       NumParameterTypes := numParams + 1,
-      Flags          := 0);
+      Flags             := 0);
 
     IF proc.parent # NIL THEN
       scope := proc.parent.funcScope.value;
@@ -5886,20 +6060,20 @@ a declare_local  _result *)
       scope := self.fileRef;
     END;
 
-   self.funcRef := M3DIB.CreateFunction(self.debugRef,
-       Scope         := scope,
-       Name          := procName,
-       NameLen       := Text.Length(procName),
-       LinkageName   := linkageName,
-       LinkageNameLen:= Text.Length(linkageName),
-       File          := self.fileRef,
-       LineNo        := self.curLine,
-       Ty            := funcTy,
-       IsLocalToUnit := TRUE,
-       IsDefinition  := TRUE,
-       ScopeLine     := self.curLine,
-       Flags         := 0,
-       IsOptimized   := FALSE);
+    self.funcRef := M3DIB.CreateFunction(self.debugRef,
+      Scope         := scope,
+      Name          := procName,
+      NameLen       := Text.Length(procName),
+      LinkageName   := linkageName,
+      LinkageNameLen:= Text.Length(linkageName),
+      File          := self.fileRef,
+      LineNo        := self.curLine,
+      Ty            := funcTy,
+      IsLocalToUnit := TRUE,
+      IsDefinition  := TRUE,
+      ScopeLine     := self.curLine,
+      Flags         := 0,
+      IsOptimized   := FALSE);
 
     proc.funcScope := NEW(BlockDebug, value := self.funcRef);
 
@@ -5935,9 +6109,9 @@ PROCEDURE DebugPushBlock(self : U) =
       (* this val has to be referred to by the var as the scope *)
 
       lexBlock := M3DIB.CreateLexicalBlock(self.debugRef,
-                   Scope := scope,
-                   File  := self.fileRef,
-                   Line  := self.curLine,
+                   Scope  := scope,
+                   File   := self.fileRef,
+                   Line   := self.curLine,
                    Column := 0);
       blockRef := NEW(BlockDebug, value:= lexBlock);
     END;
@@ -5977,11 +6151,11 @@ PROCEDURE DebugBasic(self : U; b : BaseDebug) : MetadataRef =
   BEGIN
     typeName := M3ID.ToText(b.typeName);
     RETURN M3DIB.CreateBasicType(self.debugRef,
-       Name       := typeName,
-       NameLen    := Text.Length(typeName),
-       SizeInBits := VAL(b.bitSize,uint64_t),
-       Encoding   := b.encoding,
-       Flags      := 0);
+      Name       := typeName,
+      NameLen    := Text.Length(typeName),
+      SizeInBits := VAL(b.bitSize,uint64_t),
+      Encoding   := b.encoding,
+      Flags      := 0);
   END DebugBasic;
 
 PROCEDURE DebugSubrange(self : U; subrange : SubrangeDebug)
@@ -5991,7 +6165,6 @@ PROCEDURE DebugSubrange(self : U; subrange : SubrangeDebug)
     MLBase : BaseDebug;
     baseName,srName : TEXT;
     card : BOOLEAN := FALSE;
-v13test : BOOLEAN := TRUE;
   BEGIN
     srName := M3ID.ToText(subrange.typeName);
     IF Text.Length(srName) = 0 THEN srName := "AnonSR"; END;
@@ -6020,15 +6193,14 @@ v13test : BOOLEAN := TRUE;
 
     (* cannot use MLBase type since we need the correct size and encoding *)
     baseType := M3DIB.CreateBasicType(self.debugRef,
-       Name       := baseName,
-       NameLen    := Text.Length(baseName),
-       SizeInBits := VAL(subrange.bitSize,uint64_t),
-       Encoding   := subrange.encoding,
-       Flags      := 0);
-(* temp until DebugInfo updated *)
-IF v13test THEN
-  RETURN baseType;
-END;
+      Name       := baseName,
+      NameLen    := Text.Length(baseName),
+      SizeInBits := VAL(subrange.bitSize,uint64_t),
+      Encoding   := subrange.encoding,
+      Flags      := 0);
+
+(* does not need llvm13 *)
+    RETURN baseType;
 
     IF MLBase = NIL AND card = FALSE THEN
       (* this case is for inbuilt integer longint char boolean widechar,
@@ -6044,15 +6216,15 @@ END;
       END;
     END;
 
-(* not in debuginfo yet
+(* needs llvm13 
     Result := M3DIB.GetSubrangeConst (self.debugRef,
-                 Scope := DebugScope(self,subrange),
-                 Name  := srName,
-                 NameLen := Text.Length(srName),
-                 File  := self.fileRef,
-                 BaseTy := baseType,
-                 LowerBound := TIntToint64_t(subrange.min),
-                 Count := TIntToint64_t(subrange.count));
+      Scope      := DebugScope(self,subrange),
+      Name       := srName,
+      NameLen    := Text.Length(srName),
+      File       := self.fileRef,
+      BaseTy     := baseType,
+      LowerBound := TIntToint64_t(subrange.min),
+      Count      := TIntToint64_t(subrange.count));
 *)
 
 (* REVIEW: How does llvm handle subranges for different signedness? *)
@@ -6069,12 +6241,12 @@ PROCEDURE DebugPointer(self : U; p : PointerDebug) : MetadataRef =
 
     typeName := M3ID.ToText(p.typeName);
     RETURN M3DIB.CreatePointerType(self.debugRef,
-               PointeeTy         := referentDIType,
-               SizeInBits        := VAL(p.bitSize,uint64_t),
-               AlignInBits       := VAL(p.align,uint32_t),
-               AddressSpace      := 0,
-               Name              := typeName,
-               NameLen           := Text.Length(typeName));
+      PointeeTy         := referentDIType,
+      SizeInBits        := VAL(p.bitSize,uint64_t),
+      AlignInBits       := VAL(p.align,uint32_t),
+      AddressSpace      := 0,
+      Name              := typeName,
+      NameLen           := Text.Length(typeName));
   END DebugPointer;
 
 PROCEDURE DebugIndirect(self : U; p : IndirectDebug) : MetadataRef =
@@ -6093,18 +6265,18 @@ PROCEDURE DebugArray(self : U; a : ArrayDebug) : MetadataRef =
     DebugLookupOrdinalBounds (self, a.index, (*OUT*)min, (*OUT*)count);
 
    subsVal := M3DIB.GetOrCreateSubrange(self.debugRef,
-        LowerBound := TIntToint64_t(min),
-        Count := TIntToint64_t(count));
+     LowerBound := TIntToint64_t(min),
+     Count      := TIntToint64_t(count));
 
     NewArrayRefOfMetadataRef(1, (*OUT*)paramsArr, (*OUT*)paramsMetadata);
     paramsArr[0] := subsVal;
 
     arrDIT := M3DIB.CreateArrayType(self.debugRef,
-        Size        := VAL(a.bitSize,uint64_t),
-        AlignInBits := VAL(a.align,uint32_t),
-        Ty          := eltVal,
-        Subscripts  := paramsMetadata.Data,
-        NumSubscripts := 1);
+      Size        := VAL(a.bitSize,uint64_t),
+      AlignInBits := VAL(a.align,uint32_t),
+      Ty          := eltVal,
+      Subscripts  := paramsMetadata.Data,
+      NumSubscripts := 1);
 
     RETURN arrDIT;
   END DebugArray;
@@ -6120,7 +6292,6 @@ PROCEDURE DebugOpenArray(self : U; a : OpenArrayDebug; ofs : CARDINAL := 0) : Me
     elts : MetadataRef;
     typeName : TEXT;
     srBaseType : MetadataRef;
-v13test : BOOLEAN := TRUE; (* temp until debuginfo has open array support *)
   BEGIN
     (* data location only really meaningful for outermost dimension *)
     IF ofs = 0 THEN
@@ -6144,51 +6315,49 @@ v13test : BOOLEAN := TRUE; (* temp until debuginfo has open array support *)
 
     srBaseType := DebugLookupLL(self,UID_INTEGER);
 
-IF v13test THEN
+(* does not need llvm13 *)
    subrange := M3DIB.GetOrCreateSubrange(self.debugRef,
-        LowerBound := TIntToint64_t(TInt.Zero),
-        Count := TIntToint64_t(TInt.One));
-ELSE
+     LowerBound := TIntToint64_t(TInt.Zero),
+     Count      := TIntToint64_t(TInt.One));
+
+(* needs llvm13 
     typeName := M3ID.ToText(a.typeName) & "_rng";
-(* not in v13 *)
-(*
     subrange := M3DIB.GetSubrangeExpr (self.debugRef,
-                 Scope := DebugScope(self,a),
-                 Name  := typeName,
-                 NameLen := Text.Length(typeName),
-                 File  := self.fileRef,
-                 BaseTy := srBaseType,
-                 LowerBound := low,
-                 Count := cnt);
+      Scope      := DebugScope(self,a),
+      Name       := typeName,
+      NameLen    := Text.Length(typeName),
+      File       := self.fileRef,
+      BaseTy     := srBaseType,
+      LowerBound := low,
+      Count      := cnt);
 *)
-END;
 
     NewArrayRefOfMetadataRef(1, (*OUT*)paramsArr, (*OUT*)paramsMetadata);
     paramsArr[0] := subrange;
 
-IF v13test THEN
+(* does not need llvm13 *)
     oarrDIT := M3DIB.CreateArrayType(self.debugRef,
-        Size        := VAL(a.bitSize,uint64_t),
-        AlignInBits := VAL(a.align,uint32_t),
-        Ty          := elts,
-        Subscripts  := paramsMetadata.Data,
-        NumSubscripts := 1);
-ELSE
-(* not in v13 actually not in DebugInfo since the guy who did
+      Size          := VAL(a.bitSize,uint64_t),
+      AlignInBits   := VAL(a.align,uint32_t),
+      Ty            := elts,
+      Subscripts    := paramsMetadata.Data,
+      NumSubscripts := 1);
+
+(* needs llvm13 
+ not in v13 actually not in DebugInfo since the guy who did
 the fortran updates didnt do the C interface.
 
     oarrDIT := M3DIB.CreateDynamicArrayType(self.debugRef,
-        Size         := 0L, (* we dont know the size *)
-        AlignInBits  := VAL(a.align,uint32_t),
-        Ty           := elts,
-        Subscripts   := paramsMetadata.Data,
-        NumSubscripts := 1,
-        DataLocation := dataLoc,
-        Associated   := NIL,
-        Allocated    := NIL,
-        Rank         := NIL); (* rank needed if genericsubrange used *)
+      Size          := 0L, (* we dont know the size *)
+      AlignInBits   := VAL(a.align,uint32_t),
+      Ty            := elts,
+      Subscripts    := paramsMetadata.Data,
+      NumSubscripts := 1,
+      DataLocation  := dataLoc,
+      Associated    := NIL,
+      Allocated     := NIL,
+      Rank          := NIL); (* rank needed if genericsubrange used *)
 *)
-END;
 
     a.diType := oarrDIT;
 
@@ -6200,27 +6369,23 @@ PROCEDURE DebugSet(self : U; s : SetDebug) : MetadataRef =
     baseType : MetadataRef;
     setDIT : MetadataRef;
     typeName : TEXT;
-v13test : BOOLEAN := TRUE; (* temp until set in debuginfo *)
   BEGIN
     baseType := DebugLookupLL(self,s.domain);
 
-(* not in  debuginfo *)
-IF v13test THEN
+(* does not need llvm13 *)
     setDIT := baseType;
-ELSE
+(* needs llvm13 
     typeName := M3ID.ToText(s.typeName);
-(* not in debuginfo yet
     setDIT := M3DIB.CreateSetType(self.debugRef,
-               Scope       := DebugScope(self,s),
-               Name        := typeName,
-               NameLen     := Text.Length(typeName),
-               File        := self.fileRef,
-               LineNumber  := self.curLine,
-               SizeInBits  := VAL(s.bitSize,uint64_t),
-               AlignInBits := VAL(s.align,uint32_t),
-               BaseTy      := baseType);
+      Scope       := DebugScope(self,s),
+      Name        := typeName,
+      NameLen     := Text.Length(typeName),
+      File        := self.fileRef,
+      LineNumber  := self.curLine,
+      SizeInBits  := VAL(s.bitSize,uint64_t),
+      AlignInBits := VAL(s.align,uint32_t),
+      BaseTy      := baseType);
 *)
-END;
     RETURN setDIT;
   END DebugSet;
 
@@ -6244,18 +6409,18 @@ PROCEDURE DebugEnum(self : U; e : EnumDebug) : MetadataRef =
       paramsArr[i] := eltVal;
     END;
 
-   typeName := M3ID.ToText(e.typeName);
-   RETURN M3DIB.CreateEnumerationType(self.debugRef,
-               Scope            := DebugScope(self,e),
-               Name             := typeName,
-               NameLen          := Text.Length(typeName),
-               File             := self.fileRef,
-               LineNumber       := self.curLine,
-               SizeInBits       := VAL(e.bitSize,uint64_t),
-               AlignInBits      := VAL(e.align,uint32_t),
-               Elements         := paramsMetadata.Data,
-               NumElements      := e.numElts,
-               ClassTy          := NIL);
+    typeName := M3ID.ToText(e.typeName);
+    RETURN M3DIB.CreateEnumerationType(self.debugRef,
+      Scope        := DebugScope(self,e),
+      Name         := typeName,
+      NameLen      := Text.Length(typeName),
+      File         := self.fileRef,
+      LineNumber   := self.curLine,
+      SizeInBits   := VAL(e.bitSize,uint64_t),
+      AlignInBits  := VAL(e.align,uint32_t),
+      Elements     := paramsMetadata.Data,
+      NumElements  := e.numElts,
+      ClassTy      := NIL);
 
   END DebugEnum;
 
@@ -6293,12 +6458,12 @@ FIXME^ - need to handle recursive proc type
 
     typeName := M3ID.ToText(p.typeName);
     PTy := M3DIB.CreatePointerType(self.debugRef,
-               PointeeTy         := tempTy,
-               SizeInBits        := VAL(p.bitSize,uint64_t),
-               AlignInBits       := VAL(p.align,uint32_t),
-               AddressSpace      := 0,
-               Name              := typeName,
-               NameLen           := Text.Length(typeName));
+      PointeeTy         := tempTy,
+      SizeInBits        := VAL(p.bitSize,uint64_t),
+      AlignInBits       := VAL(p.align,uint32_t),
+      AddressSpace      := 0,
+      Name              := typeName,
+      NameLen           := Text.Length(typeName));
     p.diType := PTy;
 *)
     IF p.numFormals > 0 THEN
@@ -6308,21 +6473,20 @@ FIXME^ - need to handle recursive proc type
       END;
     END;
 
-    LDISubprogTy
-      := M3DIB.CreateSubroutineType(self.debugRef,
-            File  := self.fileRef,
-            ParameterTypes := paramsMetadata.Data,
-            NumParameterTypes := p.numFormals + 1,
-            Flags := 0);
+    LDISubprogTy := M3DIB.CreateSubroutineType(self.debugRef,
+      File              := self.fileRef,
+      ParameterTypes    := paramsMetadata.Data,
+      NumParameterTypes := p.numFormals + 1,
+      Flags             := 0);
 
     typeName := M3ID.ToText(p.typeName);
     PTy := M3DIB.CreatePointerType(self.debugRef,
-               PointeeTy         := LDISubprogTy,
-               SizeInBits        := VAL(p.bitSize,uint64_t),
-               AlignInBits       := VAL(p.align,uint32_t),
-               AddressSpace      := 0,
-               Name              := typeName,
-               NameLen           := Text.Length(typeName));
+      PointeeTy         := LDISubprogTy,
+      SizeInBits        := VAL(p.bitSize,uint64_t),
+      AlignInBits       := VAL(p.align,uint32_t),
+      AddressSpace      := 0,
+      Name              := typeName,
+      NameLen           := Text.Length(typeName));
 
 (*
     does not work - a replacetypes similar to replacearrays
@@ -6353,17 +6517,17 @@ PROCEDURE DebugObject(self : U; o : ObjectDebug) : MetadataRef =
     IF o.opaque THEN
       className := "__OpaqueObject";
       opaqueObjectDIT := M3DIB.CreateForwardDecl (self.debugRef,
-            Tag          := DC.DW_TAG_class_type,
-            Name         := className,
-            NameLen      := Text.Length(className),
-            Scope        := DebugScope(self,o),
-            File         := self.fileRef,
-            Line         := self.curLine,
-            RuntimeLang  := 0,
-            SizeInBits   := 0L,
-            AlignInBits  := 0,
-            UniqueIdentifier := uniqueId,
-            UniqueIdentifierLen := Text.Length(uniqueId));
+        Tag                 := DC.DW_TAG_class_type,
+        Name                := className,
+        NameLen             := Text.Length(className),
+        Scope               := DebugScope(self,o),
+        File                := self.fileRef,
+        Line                := self.curLine,
+        RuntimeLang         := 0,
+        SizeInBits          := 0L,
+        AlignInBits         := 0,
+        UniqueIdentifier    := uniqueId,
+        UniqueIdentifierLen := Text.Length(uniqueId));
 
       o.objectType := opaqueObjectDIT;
 
@@ -6376,23 +6540,21 @@ PROCEDURE DebugObject(self : U; o : ObjectDebug) : MetadataRef =
        (*OUT*) paramsMetadata);
 
     typeName  := M3ID.ToText(o.typeName) & "__HeapObject";
-    heapObjectDIT
-      := M3DIB.CreateReplaceableCompositeType
-           (self.debugRef,
-            Tag          := DC.DW_TAG_class_type,
-            Name         := typeName,
-            NameLen      := Text.Length(typeName),
-            Scope        := DebugScope(self,o),
-            File         := self.fileRef,
-            Line         := self.curLine,
+    heapObjectDIT := M3DIB.CreateReplaceableCompositeType (self.debugRef,
+      Tag          := DC.DW_TAG_class_type,
+      Name         := typeName,
+      NameLen      := Text.Length(typeName),
+      Scope        := DebugScope(self,o),
+      File         := self.fileRef,
+      Line         := self.curLine,
 (* CHECK ^ the line number is pretty meaningless for the type since it is
  usually at the beginning of the module not at the type creation line. *)
-            RuntimeLang  := 0,
-            SizeInBits   := VAL(o.objSize + ptrBits,uint64_t),
-            AlignInBits  := VAL(o.align,uint32_t),
-            Flags        := 0,
-            UniqueIdentifier := uniqueId,
-            UniqueIdentifierLen := Text.Length(uniqueId));
+      RuntimeLang  := 0,
+      SizeInBits   := VAL(o.objSize + ptrBits,uint64_t),
+      AlignInBits  := VAL(o.align,uint32_t),
+      Flags        := 0,
+      UniqueIdentifier := uniqueId,
+      UniqueIdentifierLen := Text.Length(uniqueId));
 
     (* save for possible inherit node *)
     o.objectType := heapObjectDIT;
@@ -6403,12 +6565,12 @@ PROCEDURE DebugObject(self : U; o : ObjectDebug) : MetadataRef =
 
     typeName := M3ID.ToText(o.typeName);
     ptrDIT := M3DIB.CreatePointerType(self.debugRef,
-               PointeeTy         := heapObjectDIT,
-               SizeInBits        := VAL(ptrBits,uint64_t),
-               AlignInBits       := VAL(ptrBits,uint32_t),
-               AddressSpace      := 0,
-               Name              := typeName,
-               NameLen           := Text.Length(typeName));
+      PointeeTy         := heapObjectDIT,
+      SizeInBits        := VAL(ptrBits,uint64_t),
+      AlignInBits       := VAL(ptrBits,uint32_t),
+      AddressSpace      := 0,
+      Name              := typeName,
+      NameLen           := Text.Length(typeName));
 
     (* save for recursive lookups in fields *)
     o.diType := ptrDIT;
@@ -6428,17 +6590,15 @@ PROCEDURE DebugObject(self : U; o : ObjectDebug) : MetadataRef =
       superObj := NARROW(debugObj,ObjectDebug);
       EnsureDebugTypeName(superObj);
 
-      (* Create a DIBuilder inherit node connecting to the supertype
+     (* Create a DIBuilder inherit node connecting to the supertype
          and make it the first "param". *)
 
-     inheritDIT
-        := M3DIB.CreateInheritance
-           (self.debugRef,
-            Ty         := heapObjectDIT,
-            BaseTy     := superObj.objectType,
-            BaseOffset := VAL(0L,uint64_t),
-            VBPtrOffset := 0,
-            Flags      := 0);
+      inheritDIT := M3DIB.CreateInheritance (self.debugRef,
+        Ty          := heapObjectDIT,
+        BaseTy      := superObj.objectType,
+        BaseOffset  := VAL(0L,uint64_t),
+        VBPtrOffset := 0,
+        Flags       := 0);
       paramsArr[0] := inheritDIT;
     ELSE
       paramsArr[0] := NIL; (* Is this truly a C++ null? *)
@@ -6494,16 +6654,19 @@ PROCEDURE DebugObject(self : U; o : ObjectDebug) : MetadataRef =
       INC(nextMemberNo);
     END;
 
+(* this works *)
+(* needs llvm13 
    M3DIB.LLVMReplaceArrays(self.debugRef,
       T        := ADR(heapObjectDIT),
       Elements := paramsMetadata.Data,
       NumElements := nextMemberNo);
-
-(* this should work but no
+*)
+(* this should work but no.
     M3DIB.LLVMMetadataReplaceAllUsesWith(
       TempTargetMetadata := heapObjectDIT,
       Replacement        := resClassDIT);
 *)
+
     RETURN ptrDIT;
   END DebugObject;
 
@@ -6522,20 +6685,19 @@ PROCEDURE DebugRecord(self : U; r : RecordDebug) : MetadataRef =
       (r.numFields, (*OUT*)paramsArr, (*OUT*)paramsMetadata);
 
     typeName  := M3ID.ToText(r.typeName);
-    structDIT
-      := M3DIB.CreateReplaceableCompositeType(self.debugRef,
-            Tag          := DC.DW_TAG_structure_type,
-            Name         := typeName,
-            NameLen      := Text.Length(typeName),
-            Scope        := DebugScope(self,r),
-            File         := self.fileRef,
-            Line         := self.curLine,
-            RuntimeLang  := 0,
-            SizeInBits   := VAL(r.bitSize,uint64_t),
-            AlignInBits  := VAL(r.align,uint32_t),
-            Flags        := 0,
-            UniqueIdentifier := uniqueId,
-            UniqueIdentifierLen := Text.Length(uniqueId));
+    structDIT := M3DIB.CreateReplaceableCompositeType(self.debugRef,
+      Tag          := DC.DW_TAG_structure_type,
+      Name         := typeName,
+      NameLen      := Text.Length(typeName),
+      Scope        := DebugScope(self,r),
+      File         := self.fileRef,
+      Line         := self.curLine,
+      RuntimeLang  := 0,
+      SizeInBits   := VAL(r.bitSize,uint64_t),
+      AlignInBits  := VAL(r.align,uint32_t),
+      Flags        := 0,
+      UniqueIdentifier := uniqueId,
+      UniqueIdentifierLen := Text.Length(uniqueId));
 
     r.diType := structDIT;
 
@@ -6591,23 +6753,22 @@ PROCEDURE DebugRecord(self : U; r : RecordDebug) : MetadataRef =
       paramsArr[i] := memberDIT;
     END;
 
-    resStructDIT
-      := M3DIB.CreateStructType(self.debugRef,
-            Name         := typeName,
-            NameLen      := Text.Length(typeName),
-            Scope        := DebugScope(self,r),
-            File         := self.fileRef,
-            LineNumber   := self.curLine,
-            SizeInBits   := VAL(r.bitSize,uint64_t),
-            AlignInBits  := VAL(r.align,uint32_t),
-            Flags        := 0,
-            DerivedFrom  := NIL,
-            Elements     := paramsMetadata.Data,
-            NumElements  := r.numFields,
-            RunTimeLang  := 0,
-            VTableHolder := NIL,
-            UniqueId := uniqueId,
-            UniqueIdLen := Text.Length(uniqueId));
+    resStructDIT := M3DIB.CreateStructType(self.debugRef,
+      Name         := typeName,
+      NameLen      := Text.Length(typeName),
+      Scope        := DebugScope(self,r),
+      File         := self.fileRef,
+      LineNumber   := self.curLine,
+      SizeInBits   := VAL(r.bitSize,uint64_t),
+      AlignInBits  := VAL(r.align,uint32_t),
+      Flags        := 0,
+      DerivedFrom  := NIL,
+      Elements     := paramsMetadata.Data,
+      NumElements  := r.numFields,
+      RunTimeLang  := 0,
+      VTableHolder := NIL,
+      UniqueId := uniqueId,
+      UniqueIdLen := Text.Length(uniqueId));
 
 (* This seems to work but better to use replace arrays as in object*)
     M3DIB.LLVMMetadataReplaceAllUsesWith(

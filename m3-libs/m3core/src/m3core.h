@@ -47,17 +47,6 @@ typedef int BOOL;
 #define TRUE 1
 #define FALSE 0
 
-// This is disabled.
-// There are warnings about inconsistencies.
-// There is not all that much code that it affects.
-// We should be more worried the m3c output than the hand written C.
-// It is not clearly worth the platform-specificity.
-#if 0 /* __GNUC__ >= 4 && !defined(__osf__) && !defined(__CYGWIN__) */
-#define M3_HAS_VISIBILITY 1
-#else
-#define M3_HAS_VISIBILITY 0
-#endif
-
 /* __DARWIN_UNIX03 defaults to 1 on older and newer headers,
  * but older headers still have context "ss" instead of "__ss"
  * and such, so we have to force 0.
@@ -99,20 +88,6 @@ typedef int BOOL;
 #define _TIME64_T
 #endif
 #endif /* osf */
-
-/* http://gcc.gnu.org/wiki/Visibility */
-/* Helpers for shared library support */
-#if M3_HAS_VISIBILITY
-#ifdef __APPLE__
-#define M3_DLL_EXPORT __attribute__ ((visibility("default")))
-#else
-#define M3_DLL_EXPORT __attribute__ ((visibility("protected")))
-#endif
-#define M3_DLL_LOCAL  __attribute__ ((visibility("hidden")))
-#else
-#define M3_DLL_EXPORT /* nothing */
-#define M3_DLL_LOCAL  /* nothing */
-#endif
 
 /* Autoconf: AC_SYS_LARGEFILE
  */
@@ -198,9 +173,40 @@ typedef int BOOL;
 #endif
 #endif
 
-#if !defined(_MSC_VER) && !defined(__cdecl)
+// Explicit __cdecl supports building Windows/x86 code
+// with non-default calling convention (cl /Gz /Gr /Gv),
+// while retaining constant meaning for Modula-3 m3core and
+// m3c output. This is messy and causes many warnings on Haiku/amd64.
+//
+// Explicit __stdcall is for a few helper functions on Windows/x86.
+// This also produces warnings on Haiku/amd64 but not as many as __cdecl.
+//
+// cdecl/stdcall have essentially no meaning outside
+// of Windows/x86. They might have meaning on Windows/amd64
+// compiled with /Gv for default vector call. (Or only for certain parameter lists?)
+// Do not do that?
+// They might have meaning on Haiku/x86?
+// They are correctly placed for Haiku/gcc, for functions
+// but maybe not function pointers. The warnings are
+// that Haiku/amd64 ignores them and/or they are misplaced for function pointers.
+//
+// We should probably change the helpers to cdecl.
+// Explicit stdcall would remain in use then only for
+// imported Windows functions (unless we wrap them all as we do for Posix).
+//
+#if !defined(_WIN32) && !defined(__CYGWIN__)
+#undef __cdecl
+#undef __stdcall
 #define __cdecl /* nothing */
+#define __stdcall /* nothing */
 #endif
+// Prior definition that is good but produces many warnings on Haiku.
+//#if !defined(_MSC_VER) && !defined(__cdecl)
+//#define __cdecl /* nothing */
+//#endif
+//#if !defined(_MSC_VER) && !defined(__stdcall)
+//#define __stdcall /* nothing */
+//#endif
 
 #ifndef _MSC_VER
 #define __try /* nothing */
@@ -280,7 +286,7 @@ M3EXTERNC_END
 #define M3PASTE3(a, b, c) M3PASTE3_(a, b, c)
 
 #define M3WRAP(ret, m3name, cname, in, out)                                 \
-    M3EXTERNC_BEGIN M3_DLL_EXPORT ret __cdecl M3PASTE(M3MODULE, m3name) in  \
+    M3EXTERNC_BEGIN ret __cdecl M3PASTE(M3MODULE, m3name) in                \
     {                                                                       \
         ret return_value;                                                   \
         return_value = cname out;                                           \
@@ -288,7 +294,7 @@ M3EXTERNC_END
     } M3EXTERNC_END
 
 #define M3WRAP_NO_SWITCHING(ret, m3name, cname, in, out) \
-    M3EXTERNC_BEGIN M3_DLL_EXPORT ret __cdecl m3name in  \
+    M3EXTERNC_BEGIN ret __cdecl m3name in                \
     {                                                    \
         ret return_value;                                \
         Scheduler__DisableSwitching ();                  \
@@ -298,13 +304,13 @@ M3EXTERNC_END
     } M3EXTERNC_END
 
 #define M3WRAP_RETURN_VOID(m3name, cname, in, out)       \
-    M3EXTERNC_BEGIN M3_DLL_EXPORT void __cdecl m3name in \
+    M3EXTERNC_BEGIN void __cdecl m3name in               \
     {                                                    \
         cname out;                                       \
     } M3EXTERNC_END
 
 #define M3WRAP_RETURN_VOID_NO_SWITCHING(m3name, cname, in, out) \
-    M3EXTERNC_BEGIN M3_DLL_EXPORT void __cdecl m3name in        \
+    M3EXTERNC_BEGIN void __cdecl m3name in                      \
     {                                                           \
         Scheduler__DisableSwitching ();                         \
         cname out;                                              \
@@ -364,7 +370,9 @@ typedef ptrdiff_t ssize_t;
 #else
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#ifndef __DJGPP__
 #include <sys/socket.h>
+#endif
 #include <sys/time.h>
 /* Check if this system really supports _TIME64_T, i.e. Tru64 v5.1 or later. */
 #if defined(_TIME64_T) && !defined(TIMEVAL64TO32) && !defined(TIMEVAL32TO64)
@@ -373,12 +381,18 @@ typedef ptrdiff_t ssize_t;
 #include <sys/wait.h>
 #include <dirent.h>
 #include <grp.h>
+#ifndef __DJGPP__
 #include <netdb.h>
+#endif
+#ifndef __DJGPP__
 #include <pthread.h>
+#endif
 #include <unistd.h>
 #include <pwd.h>
+#ifndef __DJGPP__
 #include <semaphore.h>
-#if !(defined(__OpenBSD__) || defined(__CYGWIN__) || defined(__vms))
+#endif
+#if !(defined (__OpenBSD__) || defined (__CYGWIN__) || defined (__vms) || defined (__HAIKU__) || defined (__DJGPP__))
 #include <sys/ucontext.h>
 #ifndef __APPLE__
 /* OpenBSD 4.3, 4.7: ucontext.h doesn't exist, ucontext_t is in signal.h
@@ -396,10 +410,12 @@ typedef ptrdiff_t ssize_t;
 // Posix says include <arpa/inet.h>, but FreeBSD 4 inet.h
 // requires netinet/in.h
 #include <netinet/in.h>
+#ifndef __DJGPP__
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 #include <sys/un.h>
 #include <sys/select.h>
+#endif
 #endif /* Win32 vs. Posix */
 
 #define ZERO_MEMORY(a) (ZeroMemory(&(a), sizeof(a)))
@@ -658,13 +674,25 @@ The values involved are all small and positive, and we convert carefully.
 Note that socklen_t should be declared by system headers, but isn't always.
 
 TODO: Consider changing m3_socklen_t to int.
+
+HP-UX socklen_t is always size_t, but depending on defines, socklen_t or int are used.
 */
+typedef WORD_T m3_socklen_t;
+#ifndef __hpux
 #if defined(__INTERIX) || (defined(__vms) && defined(_DECC_V4_SOURCE)) || defined(_WIN32)
 typedef int socklen_t;
 #elif defined(__vms)
 typedef size_t socklen_t;
 #endif
-typedef WORD_T m3_socklen_t;
+#define m3c_socklen_t socklen_t
+
+#else /* hpux */
+#ifdef _XOPEN_SOURCE_EXTENDED
+typedef size_t/*socklen_t*/ m3c_socklen_t;
+#else
+typedef int/*not socklen_t*/ m3c_socklen_t;
+#endif
+#endif
 
 #define Usocket__socklen_t Usocket__socklen_t /* inhibit m3c type */
 typedef m3_socklen_t Usocket__socklen_t;
@@ -853,11 +881,6 @@ void
 __cdecl
 Scheduler__EnableScheduling(void);
 
-M3_DLL_LOCAL
-int
-__cdecl
-ThreadInternal__StackGrowsDown (void);
-
 void
 __cdecl
 Process__RegisterExitor(void (__cdecl*)(void));
@@ -914,6 +937,38 @@ Process__RegisterExitor(void (__cdecl*)(void));
 #endif
 #else
 #error Unknown __APPLE__ target
+#endif
+
+#elif defined(__CYGWIN__)
+#define M3_HOST_SKIP_UNAME 1
+#if defined(__amd64)
+#define M3_HOST "AMD64_CYGWIN"
+#elif defined(__i386)
+#define M3_HOST "I386_CYGWIN"
+#else
+#error Unknown Cygwin
+#endif
+
+#elif defined(__DJGPP__)
+
+#ifdef __i386__
+#define M3_HOST_SKIP_UNAME 1 // uname yields I386_MS-DOS
+#define M3_HOST "I386_DJGPP"
+#else
+#error Unsupported Djgpp
+#endif
+
+#elif defined(__HAIKU__)
+#ifdef __amd64
+#define GET_PC(context) ((context)->uc_mcontext.rip)
+#define M3_HOST "AMD64_HAIKU"
+#elif defined(__i386__)
+#define GET_PC(context) ((context)->uc_mcontext.eip)
+#define M3_HOST "I386_HAIKU"
+// uname says the architecture is "BePC", skip it
+#define M3_HOST_SKIP_UNAME 1
+#else
+#error Unsupported Haiku
 #endif
 
 #elif defined(__osf__)
@@ -1009,6 +1064,14 @@ Process__RegisterExitor(void (__cdecl*)(void));
 #else
 #define GET_PC(context) ((context)->uc_mcontext.mc_pc)
 #endif
+
+#elif defined(__hpux) && defined(__ia64) && (defined(_LP64) || defined(__LP64__))
+#define M3_HOST "IA64_HPUX64"
+// GET_PC does not fit, see RTSignalC.c
+
+#elif defined(__hpux) && defined(__ia64) && defined(_ILP32)
+#define M3_HOST "IA64_HPUX32"
+// GET_PC does not fit, see RTSignalC.c
 
 #elif defined(__mips)
 #define GET_PC(context) ((context)->uc_mcontext.scp_pc.lo)
@@ -1173,18 +1236,22 @@ struct RT0__Module
 #define ThreadPThread__pthread_cond_t  ThreadPThread__pthread_cond_t  /* inhibit m3c type */
 #define ThreadPThread__const_pthread_mutex_t ThreadPThread__const_pthread_mutex_t /* inhibit m3c type */
 #define ThreadPThread__const_pthread_cond_t  ThreadPThread__const_pthread_cond_t  /* inhibit m3c type */
+#ifndef __DJGPP__
 typedef               pthread_mutex_t* ThreadPThread_pthread_mutex_t;
 typedef               pthread_cond_t*  ThreadPThread_pthread_cond_t;
 typedef               pthread_mutex_t* ThreadPThread__pthread_mutex_t;
 typedef               pthread_cond_t*  ThreadPThread__pthread_cond_t;
 typedef               pthread_mutex_t* const ThreadPThread__const_pthread_mutex_t;
 typedef               pthread_cond_t*  const ThreadPThread__const_pthread_cond_t;
+#endif
 
 #define ThreadInternal__FDSet ThreadInternal__FDSet /* inhibit m3c type */
 typedef                fd_set ThreadInternal__FDSet;
 
 #define ThreadPThread__siginfo_t ThreadPThread__siginfo_t /* inhibit m3c type */
+#ifndef __DJGPP__
 typedef siginfo_t ThreadPThread__siginfo_t;
+#endif
 #endif
 
 #define ThreadPThread__Activation ThreadPThread__Activation /* inhibit m3c type */
@@ -1248,6 +1315,24 @@ typedef unsigned long                           WinBaseTypes__UINT32;  // even o
 typedef void*                                   WinNT__PSECURITY_DESCRIPTOR;
 typedef unsigned long                           WinNT__SECURITY_INFORMATION;
 
+typedef union m3core_trace_t
+{
+    int all;
+    struct
+    {
+        unsigned chdir : 1;
+        unsigned close : 1;
+        unsigned creat : 1;
+        unsigned fstat : 1;
+        unsigned open : 1;
+        unsigned readdir : 1;
+        unsigned stat : 1;
+        unsigned write : 1;
+    } s;
+} m3core_trace_t;
+
+extern m3core_trace_t m3core_trace;
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
@@ -1271,7 +1356,7 @@ extern "C" {
 #endif
 #  define alloca _alloca
 # else
-/* This is verified correct for Solaris, Tru64/OSF1, documented correct for AIX. TODO: Irix, HP-UX, etc. */
+/* This is verified correct for Solaris, Tru64/OSF1, HP-UX, documented correct for AIX. TODO: Irix, etc. */
 #  include <alloca.h>
 # endif
 #endif

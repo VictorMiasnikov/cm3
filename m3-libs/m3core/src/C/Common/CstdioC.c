@@ -64,8 +64,10 @@ M3WRAP2(int, rename, const char*, const char*)
 M3WRAP4(int, setvbuf, FILE*, char*, int, size_t)
 M3WRAP0(FILE*, tmpfile)
 M3WRAP2(int, ungetc, int, FILE*)
+#ifndef __HAIKU__
 M3WRAP1_(int, getw, FILE*)
 M3WRAP2_(int, putw, int, FILE*)
+#endif
 
 M3WRAP1_RETURN_VOID(clearerr, FILE*)
 M3WRAP1_RETURN_VOID(perror, const char*) /* print error */
@@ -74,8 +76,8 @@ M3WRAP2_RETURN_VOID(setbuf, FILE*, char*)
 
 #undef X
 #undef X_
-#define X(a) M3_DLL_EXPORT EXTERN_CONST int Cstdio__##a = a;
-#define X_(a) M3_DLL_EXPORT EXTERN_CONST int Cstdio__##a = _##a;
+#define X(a) EXTERN_CONST int Cstdio__##a = a;
+#define X_(a) EXTERN_CONST int Cstdio__##a = _##a;
 
 X(BUFSIZ)
 X(FILENAME_MAX)
@@ -91,7 +93,7 @@ X(TMP_MAX)
 X(EOF)
 
 #undef X
-#define X(a) M3_DLL_EXPORT FILE* __cdecl Cstdio__get_##a(void) { return a; }
+#define X(a) FILE* __cdecl Cstdio__get_##a(void) { return a; }
 
 X(stdin)
 X(stdout)

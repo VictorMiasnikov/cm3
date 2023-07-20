@@ -3,10 +3,10 @@
 
 UNSAFE MODULE Json;
 
-IMPORT IO, Fmt, Rd, Text, Thread;
+IMPORT IO, Fmt, Scan, Rd, Text, Thread;
 IMPORT SortedTextRefTbl AS Tbl;
-IMPORT Scanner AS SK;
-IMPORT TextUtils,TextSeq,ASCII;
+IMPORT JsonScanner AS SK;
+IMPORT TextUtils, TextSeq, ASCII;
 
 CONST
    MaxDepth = 1000;
@@ -24,6 +24,7 @@ CONST
   E_Depth  = 6;
   E_Parse  = 7;
   E_Add    = 8;
+  E_Type   = 9;
 
 REVEAL
   T =
@@ -51,6 +52,9 @@ REVEAL
       kind       := Kind;
       format     := Format;
       find       := Find;
+      getInt     := GetInt;
+      getFloat   := GetFloat;
+      getBool    := GetBool;
       addText    := AddText;
       addInt     := AddInt;
       addFloat   := AddFloat;
@@ -243,6 +247,17 @@ PROCEDURE ParseBuf (buf: TEXT) : T RAISES{E} =
     RETURN node;
   END ParseBuf;
 
+PROCEDURE ParseArr (arr: REF ARRAY OF CHAR) : T RAISES{E} =
+  VAR
+    s    : SK.Default;
+    node : T := NEW(T);
+  BEGIN
+    s := NEW(SK.Default);
+    node.tok := s.initFromBuf(arr);
+    node.parse();
+    RETURN node;
+  END ParseArr;
+
 PROCEDURE ParseFile (f: TEXT) : T RAISES{E} =
   VAR rd : Rd.T;
       node : T;
@@ -340,6 +355,30 @@ PROCEDURE Value(self : T) : TEXT =
       RETURN self.nodeValue;
     END;
   END Value;
+
+PROCEDURE GetInt(self : T) : INTEGER =
+  BEGIN
+    IF self.nodeKind # NodeKind.nkInt THEN
+      self.error(E_Type);
+    END;
+    RETURN Scan.Int(self.nodeValue);
+  END GetInt;
+
+PROCEDURE GetFloat(self : T) : LONGREAL =
+  BEGIN
+    IF self.nodeKind # NodeKind.nkFloat THEN
+      self.error(E_Type);
+    END;
+    RETURN Scan.LongReal(self.nodeValue);
+  END GetFloat;
+
+PROCEDURE GetBool(self : T) : BOOLEAN =
+  BEGIN
+    IF self.nodeKind # NodeKind.nkBool THEN
+      self.error(E_Type);
+    END;
+    RETURN Scan.Bool(self.nodeValue);
+  END GetBool;
 
 PROCEDURE Kind(self : T) : NodeKind =
   BEGIN

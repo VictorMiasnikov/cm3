@@ -1,0 +1,307 @@
+%-------------------------------------------------------------------
+% defined by cm3, but not the other MxConfig users
+if not defined("CR") CR = "\n" end
+if not defined("EOL") EOL = "\n" end
+if not defined("M3_PROFILING") M3_PROFILING = FALSE end
+if not defined("SL") SL = "/" end
+%-------------------------------------------------------------------
+
+readonly TARGET_OS = "SOLARIS"
+readonly SYSTEM_AR = "/usr/ccs/bin/ar"
+readonly WordSize = {"32BITS" : "32", "64BITS" : "64"}{WORD_SIZE}
+
+M3_BACKEND_MODE = "C"
+
+M3_PARALLEL_BACK = 20 % modern machines usually have many cores
+
+proc configure_c_compiler() is
+end
+
+proc configure_assembler() is
+    if defined("SYSTEM_ASM")
+        return
+    end
+    % Solaris 5.9: fbe exists and supports .hidden, as does not support .hidden
+    % Solaris 5.10: both fbe and as support .hidden
+    % Solaris 5.11: fbe is gone, as supports .hidden
+    % Solaris 5.8: like 5.9, but /opt/studio/SOS11/SUNWspro/bin/fbe
+    % AMD64_SOLARIS: always /usr/ccs/bin/as (in config)
+    readonly local possible = [
+        "/usr/bin/fbe",
+        % One wonders if the cc probe list should inform other options here.
+        "/opt/studio/SOS11/SUNWspro/bin/fbe",
+        "/usr/ccs/bin/as",
+        ]
+    foreach a in possible
+        if FileExists(a)
+            SYSTEM_ASM = a & " " & SolarisAssemblerFlags
+            return
+        end
+    end
+    error("unable to find assembler among " & possible)
+end
+
+libcxx = [ ]
+
+proc set_sun_libcxx() is
+  libcxx = ["-lCstd", "-lCrun"]
+end
+
+proc configure_c_compiler() is
+  if defined("SYSTEM_CC")
+    return
+  end
+
+  readonly possible_sun_cc = [
+    "/usr/bin/CC",
+    "/opt/developerstudio12.6/bin/CC",
+    "/opt/developerstudio12.5/bin/CC",
+    "/opt/solarisstudio12.4/bin/CC",
+    "/opt/solarisstudio12.3/bin/CC",
+    "/opt/solstudio12.2/bin/CC",
+    "/opt/studio/SOS12/SUNWspro/bin/CC",
+    "/opt/studio/SOS11/SUNWspro/bin/CC",
+    "/opt/SUNWspro/bin/CC",
+    ]
+
+  readonly possible_gnu_cc = [
+    "/usr/bin/g++",
+    % I386_SOLARIS and AMD64_SOLARIS fail with clang++
+    % /usr/gcc/7/lib/gcc/x86_64-pc-solaris2.11/7.3.0/../../../../include/c++/7.3.0/bits/std_abs.h:102:7: error: __float128 is
+    % not supported on this target
+    % abs(__float128 __x)
+    % ^
+    %"/usr/bin/clang++",
+    % clang can work but let's stick to C++.
+    "/usr/sfw/bin/g++",
+    "/opt/csw/gcc5/bin/g++",
+    "/opt/csw/bin/g++",
+    ]
+
+  local proc find_sun_cc() is
+      foreach a in possible_sun_cc
+          if FileExists(a)
+              return a
+          end
+      end
+      return FALSE
+    end
+
+  local proc find_gnu_cc() is
+    foreach a in possible_gnu_cc
+        if FileExists(a)
+            return a
+        end
+    end
+    return FALSE
+  end
+
+  local sun_cc = FALSE
+  local gnu_cc = FALSE
+
+  % User set nothing, look for all.
+  if not defined ("C_COMPILER")
+    sun_cc = find_sun_cc ()
+    if sun_cc
+      C_COMPILER = "SUN"
+      set_sun_libcxx ()
+    else
+      gnu_cc = find_gnu_cc ()
+      if gnu_cc
+        C_COMPILER = "GNU"
+      end
+    end
+    if not sun_cc and not gnu_cc
+      error("unable to find compiler among " & possible_gnu_cc & possible_sun_cc)
+    end
+  end
+
+  % User prefers SUN or GNU, look for just that.
+  if not sun_cc and equal (C_COMPILER, "SUN")
+    sun_cc = find_sun_cc ()
+    if not sun_cc
+      error("unable to find compiler among " & possible_sun_cc)
+    end
+  end
+  if not gnu_cc and equal (C_COMPILER, "GNU")
+    gnu_cc = find_gnu_cc ()
+    if not gnu_cc
+      error("unable to find compiler among " & possible_gnu_cc)
+    end
+  end
+
+  if equal (C_COMPILER, "SUN")
+    % newer compiler says:
+    % cc: Warning: -xarch=v8plus is deprecated, use -m32 -xarch=sparc instead
+    % cc: Warning: -xarch=v9 is deprecated, use -m64 to create 64-bit programs
+    % cc: Warning: -xarch=amd64 is deprecated, use -m64 to create 64-bit programs
+    % cc: Warning: -xarch=generic64 is deprecated, use -m64 to create 64-bit programs
+    %
+    % Probe for this and if found, use what it recommends.
+    % We presumably can't just always use the new syntax, in case
+    % we are using older tools that don't understand it.
+
+    set_sun_libcxx ()
+    local cc = sun_cc & " -g -mt -xldscope=symbolic " & SunXRegs & " " % TODO: consider -xldscope=hidden
+    local old = "-xarch=" & SunXArch
+    local new = "-m" & WordSize
+    if equal(WORD_SIZE, "32BITS") and not equal(TARGET, "I386_SOLARIS")
+      % SOLsun, SOLgnu, SPARC32_SOLARIS, SPARC_SOLARIS
+      new = new & " -xarch=sparc"
+    end
+    if equal(try_exec("@" & cc & old & " 2>&1 | fgrep \" " & new & " \" > /dev/null"), 0)
+      cc = cc & new
+    else
+      cc = cc & old
+    end
+    % -xF splits functions into sections so linker need not take them all
+    % This is equivalent to -Gy in Visual C++.
+    % TODO: It can be refined to split data also.
+    if equal(TARGET, "I386_SOLARIS") or equal(TARGET, "AMD64_SOLARIS")
+      SYSTEM_CC = cc & " -xF -Kpic"
+    else
+      SYSTEM_CC = cc & " -xF -xcode=pic32" % pic13 if not many external references
+    end
+  end
+
+  % SYSTEM_LD = "/usr/ccs/bin/ld"
+
+  if equal (C_COMPILER, "GNU")
+    % -pthread and -pthreads seem the same for gcc but
+    % clang says -pthreads is ignored.
+    SYSTEM_CC = gnu_cc & " -g -fPIC -pthread -m" & WordSize
+  end
+end
+
+proc configure_linker() is
+  if defined("SYSTEM_LD")
+    return
+  end
+  configure_c_compiler()
+
+  SYSTEM_LD = SYSTEM_CC & " -B direct -z ignore -z combreloc -z defs -z text"
+    & " -z now -z origin "
+    & " -R \\$ORIGIN"
+    & " -R \\$ORIGIN/../lib"
+
+  if equal (C_COMPILER, "SUN")
+    SYSTEM_LD = SYSTEM_LD & " -i"
+  else
+    % This should work but it seems to get dropped.
+    SYSTEM_LD = SYSTEM_LD & " -Wl,-i"
+  end
+
+end
+
+SYSTEM_LIBS = {
+    "LIBC"      : [ "-lpthread", "-lrt", "-lm", "-lnsl", "-lsocket", "-lc" ],
+    "LEX-YACC"   : [ "-ll" ],
+    % "FLEX-BISON" : [ "-L/usr/sfw/lib", "-lfl" ],
+    % "POSTGRES95" : [ ],
+    % "OPENGL" below
+    % "ODBC"     : [ ],
+    "MOTIF"      : [ "-lXm" ],
+    "X11"        : [ "-lXft", "-lfontconfig", "-lXaw", "-lXmu", "-lXext", "-lXt", "-lX11" ],
+    "Z"          : [ "-lz" ],
+    "TCP"        : [ ]
+}
+
+proc internal_configure_system_lib(name, known, args) is
+  % Is this right for cross builds?
+  % We don't really have cross builds in the normal
+  % sense, and even then, only for cm3. Currently.
+  if SYSTEM_LIBS contains name
+    return
+  end
+  if known
+    SYSTEM_LIBS{name} = args
+    return
+  end
+  if equal(try_exec("@/usr/ccs/bin/ld", args, "-o", "/dev/null", "2>/dev/null"), 0)
+    SYSTEM_LIBS{name} = args
+  end
+end
+
+proc configure_system_libs() is
+  internal_configure_system_lib("OPENGL", FALSE, ["-lGLU", "-lGL", "-lXext"])
+end
+
+configure_system_libs()
+
+SYSTEM_LIBORDER = [
+    "OPENGL",
+    % "DECPEX",
+    "MOTIF",
+    "X11",
+    "TCP",
+    % "ODBC",
+    % "POSTGRES95",
+    % "FLEX-BISON",
+    "LEX-YACC",
+    "LIBC"
+]
+
+proc make_lib (lib, options, objects, imported_libs, shared) is
+    local ret_code = 0
+    local lib_a    = format ("lib%s.a", lib)
+    local lib_so   = format ("lib%s.so", lib)
+    local lib_sox  = format ("lib%s.so.5", lib)
+
+    make_lib_delete_outputs(lib)
+
+    % first, build the non-shared library
+    ret_code = try_exec ("@" & SYSTEM_AR, "cru", lib_a, objects)
+    if not equal (ret_code, 0)
+        make_lib_delete_outputs(lib)
+        return ret_code
+    end
+
+    if shared
+        % then, build the shared library
+        configure_linker()
+        local shared_option = ""
+        if equal(C_COMPILER, "GNU")
+            shared_option = "-shared"
+        else
+            shared_option = "-G"
+        end
+        configure_c_compiler ()
+        ret_code = try_exec ("@" & SYSTEM_LD, shared_option, "-o",
+                             lib_sox, "-h", lib_sox, objects,
+                             libcxx, imported_libs)
+        if not equal (ret_code, 0)
+            make_lib_delete_outputs(lib)
+            return ret_code
+        end
+    end
+
+    local a = skip_lib(lib, shared)
+
+    return 0
+end
+
+%------------------------------------------------------------------- linker ---
+% "m3_link" is called to produce a final executable.
+
+proc m3_link (prog, options, objects, imported_libs, shared) is
+    configure_linker()
+    local linker = [ "@" & SYSTEM_LD ]
+    local args = [ ]
+    if M3_PROFILING
+        args += "-pg"
+    end
+    configure_c_compiler ()
+    args += [ "-o", prog, options, objects, libcxx, imported_libs ]
+    if shared or equal (C_COMPILER, "SUN")
+        return try_exec (linker, args)
+    else
+        return try_exec (linker, "-pie", args)
+    end
+end
+
+% don't build up large RPATH
+M3_SHARED_LIB_ARG = ""
+
+include ("Unix.common")
+
+%M3_MAIN_IN_C = TRUE

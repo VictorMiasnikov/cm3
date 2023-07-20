@@ -9,7 +9,7 @@ UNSAFE MODULE ProcessCygwin EXPORTS Process;
 
 IMPORT Cerrno, Ctypes, File, FilePosix, OSError, OSErrorPosix,
   Pathname, RTLinker, Unix, Uerror, ProcessPosixCommon, Process;
-IMPORT Usysdep;
+IMPORT Uexec;
 
 FROM ProcessPosixCommon IMPORT ArrCStr, GetPathToExec, AllocArgs,
     AllocEnv, FreeArgs, FreeEnv, stdin_g, stdout_g, stderr_g,
@@ -59,6 +59,9 @@ PROCEDURE Create(
     stdin, stdout, stderr: File.T := NIL)
   : Process.T RAISES {OSError.E} =
   BEGIN
+    (* If the generality of fork/exec is not needed, call much faster spawn instead.
+     * Caller should consider calling spawn directly, or system().
+     *)
     IF (wd # NIL)
         OR (stdin # NIL AND stdin.fd # stdin_g.fd)
         OR (stdout # NIL AND stdout.fd # stdout_g.fd)
@@ -69,13 +72,14 @@ PROCEDURE Create(
     END;
   END Create;
 
+(* If caller is going to wait right away, caller should use system() instead. *)
 PROCEDURE ExecChild_Spawn(
     argx: ArrCStr; (* see "AllocArgs" for layout *)
     envp: Ctypes.char_star_star) : INTEGER
   RAISES {} =
   VAR res : INTEGER; t: Ctypes.char_star;
   BEGIN
-    res := Usysdep.spawnve(Usysdep.P_NOWAIT, (*path*)argx[0], ADR(argx[2]), envp);
+    res := Uexec.spawnve(Uexec.P_NOWAIT, (*path*)argx[0], ADR(argx[2]), envp);
     IF res < 0 THEN
       IF Cerrno.GetErrno() = Uerror.ENOEXEC THEN
         t := argx[0]; argx[0] := argx[2]; argx[2] := t;

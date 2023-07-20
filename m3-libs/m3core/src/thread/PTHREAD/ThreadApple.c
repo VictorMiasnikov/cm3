@@ -13,10 +13,6 @@
 #endif
 #endif /* Apple */
 
-#if M3_HAS_VISIBILITY
-#pragma GCC visibility push(hidden)
-#endif
-
 M3_EXTERNC_BEGIN
 
 #ifndef __APPLE__
@@ -112,15 +108,15 @@ typedef _STRUCT_ARM_THREAD_STATE64 m3_thread_state_t;
 
 void
 __cdecl
-ThreadPThread__ProcessStopped (m3_pthread_t mt, ADDRESS bottom, ADDRESS context,
-                               void (*p)(void *start, void *limit))
+ThreadPThread__ProcessStopped (m3_pthread_t mt, ADDRESS top, ADDRESS context,
+                               ADDRESS regbottom, ADDRESS bsp, void (*p)(void *start, void *limit))
 {
   char *sp = { 0 };
   m3_thread_state_t state = { 0 };
   kern_return_t status = { 0 };
   mach_msg_type_number_t thread_state_count = M3_THREAD_STATE_COUNT;
 
-  if (!bottom) return;
+  if (!top) return;
   status = thread_get_state(PTHREAD_FROM_M3(mt),
                             M3_THREAD_STATE, (thread_state_t)&state,
                             &thread_state_count);
@@ -144,11 +140,11 @@ ThreadPThread__ProcessStopped (m3_pthread_t mt, ADDRESS bottom, ADDRESS context,
 #endif
   sp -= M3_STACK_ADJUST;
   /* process the stack */
-#if 0
-  assert(stack_grows_down); /* See ThreadPThreadC.c */
-#endif
   assert(context == 0);
-  p(sp, bottom);
+  if (sp < top)
+      p(sp, top);
+  else if (sp > top)
+      p(top, sp);
   /* process the registers */
   p(&state, &state + 1);
 }
@@ -156,7 +152,3 @@ ThreadPThread__ProcessStopped (m3_pthread_t mt, ADDRESS bottom, ADDRESS context,
 #endif /* Apple */
 
 M3_EXTERNC_END
-
-#if M3_HAS_VISIBILITY
-#pragma GCC visibility pop
-#endif

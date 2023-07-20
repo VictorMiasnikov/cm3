@@ -33,6 +33,7 @@ PROCEDURE SetLazyAlignment (on: BOOLEAN);
 PROCEDURE ExportScope (t: T): Scope.T;
 
 PROCEDURE Current (): T;
+(* The current module. *)
 
 PROCEDURE Name (t: T): M3ID.T;
 (* t = NIL => use Current *)
@@ -51,7 +52,8 @@ PROCEDURE GlobalData (is_const: BOOLEAN): CG.Var;
 (* returns the current module's global data segment.  *)
 
 PROCEDURE LoadGlobalAddr (t: T;  offset: INTEGER;  is_const: BOOLEAN);
-(* generate code to load the address of 't's global data + 'offset'. *)
+(* generate code to load the address of 't's global constant/data + 'offset'. *)
+(* PRE: t = Current () OR NOT is_const. *)
 
 PROCEDURE ImportInterface (t: T);
 (* generate the structures that force "t" to be imported and initialized at

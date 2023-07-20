@@ -6,6 +6,7 @@
 #include "m3core.h"
 #endif
 
+// TODO: HPUX has direct suspend also.
 #if defined(__APPLE__)
 /* See ThreadApple.c. */
 #define M3_DIRECT_SUSPEND
@@ -15,13 +16,28 @@
 #include <mach/mach_port.h>
 #include <mach/mach_init.h>
 #endif
+#if defined(__hpux) && defined(__ia64)
+#include "ia64/sys/kern_inline.h"
+
+// Missing in the headers.
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+int pthread_attr_setsuspendstate_np(pthread_attr_t*, int);
+#ifdef __cplusplus
+} // extern "C"
+#endif
+#endif
 
 #undef M3MODULE /* Support concatenating multiple .c files. */
 #define M3MODULE ThreadPThread
 
-#if defined(__sparc) || defined(__ia64__)
-#define M3_REGISTER_WINDOWS
-#endif
+// Wrap jmpbuf in a struct to avoid warnings from some compilers
+// about taking address of array. i.e. on OSF.
+// cc: Warning: ThreadPThreadC.c, line 170: In this statement, & before array "jb" is ignored. (addrarray)
+//     p(&jb, ((char *)&jb) + sizeof(jb));
+typedef struct { sigjmp_buf jb; } M3SigJmpBuf;
 
 #ifdef M3_DIRECT_SUSPEND
 #define M3_DIRECT_SUSPEND_ASSERT_FALSE do {            \
@@ -41,10 +57,6 @@ M3_EXTERNC_BEGIN
 
 void __cdecl SignalHandler(int signo, ADDRESS context);
 
-#if M3_HAS_VISIBILITY
-#pragma GCC visibility push(hidden)
-#endif
-
 /* expected values for compat, if compat matters:
     Solaris: 17 (at least 32bit SPARC?)
     Cygwin: 19 -- er, but maybe that's wrong
@@ -60,7 +72,9 @@ EXTERN_CONST int SIG_SUSPEND = 0;
 #elif defined(__sun) || defined(__CYGWIN__)
 EXTERN_CONST int SIG_SUSPEND = SIGUSR2;
 #elif defined(__linux)
-EXTERN_CONST int SIG_SUSPEND = NSIG - 1;
+// This is not constant. Under valgrind, initialization
+// fails, and we decrement it one and retry once.
+int SIG_SUSPEND = NSIG - 1;
 #elif defined(__hpux)
 EXTERN_CONST int SIG_SUSPEND = _SIGRTMAX;
 #elif defined(SIGRTMAX) && !defined(__osf__)
@@ -74,7 +88,43 @@ EXTERN_CONST int SIG_SUSPEND = SIGUSR2;
 #error Unable to determine SIG_SUSPEND.
 #endif
 
-static int stack_grows_down;
+ADDRESS
+ThreadPThread__FlushRegisterWindows1 (M3SigJmpBuf* pbuf)
+// 1: takes 1 parameter
+{
+#if defined(__ia64)
+#if defined(__GNUC___) && defined(__ia64)
+  __builtin_ia64_flushrs();
+  return (ADDRESS)(long)__builtin_ia64_bsp();
+#elif defined(__hpux) && defined(__ia64)
+  _FLUSHRS();
+  return (ADDRESS)(long)_MOV_FROM_AR(AR_BSP);
+#else
+#error Unknown IA64 configuration. (VMS?)
+#endif
+#elif defined(__sparc)
+  // Caller either captured and wants to flush or only flush.
+  // By providing pbuf or not.
+  M3SigJmpBuf buf;
+  if (!pbuf)
+  {
+      if (sigsetjmp(buf.jb, 0) == 1)
+          return 0;
+      pbuf = &buf;
+  }
+  siglongjmp(pbuf->jb, 1); // flush register windows
+  // unreachable
+#else
+  return 0;
+#endif
+}
+
+ADDRESS
+ThreadPThread__FlushRegisterWindows0 (void)
+// 0: takes 0 parameters
+{
+  return ThreadPThread__FlushRegisterWindows1 (0);
+}
 
 #ifndef M3_DIRECT_SUSPEND
 
@@ -99,17 +149,6 @@ void
 __cdecl
 ThreadPThread__sigsuspend(void)
 {
-  struct {
-    sigjmp_buf jb;
-  } s;
-
-  ZERO_MEMORY(s);
-
-  if (sigsetjmp(s.jb, 0) == 0) /* save registers to stack */
-#ifdef M3_REGISTER_WINDOWS
-    siglongjmp(s.jb, 1); /* flush register windows */
-  else
-#endif
     sigsuspend(&mask);
 }
 
@@ -131,23 +170,25 @@ ThreadPThread__RestartThread (m3_pthread_t mt)
 
 void
 __cdecl
-ThreadPThread__ProcessStopped (m3_pthread_t mt, ADDRESS bottom, ADDRESS context,
-                               void (*p)(void *start, void *limit))
+ThreadPThread__ProcessStopped (m3_pthread_t mt, ADDRESS top, ADDRESS context,
+                               ADDRESS regbottom, ADDRESS bsp, void (*p)(void *start, void *limit))
 {
-  /* process stack */
-  if (!bottom) return;
-  if (stack_grows_down)
+  // process stack and registers and second ia64 stack
+  if (top && context)
   {
-    assert(context <= bottom);  /* is it not OK to have an empty stack? */
-    p(context, bottom);
+    if ((char*)context < (char*)top) // typical growdown stack, context in stack
+      p(context, top);
+    else // unusual growup stack, e.g. hppa
+      p(top, 1 + (ucontext_t*)context);
   }
-  else
+
+  if (regbottom && bsp)
   {
-    assert(bottom <= context);
-    p(bottom, context);
+    if ((char*)regbottom < (char*)bsp)
+      p (regbottom, bsp);
+    else
+      p (bsp, regbottom);
   }
-  /* process register context */
-  /*p(context, context + sizeof(ucontext_t));*/ /* cant be right */
 }
 
 #else /* M3_DIRECT_SUSPEND */
@@ -159,46 +200,36 @@ void __cdecl ThreadPThread__sigsuspend(void)        { M3_DIRECT_SUSPEND_ASSERT_F
 
 #endif /* M3_DIRECT_SUSPEND */
 
+M3_NO_INLINE // because alloca
 void
 __cdecl
-ThreadPThread__ProcessLive(ADDRESS bottom, void (*p)(void *start, void *limit))
+ThreadPThread__ProcessLive(ADDRESS top, ADDRESS regbottom, void (*p)(void *start, void *limit))
 {
-/*
-cc: Warning: ThreadPThreadC.c, line 170: In this statement, & before array "jb" is ignored. (addrarray)
-    p(&jb, ((char *)&jb) + sizeof(jb));
-------^
-cc: Warning: ThreadPThreadC.c, line 170: In this statement, & before array "jb" is ignored. (addrarray)
-    p(&jb, ((char *)&jb) + sizeof(jb));
---------------------^
+  char* bsp = 0;
+  M3SigJmpBuf jb;
 
-jb may or may not be an array, & is necessary, wrap it in struct.
-*/
-  struct {
-    sigjmp_buf jb;
-  } s;
+  if (sigsetjmp (jb.jb, 0) == 0) // save registers to stack (TODO: Posix getcontext)
+    bsp = (char*)ThreadPThread__FlushRegisterWindows1 (&jb);
 
-  ZERO_MEMORY(s);
-
-  if (sigsetjmp(s.jb, 0) == 0) /* save registers to stack */
-#ifdef M3_REGISTER_WINDOWS
-    siglongjmp(s.jb, 1); /* flush register windows */
-  else
-#endif
+  // capture bottom after longjmp because longjmp can clobber non-volatile locals,
+  // and so jb is in stack (address of local would not work)
+  if (top)
   {
-    /* capture top after longjmp because longjmp can clobber non-volatile locals */
-    char *top = (char*)alloca(1);
-    assert(bottom);
-    if (stack_grows_down)
-    {
-      assert(top < bottom);
-      p(top, bottom);
-    }
+    char* bottom = (char*)alloca (1);
+
+    if (bottom < top) // typical growdown stack
+      p (bottom, top);
+    else // unusual growup stack, e.g. hppa
+      p (top, bottom);
+  }
+
+  // regbottom-bsp is essentially a second stack, i.e. for IA64
+  if (regbottom && bsp)
+  {
+    if ((char*)regbottom < bsp)
+      p (regbottom, bsp);
     else
-    {
-      assert((char*)bottom < top);
-      p(bottom, top);
-    }
-    p(&s, sizeof(s) + (char *)&s);
+      p (bsp, regbottom);
   }
 }
 
@@ -221,9 +252,11 @@ typedef void *(*start_routine_t)(void *);
 
 int
 __cdecl
-ThreadPThread__thread_create(size_t stackSize,
-                             start_routine_t start_routine,
-                             void *arg)
+ThreadPThread__thread_create(
+    size_t stackSize,
+    start_routine_t start_routine,
+    void* arg,
+    void** regbottom)
 {
   int r = { 0 };
   WORD_T bytes = { 0 };
@@ -232,6 +265,7 @@ ThreadPThread__thread_create(size_t stackSize,
 
   ZERO_MEMORY(pthread);
   ZERO_MEMORY(attr);
+  assert(regbottom);
   
   M3_RETRY(pthread_attr_init(&attr));
 #ifdef __hpux
@@ -240,15 +274,24 @@ ThreadPThread__thread_create(size_t stackSize,
       fprintf(stderr,
               "You got the nonfunctional pthread stubs on HP-UX. You need to"
               " adjust your build commands, such as to link to -lpthread or"
-              " use -pthread, and not link explicitly to -lc.\n");
+              " use -pthread or -mt, and not link explicitly to -lc.\n");
     }
 #endif
   assert(r == 0);
 
   r = pthread_attr_getstacksize(&attr, &bytes); assert(r == 0);
+  assert(r == 0);
 
   bytes = M3_MAX(bytes, stackSize);
   pthread_attr_setstacksize(&attr, bytes);
+
+#if defined(__hpux) && defined(__ia64) // TODO: Linux VMS etc.
+  // Start the thread suspended so we can get its register stack base.
+  // _pthread_stack_info_np requires a suspended thread.
+  _pthread_stack_info_t stack_info = {0};
+  r = pthread_attr_setsuspendstate_np(&attr, PTHREAD_CREATE_SUSPENDED);
+  assert(r == 0);
+#endif
 
   M3_RETRY(pthread_create(&pthread, &attr, start_routine, arg));
 #ifdef __sun
@@ -268,6 +311,22 @@ ThreadPThread__thread_create(size_t stackSize,
             (unsigned)r,
             (unsigned)errno);
   }
+
+#if defined(__hpux) && defined(__ia64) // TODO: Linux VMS etc.
+  r = _pthread_stack_info_np(pthread, &stack_info);
+  assert(r == 0);
+
+  assert(stack_info.stk_rse_base);
+  *regbottom = stack_info.stk_rse_base;
+  // Also useful: stack_info.stk_stack_base
+  // If we use direct suspend, all useful: stk_sp stk_bsp stk_stack_base stk_rse_base
+
+  // Resume the thread after getting its stack information.
+  // PTHREAD_COUNT_RESUME_NP means decrement suspend count by one toward zero,
+  // instead of set it to zero, which PTHREAD_FORCE_RESUME_NP or pthread_continue() does.
+  r = pthread_resume_np(pthread, PTHREAD_COUNT_RESUME_NP);
+  assert(r == 0);
+#endif
 
   pthread_attr_destroy(&attr);
 
@@ -544,11 +603,9 @@ ThreadPThread__pthread_mutex_unlock(pthread_mutex_t* mutex)
   return a;
 }
 
-// Do not inline to help ensure stack range is understandable.
-M3_NO_INLINE
 void
 __cdecl
-InitC(ADDRESS bottom)
+InitC(void)
 {
   int r = { 0 };
 
@@ -557,10 +614,6 @@ InitC(ADDRESS bottom)
   ZERO_MEMORY(act);
 #endif
 
-  stack_grows_down = ((char*)bottom > (char*)alloca(1));
-#if defined(__APPLE__) || defined(__INTERIX)
-  assert(stack_grows_down); /* See ThreadApple.c */
-#endif
 #ifndef M3_COMPILER_THREAD_LOCAL
   M3_RETRY(pthread_key_create(&activations, NULL)); assert(r == 0);
 #endif
@@ -580,7 +633,18 @@ InitC(ADDRESS bottom)
   act.sa_flags = SA_RESTART | SA_SIGINFO;
   act.sa_sigaction = SignalHandlerC;
   r = sigfillset(&act.sa_mask); assert(r == 0);
-  r = sigaction(SIG_SUSPEND, &act, NULL); assert(r == 0);
+  r = sigaction(SIG_SUSPEND, &act, NULL);
+  // If that fails, try again off by one, to work with Valgrind.
+#ifdef __linux
+  if (r)
+  {
+    r = sigaddset(&mask, SIG_SUSPEND); assert(r == 0);
+    --SIG_SUSPEND;
+    r = sigdelset(&mask, SIG_SUSPEND); assert(r == 0);
+    r = sigaction(SIG_SUSPEND, &act, NULL);
+  }
+#endif
+  assert(r == 0);
 #endif
 }
 
@@ -595,8 +659,13 @@ ThreadPThread__Solaris(void)
 #endif
 }
 
-M3_EXTERNC_END
-
-#if M3_HAS_VISIBILITY
-#pragma GCC visibility pop
+BOOLEAN ThreadPThread__IA64 (void)
+{
+#ifdef __ia64
+    return TRUE;
+#else
+    return FALSE;
 #endif
+}
+
+M3_EXTERNC_END

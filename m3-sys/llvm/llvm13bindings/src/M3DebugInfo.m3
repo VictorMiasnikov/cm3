@@ -415,6 +415,7 @@ PROCEDURE CreateEnumerationType (Builder    : BuilderRef;
     RETURN result;
   END CreateEnumerationType;
 
+<<<<<<< HEAD
 (* VVM:
 PROCEDURE CreateSetType (Builder    : BuilderRef;
                          Scope      : MetadataRef;
@@ -479,6 +480,8 @@ PROCEDURE GetSubrangeExpr (Builder                        : BuilderRef;
   END GetSubrangeExpr;
 *)
 
+=======
+>>>>>>> rodney-new
 PROCEDURE CreateUnionType (Builder    : BuilderRef;
                            Scope      : MetadataRef;
                            Name       : TEXT;
@@ -523,6 +526,7 @@ PROCEDURE CreateArrayType (Builder      : BuilderRef;
              Builder, Size, AlignInBits, Ty, Subscripts, NumSubscripts);
   END CreateArrayType;
 
+<<<<<<< HEAD
 (* VVM:
 PROCEDURE CreateDynamicArrayType
   (Builder                                  : BuilderRef;
@@ -540,6 +544,8 @@ PROCEDURE CreateDynamicArrayType
   END CreateDynamicArrayType;
 *)
 
+=======
+>>>>>>> rodney-new
 PROCEDURE CreateVectorType (Builder      : BuilderRef;
                             Size         : uint64_t;
                             AlignInBits  : uint32_t;
@@ -1220,6 +1226,7 @@ PROCEDURE LLVMGetMetadataKind (Metadata: MetadataRef; ): CARDINAL =
     RETURN M3DebugInfoRaw.LLVMGetMetadataKind(Metadata);
   END LLVMGetMetadataKind;
 
+<<<<<<< HEAD
 (* VVM:
 PROCEDURE LLVMReplaceArrays (Builder    : BuilderRef;
                              T, Elements: UNTRACED REF MetadataRef;
@@ -1228,6 +1235,8 @@ PROCEDURE LLVMReplaceArrays (Builder    : BuilderRef;
     M3DebugInfoRaw.LLVMReplaceArrays(Builder, T, Elements, NumElements);
   END LLVMReplaceArrays;
 *)
+=======
+>>>>>>> rodney-new
 
 BEGIN
 END M3DebugInfo.

@@ -44,7 +44,7 @@ FROM WinBaseTypes IMPORT const_UINT32;
 (*---------------------------------------------------------------------------*)
 
 <*EXTERNAL "ThreadWin32__ProcessLive"*>
-PROCEDURE ProcessLive(bottom: ADDRESS; p: PROCEDURE(start, limit: ADDRESS));
+PROCEDURE ProcessLive(top: ADDRESS; p: PROCEDURE(start, limit: ADDRESS));
 
 <*EXTERNAL "ThreadWin32__ProcessStopped"*>
 PROCEDURE ProcessStopped(stackStart, stackEnd: ADDRESS; context: PCONTEXT;
@@ -84,5 +84,8 @@ PROCEDURE DelCriticalSection(VAR a:PCRITICAL_SECTION);
 PROCEDURE PerfChanged (s: State);
 PROCEDURE PerfRunning ();
 VAR perfOn: BOOLEAN := FALSE;		 (* LL = perfLock *)
+
+TYPE Activation <: ADDRESS; (* untraced thread stated stored in thread local *)
+PROCEDURE XTestAlert (self: Activation): BOOLEAN;
 
 END ThreadWin32.

@@ -1,0 +1,39 @@
+M3_BACKEND_MODE = "C"
+
+readonly TARGET_OS = "HAIKU"
+readonly OS_TYPE = "POSIX"
+
+M3_PARALLEL_BACK = 20
+
+SYSTEM_LIBS =
+{
+  "LIBC" : [ "-lnetwork" ],
+  "TCP" : [ ],
+}
+
+SYSTEM_LIBORDER = ["TCP", "LIBC"]
+
+proc compile_c(source, object, options, optimize, debug) is
+  exec ("@", gxx, gcc_m3264, "-g -fPIC -xc++ -c", options, source, "-o", object)
+  return 0
+end
+
+proc m3_link(prog, options, objects, imported_libs, shared) is
+  exec ("@", gxx, gcc_m3264, "-g -fPIC -o", prog, options, objects, imported_libs)
+  return 0
+end
+
+proc skip_lib(lib, shared) is
+  local a = format("lib%s.a", lib)
+  deriveds ("", [a])
+  return 0
+end
+
+proc make_lib(lib, options, objects, imported_libs, shared) is
+  local a = format("lib%s.a", lib)
+  delete_file (a)
+  exec ("ar rs", a, objects)
+  return 0
+end
+
+include ("cm3cfg.common")

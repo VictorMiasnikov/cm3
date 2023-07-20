@@ -676,6 +676,7 @@ PROCEDURE CreateEnumerationType (Builder    : BuilderRef;
 
 
 (**
+<<<<<<< HEAD
  * Create debugging information entry for a set.<br>
  * @param Builder        The DIBuilder.<br>
  * @param Scope          The scope this module is imported into.<br>
@@ -743,6 +744,8 @@ PROCEDURE GetSubrangeExpr (Builder                        : BuilderRef;
 *)
 
 (**
+=======
+>>>>>>> rodney-new
  * Create debugging information entry for a union.<br>
  * @param Builder      The DIBuilder.<br>
  * @param Scope        Scope in which this union is defined.<br>
@@ -796,6 +799,7 @@ PROCEDURE CreateArrayType (Builder      : BuilderRef;
 
 
 (**
+<<<<<<< HEAD
  * Create debugging information entry for a dynamic array.<br>
  * @param Builder      The DIBuilder.<br>
  * @param Size         Array size.<br>
@@ -822,6 +826,8 @@ PROCEDURE CreateDynamicArrayType
 *)
 
 (**
+=======
+>>>>>>> rodney-new
  * Create debugging information entry for a vector type.<br>
  * @param Builder      The DIBuilder.<br>
  * @param Size         Vector size.<br>
@@ -1727,10 +1733,13 @@ PROCEDURE LLVMInstructionSetDebugLoc (Inst: ValueRef; Loc: MetadataRef; );
 
 PROCEDURE LLVMGetMetadataKind (Metadata: MetadataRef; ): CARDINAL;
 
+<<<<<<< HEAD
 (* VVM:
 PROCEDURE LLVMReplaceArrays (Builder    : BuilderRef;
                              T, Elements: UNTRACED REF MetadataRef;
                              NumElements: uint;                     );
 *)
+=======
+>>>>>>> rodney-new
 
 END M3DebugInfo.

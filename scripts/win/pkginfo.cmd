@@ -32,11 +32,10 @@ goto :eof
 
 :FilterOnePackage
     @rem goto :FilterOnePackage_%1
-    for %%a in (import_libs tcl serial X11R4 m3cc m3gdb) do if /i "%1" == "%%a" goto :FilterOnePackage_%1
+    for %%a in (tcl serial X11R4 m3cc m3gdb) do if /i "%1" == "%%a" goto :FilterOnePackage_%1
     exit /b 0
     goto :eof
 
-:FilterOnePackage_import-libs
 :FilterOnePackage_tapi
     if /i "%M3OSTYPE%" == "WIN32" exit /b 0
     exit /b 1
@@ -63,5 +62,5 @@ goto :eof
     if /i "%TARGET%" == "FreeBSD4" exit /b 0
     if /i "%TARGET%" == "LINUXLIBC6" exit /b 0
     if /i "%TARGET%" == "SOLgnu" exit /b 0
-    if /i "%TARGET%" == "NetBSD2_i386" exit /b 0
+    if /i "%TARGET%" == "I386_NETBSD" exit /b 0
     exit /b 1

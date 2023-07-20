@@ -204,6 +204,7 @@ PROCEDURE CreateEnumerationType (Builder, Scope: ADDRESS;
                                  ClassTy       : ADDRESS;              ):
   ADDRESS;
 
+<<<<<<< HEAD
 (* VVM:
 <* EXTERNAL LLVMDIBuilderCreateSetType *>
 PROCEDURE CreateSetType (Builder, Scope: ADDRESS;
@@ -234,6 +235,8 @@ PROCEDURE GetSubrangeExpr (Builder, Scope: ADDRESS;
   ADDRESS;
 *)
 
+=======
+>>>>>>> rodney-new
 <* EXTERNAL LLVMDIBuilderCreateUnionType *>
 PROCEDURE CreateUnionType (Builder, Scope: ADDRESS;
                            Name          : C.char_star;
@@ -257,6 +260,7 @@ PROCEDURE CreateArrayType (Builder      : ADDRESS;
                            Subscripts   : ADDRESS;
                            NumSubscripts: C.unsigned_int;       ): ADDRESS;
 
+<<<<<<< HEAD
 (* VVM:
 <* EXTERNAL LLVMDIBuilderCreateDynamicArrayType *>
 PROCEDURE CreateDynamicArrayType
@@ -270,6 +274,8 @@ PROCEDURE CreateDynamicArrayType
   ADDRESS;
 *)
  
+=======
+>>>>>>> rodney-new
 <* EXTERNAL LLVMDIBuilderCreateVectorType *>
 PROCEDURE CreateVectorType (Builder      : ADDRESS;
                             Size         : C.unsigned_long_long;
@@ -615,10 +621,13 @@ PROCEDURE LLVMInstructionSetDebugLoc (Inst, Loc: ADDRESS; );
 <* EXTERNAL LLVMGetMetadataKind *>
 PROCEDURE LLVMGetMetadataKind (Metadata: ADDRESS; ): C.unsigned_int;
 
+<<<<<<< HEAD
 (* VVM:
 <* EXTERNAL LLVMReplaceArrays *>
 PROCEDURE LLVMReplaceArrays
   (Builder: ADDRESS; T, Elements: ADDRESS; NumElements: C.unsigned_int; );
 *)
 
+=======
+>>>>>>> rodney-new
 END M3DebugInfoRaw.

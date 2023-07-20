@@ -2,14 +2,6 @@
 #include "m3core.h"
 #endif
 
-#if M3_HAS_VISIBILITY
-#ifdef __APPLE__
-#pragma GCC visibility push(default)
-#else
-#pragma GCC visibility push(protected)
-#endif
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -68,34 +60,59 @@ static int __cdecl m3stat_from_stat(int result, m3_stat_t* m3st, struct stat* st
         m3st->flags = 0;
 #endif
     }
+    Scheduler__EnableSwitching ();
     return result;
 }
 
-M3_DLL_EXPORT
+M3_NO_INLINE // because alloca
 int
 __cdecl
 Ustat__stat(const char* path, m3_stat_t* m3st)
 {
+    int result;
     struct stat st;
-    return m3stat_from_stat(stat(path, &st), m3st, &st);
+
+    Scheduler__DisableSwitching ();
+    result = stat (path, &st);
+#ifndef _WIN32
+    if (m3core_trace.s.stat)
+    {
+        char* buf = (char*)alloca (256 + strlen (path));
+        int len = sprintf (buf, "stat (%s):mode:%X,%d\n", path, (unsigned)st.st_mode, result);
+        write (1, buf, len);
+    }
+#endif
+    return m3stat_from_stat(result, m3st, &st);
 }
 
-M3_DLL_EXPORT
 int
 __cdecl
 Ustat__lstat(const char* path, m3_stat_t* m3st)
 {
     struct stat st;
+    Scheduler__DisableSwitching ();
     return m3stat_from_stat(lstat(path, &st), m3st, &st);
 }
 
-M3_DLL_EXPORT
+M3_NO_INLINE // because alloca
 int
 __cdecl
 Ustat__fstat(int fd, m3_stat_t* m3st)
 {
+    int result;
     struct stat st;
-    return m3stat_from_stat(fstat(fd, &st), m3st, &st);
+
+    Scheduler__DisableSwitching ();
+    result = fstat (fd, &st);
+#ifndef _WIN32
+    if (m3core_trace.s.fstat)
+    {
+        char* buf = (char*)alloca (256);
+        int len = sprintf (buf, "fstat (%d):mode:%X,%d\n", fd, (unsigned)st.st_mode, result);
+        write (1, buf, len);
+    }
+#endif
+    return m3stat_from_stat(result, m3st, &st);
 }
 
 #ifdef HAS_STAT_FLAGS
@@ -107,8 +124,4 @@ M3WRAP2(int, fchflags, int, unsigned long)
 
 #ifdef __cplusplus
 } /* extern "C" */
-#endif
-
-#if M3_HAS_VISIBILITY
-#pragma GCC visibility pop
 #endif

@@ -2,6 +2,10 @@
 #include "m3core.h"
 #endif
 
+#ifdef __DJGPP__
+#define M3_USER_THREADS 1
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -25,7 +29,6 @@ typedef struct _vector_t {
 #define fork_handlers RTProcess__fork_handlers
 static vector_t fork_handlers;
 
-M3_DLL_EXPORT
 INTEGER
 __cdecl
 RTProcess__RegisterForkHandlers(ForkHandler prepare,
@@ -75,7 +78,6 @@ Exit:
 
 #else /* M3_USER_THREADS */
 
-M3_DLL_EXPORT
 INTEGER
 __cdecl
 RTProcess__RegisterForkHandlers(ForkHandler prepare,
@@ -85,6 +87,7 @@ RTProcess__RegisterForkHandlers(ForkHandler prepare,
 /* FreeBSD < 6 lacks pthread_atfork. Would be good to use autoconf.
  * VMS lacks pthread_atfork? Would be good to use autoconf.
  * Win32 lacks pthread_atfork and fork. OK.
+ * Haiku pthread_atfork does not seem to work, pthread_mutex_unlock fails with EPERM.
  *
  * As well, for all Posix systems, we could implement
  * atfork ourselves, as long as we provide a fork()
@@ -92,6 +95,7 @@ RTProcess__RegisterForkHandlers(ForkHandler prepare,
  */
 #if defined(_WIN32) \
         || defined(__vms) \
+        || defined(__HAIKU__) \
         || (defined(__FreeBSD__) && (__FreeBSD__ < 6))
     return 0;
 #else
@@ -107,13 +111,12 @@ RTProcess__RegisterForkHandlers(ForkHandler prepare,
 
 #endif /* M3_USER_THREADS */
 
-#ifndef _WIN32
+#if !defined(_WIN32) || defined(__CYGWIN__)
 
 void
 __cdecl
 ThreadPThread__AtForkPrepareOutsideFork(void);
 
-M3_DLL_EXPORT
 INTEGER
 __cdecl
 RTProcess__Fork(void)
@@ -126,11 +129,13 @@ RTProcess__Fork(void)
   int err = { 0 };
 #endif
 
+#if !(defined(__CYGWIN__) || defined(__DJGPP__))
   // Run fork handlers outside of fork instead of in fork,
   // on Solaris, because on Solaris they run with signals deferred/disbled
   // and fork therefore deadlocks with collector.
   // See https://github.com/illumos/illumos-gate/blob/b89fc615f42c703d6100c78de04791708d190e5e/usr/src/lib/libc/port/threads/scalls.c#L194
   ThreadPThread__AtForkPrepareOutsideFork();
+#endif
 
 #ifdef M3_USER_THREADS
   Scheduler__DisableSwitching();

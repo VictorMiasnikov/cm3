@@ -526,6 +526,8 @@ readonly proc p_test (group, uid, comment) is
   run_test ("_ptests", group, uid, comment, "run", cm3opts, runopts, "probeForTargetSpecificFiles")
 end
 
+p_test ("p2", "p292", "Correct CG type of struct for record temps")
+p_test ("p2", "p291", "No internal folding of non-constant record constructors")
 p_test ("p2", "p289", "cross-unit access to constant array constructors")
 p_test ("p2", "p288", "field default constant constructors")
 p_test ("p2", "p287", "constant constructors")
@@ -838,6 +840,7 @@ readonly proc e_test (group, uid, comment) is
   run_test ("_etests", group, uid, comment, "", cm3opts, runopts, "probeForTargetSpecificFiles")
 end
 
+e_test ("e0", "e041", "Illegal mutually recursive revealed opaque types in separate units")
 e_test ("e0", "e040", "Bad SUBARRAY actuals")
 e_test ("e0", "e035", "illegal recursive declaration")
 e_test ("e0", "e034", "structural equivalence of records")

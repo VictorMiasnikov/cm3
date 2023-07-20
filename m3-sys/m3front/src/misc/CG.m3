@@ -223,6 +223,11 @@ PROCEDURE End_unit () =
     cg.end_unit ();
   END End_unit;
 
+PROCEDURE IsInsideProc () : BOOLEAN =
+  BEGIN
+    RETURN ProcStackRoot # NIL
+  END IsInsideProc;
+
 PROCEDURE Import_unit (n: Name) =
   BEGIN
     cg.import_unit (n);
@@ -748,6 +753,7 @@ PROCEDURE Free_all_values () =
     WHILE (busy_values # NIL) DO  Free (busy_values); END;
   END Free_all_values;
 
+(*
 PROCEDURE XForce () =
   (* force the value enough so that we can do a simple indirect load/store *)
   VAR offs: INTEGER;
@@ -765,6 +771,7 @@ PROCEDURE XForce () =
       END;
     END;
   END XForce;
+*)
 
 PROCEDURE ForceStacked (s: Size := 0) =
 (* s needs to be provided only if s0 could be structured and packed.
@@ -944,6 +951,7 @@ PROCEDURE Force_byte_align (VAR x: ValRec; s: Size) =
     END;
   END Force_byte_align;
 
+(*
 PROCEDURE Force_LValue (VAR x: ValRec) =
   BEGIN
     IF x.type # Type.Addr THEN
@@ -956,6 +964,7 @@ PROCEDURE Force_LValue (VAR x: ValRec) =
       Err ("####### attempt to force a bit-level L-value...");
     END;
   END Force_LValue;
+*)
 
 PROCEDURE Release_temps (VAR x: ValRec) =
   BEGIN
@@ -2251,17 +2260,17 @@ PROCEDURE Store_indirect (t: Type; addedOffset: Offset;  s: Size) =
 
       IF s = t_size AND (x.addr_align MOD t_align) = 0 THEN
         (* A full t_size'd and t_align'ed store. *)
-        SimpleIndirectStore (x, t);
+        SimpleIndirectStore (x, t, t);
       ELSIF s = t_size
             AND (x.addr_align MOD Target.Byte) = 0
             AND Target.Allow_packed_byte_aligned THEN
         (* A full t_size'd and byte-aligned store, supported by the processor.
            This is used by structures containing packed components. *)
-        SimpleIndirectStore (x, t);
+        SimpleIndirectStore (x, t, t);
 
       ELSIF s > t_size THEN
         Err ("In Store_indirect, memory size exceeds stack size.");
-        SimpleIndirectStore (x, t);
+        SimpleIndirectStore (x, t, t);
 
       ELSIF (t = Target.Word.cg_type) OR (t = Target.Integer.cg_type)
         OR  (t = Target.Long.cg_type) OR (t = Target.Longint.cg_type) THEN
@@ -2272,7 +2281,7 @@ PROCEDURE Store_indirect (t: Type; addedOffset: Offset;  s: Size) =
           oddStaticBitCt := x.offset MOD best_align;
           IF (oddStaticBitCt = 0) AND (s = best_size) AND (x.bits = NIL) THEN
             (* A full best_size'd and best_align'ed store. *)
-            SimpleIndirectStore (x, best_type);
+            SimpleIndirectStore (x, t, best_type);
           ELSIF (oddStaticBitCt = 0) AND (x.bits = NIL) THEN
             (* A best_align'ed but only partial best_size'd store. *)
             Swap (); (* Address on top *)
@@ -2294,7 +2303,7 @@ PROCEDURE Store_indirect (t: Type; addedOffset: Offset;  s: Size) =
             Push (tmp);
             ForceAddr2SAP (0);
             Swap (); (* Value on top. *) 
-            SimpleIndirectStore (x, best_type);
+            SimpleIndirectStore (x, t, best_type);
             Free (tmp);
           ELSIF (x.bits = NIL) THEN
             (* Unaligned, partial best_size'd store. *)
@@ -2320,7 +2329,7 @@ PROCEDURE Store_indirect (t: Type; addedOffset: Offset;  s: Size) =
             Push (tmp);
             ForceAddr2SAP (0);
             Swap (); (* Stuffed word on top, address below. *) 
-            SimpleIndirectStore (x, best_type);
+            SimpleIndirectStore (x, t, best_type);
             Free (tmp);
           ELSE (* bits # NIL *)
             (* Unaligned, partial best_size'd store with RT variable offset. *)
@@ -2387,7 +2396,7 @@ PROCEDURE Store_indirect (t: Type; addedOffset: Offset;  s: Size) =
             Push (tmp);
             ForceAddr2SAP (0);
             Swap (); (* Stuffed word on top, address below. *) 
-            SimpleIndirectStore (x, best_type);
+            SimpleIndirectStore (x, t, best_type);
 
             Free (tmp);
             Free_temp (oddRTBits);
@@ -2399,30 +2408,30 @@ PROCEDURE Store_indirect (t: Type; addedOffset: Offset;  s: Size) =
         ELSE
           Err ("unaligned word-straddling store_indirect, type="& Target.TypeNames[t]
               & "  s/a=" & Fmt.Int (s) & "/" & Fmt.Int (x.addr_align));
-          SimpleIndirectStore (x, t);
+          SimpleIndirectStore (x, t, t);
           END 
       ELSE
         Err ("unaligned partial-word store_indirect, type="& Target.TypeNames[t]
             & "  s/a=" & Fmt.Int (s) & "/" & Fmt.Int (x.addr_align));
-        SimpleIndirectStore (x, t);
+        SimpleIndirectStore (x, t, t);
       END;
 
     END;
     SPop (2, "Store_indirect");
   END Store_indirect;
 
-PROCEDURE SimpleIndirectStore (READONLY x: ValRec;  t: MType)=
+PROCEDURE SimpleIndirectStore (READONLY x: ValRec; t: ZType; u:MType)=
 (* PRE: x.kind IN {Stacked, Absolute, Pointer}. *)
-(* Store full t-size'd and t-align'ed. *)
+(* Store full t-size'd and t-align'ed into u. *)
   BEGIN
     CASE x.kind OF
     | VKind.Absolute =>
-      cg.store (x.base, AsBytes (x.offset), StackType [t], t);
+      cg.store (x.base, AsBytes (x.offset), t, u);
     | VKind.Pointer, VKind.Stacked =>
-      cg.store_indirect (AsBytes (x.offset), StackType [t], t);
+      cg.store_indirect (AsBytes (x.offset), t, u);
     ELSE (* ?? *)
       ErrI (ORD (x.kind), "bad VKind in SimpleIndirectStore");
-      cg.store_indirect (AsBytes (x.offset), StackType[t], t);
+      cg.store_indirect (AsBytes (x.offset), t, u);
     END;
   END SimpleIndirectStore;
 
@@ -3635,6 +3644,44 @@ PROCEDURE Gen_Call_indirect (t: Type;  cc: CallingConvention) =
     PushResult (t);
   END Gen_Call_indirect;
 
+PROCEDURE Start_try () =
+  BEGIN
+    cg.start_try ();
+  END Start_try;
+
+PROCEDURE End_try () =
+  BEGIN
+    cg.end_try ();
+  END End_try;
+
+PROCEDURE Invoke_direct (p: Proc;  t: Type; handler : Label) =
+  VAR next := Next_label ();
+  BEGIN
+    SEmpty ("Invoke_direct");
+    cg.invoke_direct (p, t, next, handler);
+    cg.set_label(next);
+    PushResult (t);
+  END Invoke_direct;
+
+PROCEDURE Invoke_indirect (t: Type; cc: CallingConvention; handler : Label) =
+  VAR next := Next_label ();
+  BEGIN
+    IF Host.doProcChk THEN Check_nil (RuntimeError.BadMemoryReference); END;
+    ForceStacked ();
+    cg.invoke_indirect (t, cc, next, handler);
+    cg.set_label(next);
+    SPop (1, "Invoke_indirect");
+    SEmpty ("Invoke_indirect");
+    PushResult (t);
+  END Invoke_indirect;
+
+PROCEDURE Landing_pad (handler : Label; READONLY catches : ARRAY OF TypeUID) =
+  BEGIN
+    SEmpty ("Landing_pad");
+    cg.landing_pad (Type.Addr, handler, catches);
+    PushResult (Type.Addr);
+  END Landing_pad;
+
 PROCEDURE PushResult (t: Type) =
   BEGIN
     IF (t # Type.Void) THEN  SPush (t)  END;
@@ -3699,7 +3746,7 @@ PROCEDURE Hdr_to_info (offset, size: INTEGER) =
   VAR base: INTEGER;
   BEGIN
     ForceStacked ();
-    IF Target.endian = Target.Endian.Little
+    IF TRUE (* endian neutrality Target.endian = Target.Endian.Little *)
       THEN base := offset;
       ELSE base := Target.Integer.size - offset - size;
     END;
@@ -3918,6 +3965,7 @@ PROCEDURE cg_load_word (i: INTEGER) =
     cg.load_integer (Target.Word.cg_type, val);
   END cg_load_word;
 
+(*
 PROCEDURE cg_load_addr (addr: INTEGER) =
 (* push addr on the M3CG stack, with type Address.
    No action on CG stack. *) 
@@ -3930,6 +3978,7 @@ PROCEDURE cg_load_addr (addr: INTEGER) =
     cg.load_integer (Target.Word.cg_type, val);
     cg.loophole (Target.Word.cg_type, Type.Addr); 
   END cg_load_addr;
+*)
 
 PROCEDURE Force_pair (commute: BOOLEAN): BOOLEAN =
   (* Returns TRUE if it leaves the items are stacked in the wrong order *)
@@ -3954,20 +4003,24 @@ PROCEDURE Force_pair (commute: BOOLEAN): BOOLEAN =
     RETURN commute;
   END Force_pair;
 
+(*
 PROCEDURE stack_old_align (n: INTEGER): INTEGER =
   BEGIN
     RETURN stack [SCheck (n, "stack_addr_align")].old_align; 
   END stack_old_align;
+*)
 
 PROCEDURE stack_addr_align (n: INTEGER): INTEGER =
   BEGIN
     RETURN stack [SCheck (n, "stack_addr_align")].addr_align; 
   END stack_addr_align;
 
+(*
 PROCEDURE SLV_align (n: INTEGER): INTEGER =
   BEGIN
     RETURN LV_align (stack [SCheck (n, "SLV_align")]);
   END SLV_align;
+*)
 
 PROCEDURE LV_align (READONLY x: ValRec): INTEGER =
   (* Largest alignment x is statically sure to have. *) 

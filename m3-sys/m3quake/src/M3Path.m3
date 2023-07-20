@@ -9,11 +9,10 @@
 
 MODULE M3Path;
 
-IMPORT Pathname, Text, ASCII, Compiler;
+IMPORT Pathname, Text, ASCII, Compiler, MxConfigC;
 
 CONST
   Null      = '\000';
-  Colon     = ':';
   Slash     = '/';
   BackSlash = '\\';
 
@@ -33,7 +32,11 @@ CONST
   (* Win32 *)      SMap { "", ".i3", ".ib", ".ic", ".is", ".io",
                           ".m3", ".mb", ".mc", ".ms", ".mo",
                           ".ig", ".mg", ".c", ".cpp", ".h", ".bc", ".s",
-                          ".obj",".lib",".lib",".m3x",".exe",".mx",".tmpl" }
+                          ".obj",".lib",".lib",".m3x",".exe",".mx",".tmpl" },
+  (* C++BackendWithAutomake *) SMap { "", ".i3", ".ib", ".ic", ".i3.s", ".i3.o",
+                          ".m3", ".mb", ".mc", ".m3.s", ".m3.o",
+                          ".ig", ".mg", ".c", ".cpp", ".h", ".bc", ".s",
+                          ".o", ".a", ".a", ".m3x", "", ".mx", ".tmpl" }
   };
 
   Prefix = ARRAY OSKind OF SMap {
@@ -48,14 +51,18 @@ CONST
   (* Win32 *)      SMap { "", "", "", "", "", "",
                           "", "", "", "", "",
                           "", "", "", "", "", "", "",
-                          "", "", "", "", "", "","" }
+                          "", "", "", "", "", "","" },
+  (* C++BackendWithAutomake *) SMap { "", "", "", "", "", "",
+                          "", "", "", "", "",
+                          "", "", "", "", "", "", "",
+                          "", "lib", "lib", "lib", "", "", "" }
   };
 
-  Default_pgm = ARRAY OSKind OF TEXT { "a.out", "a.out", "NONAME.EXE" };
+  Default_pgm = ARRAY OSKind OF TEXT { "a.out", "a.out", "NONAME.EXE", "a.out" };
 
 VAR target_os := ARRAY Compiler.OS OF OSKind{OSKind.Unix, OSKind.Win32}[Compiler.ThisOS];
-CONST d_sep = ARRAY Compiler.OS OF CHAR{Slash, BackSlash}[Compiler.ThisOS];
-CONST v_sep = ARRAY Compiler.OS OF CHAR{Null, Colon}[Compiler.ThisOS];
+VAR d_sep := MxConfigC.DirectorySeparator (); (* forward or backward slash *)
+VAR v_sep := MxConfigC.DeviceSeparator (); (* zero or colon *)
 (*CONST DirSepText = ARRAY Compiler.OS OF TEXT{"/", "\\"}[Compiler.ThisOS];*)
 
 PROCEDURE SetTargetOS (kind: OSKind) =
@@ -240,8 +247,8 @@ PROCEDURE RegionMatch (a: TEXT;  start_a: CARDINAL;
                        b: TEXT;  start_b: CARDINAL;
                        len: CARDINAL): BOOLEAN =
   CONST N = 128;
-        ignore_case = (Compiler.ThisOS = Compiler.OS.WIN32);
   VAR
+    ignore_case := MxConfigC.CaseInsensitive ();
     len_a : CARDINAL;
     len_b : CARDINAL;
     buf_a, buf_b : ARRAY [0..N-1] OF CHAR;

@@ -6,9 +6,21 @@
 #include "m3core.h"
 #endif
 
+// Most of the (static)asserts in this file are not likely needed.
+// Strongly consider significantly trimming them.
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#ifdef __DJGPP__
+
+void __cdecl
+Usocket__Assertions(void)
+{
+}
+
+#else
 
 M3_STATIC_ASSERT(AF_INET > 0);
 M3_STATIC_ASSERT(AF_INET6 > 0);
@@ -32,7 +44,7 @@ struct m3_sockaddr_in
     unsigned int   addr;
     unsigned char zero[8];
 };
-M3_STATIC_ASSERT(sizeof(sockaddr_in) == 16); // if this fails, ok, remove it
+M3_STATIC_ASSERT(sizeof(sockaddr_in) >= 16); // if this fails, ok, remove it
 M3_STATIC_ASSERT(sizeof(m3_sockaddr_in) == 16);
 
 // Idealized Modula3 IPv6 socket address.
@@ -90,13 +102,15 @@ M3_STATIC_ASSERT(offsetof(sockaddr_in, sin_family) == offsetof(sockaddr_in6, sin
 M3_STATIC_ASSERT(offsetof(sockaddr_in, sin_family) == offsetof(sockaddr_un, sun_family));
 #endif
 
-// Modula-3 forms are same size as native or larger.
-// This does mean exactly the same, as Modula-3 never has "len"
+// Modula-3 forms are usually same size as native or larger.
+// This does not mean exactly the same, as Modula-3 never has "len"
 // field and native sometimes does.
-M3_STATIC_ASSERT(sizeof(m3_sockaddr_in) == sizeof(sockaddr_in));
+// Haiku sockaddr_in is larger.
+M3_STATIC_ASSERT(sizeof(m3_sockaddr_in) <= sizeof(sockaddr_in));
 #ifdef AF_UNIX
 M3_STATIC_ASSERT(sizeof(m3_sockaddr_un) >= sizeof(sockaddr_un));
 #endif
+// Native family is 8 or 16 bits.
 M3_STATIC_ASSERT(M3_FIELD_SIZE(m3_sockaddr_in, family) >= M3_FIELD_SIZE(sockaddr_in, sin_family));
 M3_STATIC_ASSERT(M3_FIELD_SIZE(m3_sockaddr_in, port) == M3_FIELD_SIZE(sockaddr_in, sin_port));
 M3_STATIC_ASSERT(M3_FIELD_SIZE(m3_sockaddr_in, addr) == M3_FIELD_SIZE(sockaddr_in, sin_addr));
@@ -109,9 +123,9 @@ M3_STATIC_ASSERT(M3_FIELD_SIZE(m3_sockaddr_in6, scope_id) == M3_FIELD_SIZE(socka
 
 #ifdef AF_UNIX
 M3_STATIC_ASSERT(M3_FIELD_SIZE(m3_sockaddr_un, family) >= M3_FIELD_SIZE(sockaddr_un, sun_family));
-// m3 path must be larger than native; we always copy native size
-M3_STATIC_ASSERT(M3_FIELD_SIZE(m3_sockaddr_un, path) > M3_FIELD_SIZE(sockaddr_un, sun_path));
-// sun_path is expected to be an array not a pointer
+// m3 path must be larger than or the same size as native; we always copy native size
+M3_STATIC_ASSERT(M3_FIELD_SIZE(m3_sockaddr_un, path) >= M3_FIELD_SIZE(sockaddr_un, sun_path));
+// sun_path must be an array not a pointer because we copy its size
 M3_STATIC_ASSERT(4 != M3_FIELD_SIZE(sockaddr_un, sun_path));
 M3_STATIC_ASSERT(8 != M3_FIELD_SIZE(sockaddr_un, sun_path));
 M3_STATIC_ASSERT(sizeof(void*) != M3_FIELD_SIZE(sockaddr_un, sun_path));
@@ -181,7 +195,7 @@ SockAddrM3ToNativeUn(const m3_sockaddr_un* m3, sockaddr_un* native)
 {
     M3_STATIC_ASSERT(sizeof(native->sun_path) != 4);
     M3_STATIC_ASSERT(sizeof(native->sun_path) != 8);
-    M3_STATIC_ASSERT(sizeof(native->sun_path) < sizeof(m3->path));
+    M3_STATIC_ASSERT(sizeof(native->sun_path) <= sizeof(m3->path));
     assert(m3 != (void*)native);
     native->sun_family = m3->family;
     // TODO ensure it fits without truncation
@@ -196,7 +210,7 @@ SockAddrNativeToM3Un(const sockaddr_un* native, m3_sockaddr_un* m3)
 {
     M3_STATIC_ASSERT(sizeof(native->sun_path) != 4);
     M3_STATIC_ASSERT(sizeof(native->sun_path) != 8);
-    M3_STATIC_ASSERT(sizeof(native->sun_path) < sizeof(m3->path));
+    M3_STATIC_ASSERT(sizeof(native->sun_path) <= sizeof(m3->path));
     assert(m3 != (void*)native);
     m3->family = native->sun_family;
     assert(strlen(native->sun_path) < sizeof(m3->path));
@@ -262,7 +276,7 @@ SockAddrNativeToM3(const NativeSockAddrUnionAll* native, M3SockAddrUnionAll* m3)
  * Typical values are quite small.
  */
 
-#define LOSSLESS_SOCKLEN (TYPES_MATCH(socklen_t, m3_socklen_t))
+#define LOSSLESS_SOCKLEN (TYPES_MATCH(m3c_socklen_t, m3_socklen_t))
 
 static void __cdecl
 Usocket__assert_plen_in(m3_socklen_t* plen)
@@ -281,7 +295,7 @@ Usocket__assert_plen_in(m3_socklen_t* plen)
 }
 
 static void __cdecl
-Usocket__plen_out(m3_socklen_t* plen, socklen_t len)
+Usocket__plen_out(m3_socklen_t* plen, m3c_socklen_t len)
 {
     assert(LOSSLESS_SOCKLEN || plen == NULL || len <= (1UL << 30));
     if (plen)
@@ -294,7 +308,7 @@ Usocket__plen_out(m3_socklen_t* plen, socklen_t len)
 #define ASSERT_LEN \
     assert(len <= (1UL << 30));
 
-M3_DLL_LOCAL void __cdecl
+void __cdecl
 Usocket__Assertions(void)
 {
     /* assert that struct linger is literally { int l_onoff, l_linger },
@@ -334,7 +348,7 @@ M3WRAP2(int, listen, int, int)
 M3WRAP2(int, shutdown, int, int)
 M3WRAP3(int, socket, int, int, int)
 
-M3_DLL_EXPORT ssize_t __cdecl
+ssize_t __cdecl
 Usocket__send (int a, const void* b, size_t c, int d)
 {
     ssize_t r;
@@ -346,7 +360,7 @@ Usocket__send (int a, const void* b, size_t c, int d)
     return r;
 }
 
-M3_DLL_EXPORT ssize_t __cdecl
+ssize_t __cdecl
 Usocket__recv (int a, void* b, size_t c, int d)
 {
     ssize_t r;
@@ -358,7 +372,7 @@ Usocket__recv (int a, void* b, size_t c, int d)
     return r;
 }
 
-// wrap everything taking input socklen_t or sockaddr
+// wrap everything taking input m3c_socklen_t or sockaddr
 #define WRAP_SOCKADDR_INPUT1                    \
     ssize_t result = {0};                       \
     NativeSockAddrUnionAll native;              \
@@ -381,7 +395,7 @@ Usocket__recv (int a, void* b, size_t c, int d)
     ssize_t result = {0};                       \
     NativeSockAddrUnionAll native;              \
     M3SockAddrUnionAll m3;                      \
-    socklen_t len = {0};                        \
+    m3c_socklen_t len = {0};                    \
     ZERO_MEMORY(native);                        \
     ZERO_MEMORY(m3);                            \
     ASSERT_PLEN_IN                              \
@@ -399,7 +413,7 @@ Usocket__recv (int a, void* b, size_t c, int d)
     }                                                       \
     return result;
 
-M3_DLL_EXPORT int __cdecl
+int __cdecl
 Usocket__bind(int s, const M3SockAddrUnionAll* pm3_sockaddr, m3_socklen_t len)
 {
     WRAP_SOCKADDR_INPUT1
@@ -409,7 +423,7 @@ Usocket__bind(int s, const M3SockAddrUnionAll* pm3_sockaddr, m3_socklen_t len)
     WRAP_SOCKADDR_INPUT2
 }
 
-M3_DLL_EXPORT int __cdecl
+int __cdecl
 Usocket__connect(int s, const M3SockAddrUnionAll* pm3_sockaddr, m3_socklen_t len)
 {
     WRAP_SOCKADDR_INPUT1
@@ -419,7 +433,7 @@ Usocket__connect(int s, const M3SockAddrUnionAll* pm3_sockaddr, m3_socklen_t len
     WRAP_SOCKADDR_INPUT2
 }
 
-M3_DLL_EXPORT ssize_t __cdecl
+ssize_t __cdecl
 Usocket__sendto(int s, const void* msg, size_t length, int flags, const M3SockAddrUnionAll* pm3_sockaddr, m3_socklen_t len)
 {
     WRAP_SOCKADDR_INPUT1
@@ -430,7 +444,7 @@ Usocket__sendto(int s, const void* msg, size_t length, int flags, const M3SockAd
     WRAP_SOCKADDR_INPUT2
 }
 
-M3_DLL_EXPORT int __cdecl
+int __cdecl
 Usocket__setsockopt(int s, int level, int optname, const void* optval, m3_socklen_t len)
 {
     ASSERT_LEN
@@ -449,9 +463,9 @@ Usocket__setsockopt(int s, int level, int optname, const void* optval, m3_sockle
     return setsockopt(s, level, optname, (char*)optval, len); // cast for Windows
 }
 
-/* wrap everything taking input/output socklen_t */
+/* wrap everything taking input/output m3c_socklen_t */
 
-M3_DLL_EXPORT int __cdecl
+int __cdecl
 Usocket__getpeername(int s, M3SockAddrUnionAll* pm3_sockaddr, m3_socklen_t* plen)
 {
     WRAP_SOCKADDR_OUTPUT1
@@ -461,7 +475,7 @@ Usocket__getpeername(int s, M3SockAddrUnionAll* pm3_sockaddr, m3_socklen_t* plen
     WRAP_SOCKADDR_OUTPUT2
 }
 
-M3_DLL_EXPORT int __cdecl
+int __cdecl
 Usocket__getsockname(int s, M3SockAddrUnionAll* pm3_sockaddr, m3_socklen_t* plen)
 {
     WRAP_SOCKADDR_OUTPUT1
@@ -471,7 +485,7 @@ Usocket__getsockname(int s, M3SockAddrUnionAll* pm3_sockaddr, m3_socklen_t* plen
     WRAP_SOCKADDR_OUTPUT2
 }
 
-M3_DLL_EXPORT int __cdecl
+int __cdecl
 Usocket__accept(int s, M3SockAddrUnionAll* pm3_sockaddr, m3_socklen_t* plen)
 {
     WRAP_SOCKADDR_OUTPUT1
@@ -481,7 +495,7 @@ Usocket__accept(int s, M3SockAddrUnionAll* pm3_sockaddr, m3_socklen_t* plen)
     WRAP_SOCKADDR_OUTPUT2
 }
 
-M3_DLL_EXPORT int __cdecl
+int __cdecl
 Usocket__getsockopt(int s, int level, int optname, void* optval, m3_socklen_t* plen)
 /*
 Posix says l_onoff and l_linger are int, but they aren't on Cygwin.
@@ -493,7 +507,7 @@ the same order. This is checked in Usocket__Assertions.
     ASSERT_PLEN_IN
     {
         int r = { 0 };
-        socklen_t len = plen ? *plen : 0;
+        m3c_socklen_t len = plen ? *plen : 0;
 
 #if defined(__CYGWIN__) || defined(_WIN32)
         m3_linger_t* a = { 0 };
@@ -526,7 +540,7 @@ the same order. This is checked in Usocket__Assertions.
     }
 }
 
-M3_DLL_EXPORT ssize_t __cdecl
+ssize_t __cdecl
 Usocket__recvfrom(int s, void* buf, size_t length, int flags, M3SockAddrUnionAll* pm3_sockaddr, m3_socklen_t* plen)
 {
     WRAP_SOCKADDR_OUTPUT1
@@ -563,19 +577,17 @@ Usocket__un(
     return err;
 }
 
-M3_DLL_EXPORT
 int
 __cdecl
 Usocket_accept_un(int fd)
 {
     sockaddr_un addr;
-    socklen_t socklen = sizeof(addr);
+    m3c_socklen_t socklen = sizeof(addr);
     addr.sun_family = AF_UNIX;
     addr.sun_path[0] = 0;
     return accept(fd, (sockaddr*)&addr, &socklen);
 }
 
-M3_DLL_EXPORT
 int
 __cdecl
 Usocket__bind_un(
@@ -586,7 +598,6 @@ Usocket__bind_un(
     return Usocket__un(&addr, path) ? -1 : bind(fd, (sockaddr*)&addr, sizeof(addr));
 }
 
-M3_DLL_EXPORT
 int
 __cdecl
 Usocket__connect_un(
@@ -596,6 +607,8 @@ Usocket__connect_un(
     sockaddr_un addr;
     return Usocket__un(&addr, path) ? -1 : connect(fd, (sockaddr*)&addr, sizeof(addr));
 }
+
+#endif
 
 #endif
 

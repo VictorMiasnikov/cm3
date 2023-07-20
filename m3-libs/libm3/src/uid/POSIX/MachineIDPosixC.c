@@ -5,29 +5,88 @@
 /* Last modified on Mon Sep 20 11:46:17 PDT 1993 by kalsow     */
 /*      modified on Thu Jul 15 16:23:08 PDT 1993 by swart      */
 
+#if 0 /*for testing purposes*/
+#ifndef _MSC_VER
+#ifndef __cdecl
+#define __cdecl /* nothing */
+#endif
+typedef unsigned char BOOLEAN;
+typedef int BOOL;
+#define TRUE 1
+#define FALSE 0
+typedef unsigned UINT32;
+#include <assert.h>
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <grp.h>
+#include <limits.h>
+#include <math.h>
+#ifndef __DJGPP__
+#include <net/if.h>
+#endif
+#if !(defined (__HAIKU__) || defined (__DJGPP__) || defined(__CYGWIN__))
+#include <net/if_arp.h>
+#endif
+#ifndef __CYGWIN__
+#include <net/if_dl.h>
+#endif
+#include <netdb.h>
+#include <netinet/in.h>
+#include <pthread.h>
+#include <pwd.h>
+#include <semaphore.h>
+#include <setjmp.h>
+#include <signal.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
+#ifndef __DJGPP__
+#include <sys/socket.h>
+#endif
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <time.h>
+#include <unistd.h>
+#endif
+#else
 #ifndef INCLUDED_M3CORE_H
 #include "m3core.h"
+#endif
 #endif
 #ifdef __sun
 #include <sys/sockio.h>
 #endif
-#ifndef __CYGWIN__
+#if !(defined(__CYGWIN__) || defined (__DJGPP__))
 #include <net/if.h>
+#endif
+#if !(defined (__HAIKU__) || defined (__DJGPP__) || defined(__CYGWIN__))
 #include <net/if_arp.h>
+#endif
+#ifdef __hpux
+#include "dce/uuid.h"
 #endif
 
 #if !(defined(__APPLE__)    \
    || defined(__CYGWIN__)   \
+   || defined(__HAIKU__)    \
    || defined(__FreeBSD__)  \
    || defined(__linux__)    \
    || defined(__NetBSD__)   \
    || defined(__OpenBSD__)  \
    || defined(__osf__)      \
+   || defined(__hpux)       \
+   || defined(__DJGPP__)    \
    || defined(__sun))
 #error Please test/port this.
 #endif
 
-#if defined(__OpenBSD__) || defined(__NetBSD__) || defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__OpenBSD__) || defined(__NetBSD__) || defined(__FreeBSD__) || defined(__APPLE__) || defined(__HAIKU__)
 #define HAS_GETIFADDRS
 #endif
 
@@ -91,6 +150,7 @@ HexDump(void* a, size_t n)
 
 #endif
 
+#if !(defined(__DJGPP__) || defined(__hpux))
 static
 UINT32
 get_ipv4_address(void)
@@ -107,11 +167,28 @@ get_ipv4_address(void)
     }
     return 0;
 }
+#endif
 
 int/*boolean*/
 __cdecl
 MachineIDC__CanGet(unsigned char *id)
 {
+#if defined (__DJGPP__)
+    memset(id, 0, 6);
+    return 0;
+#elif defined(__hpux)
+    /* last 6 bytes of uuid */
+    uuid_t u;
+    assert(sizeof(uuid_t) == 16);
+    unsigned32 status = 0;
+    memset(id, 0, 6);
+    memset(&u, 0, sizeof(u));
+    uuid_create(&u, &status);
+    if (status != 0)
+        return FALSE;
+    memcpy(id, &((char*)&u)[10], 6);
+    return TRUE;
+#else
     int result = { 0 };
     int sock = { 0 };
 #if defined(HAS_GETIFADDRS)
@@ -128,14 +205,14 @@ MachineIDC__CanGet(unsigned char *id)
     struct ifreq req2;
 #ifdef __osf__
     struct ifdevea ifdev;
-    ZeroMemory(&ifdev, sizeof(ifdev));
+    memset(&ifdev, 0, sizeof(ifdev));
 #endif
-    ZeroMemory(&buf, sizeof(buf));
-    ZeroMemory(&list, sizeof(list));
-    ZeroMemory(&req2, sizeof(req2));
+    memset(&buf, 0, sizeof(buf));
+    memset(&list, 0, sizeof(list));
+    memset(&req2, 0, sizeof(req2));
 #endif
 
-    ZeroMemory(id, 6);
+    memset(id, 0, 6);
 
     /* try to find an ethernet hardware address */
 #ifdef __sun
@@ -218,7 +295,7 @@ MachineIDC__CanGet(unsigned char *id)
         {
             struct arpreq arp;
             struct sockaddr_in* in = (struct sockaddr_in*)&arp.arp_pa; /* protocol address */
-            ZeroMemory(&arp, sizeof(arp));
+            memset(&arp, 0, sizeof(arp));
             arp.arp_pa.sa_family = AF_INET;
             arp.arp_ha.sa_family = AF_UNSPEC;
             in->sin_addr.s_addr = get_ipv4_address();
@@ -256,6 +333,7 @@ MachineIDC__CanGet(unsigned char *id)
     }
 
     return result;
+#endif
 }
 
 #ifdef __cplusplus
@@ -274,6 +352,8 @@ int main()
     printf("   %u.%u.%u.%u.%u.%u\n", id[0], id[1], id[2], id[3], id[4], id[5]);
 #if defined(__sun)
     system("/usr/sbin/arp -a | grep L"); /* L for local */
+#elif defined(__hpux)
+    system("/usr/sbin/lanscan");
 #elif defined(__CYGWIN__)
     system("getmac");
 #elif defined(__osf__)
@@ -282,6 +362,7 @@ int main()
     system("/sbin/ifconfig -a | grep addr");
     system("/sbin/ifconfig -a | grep ether");
 #endif
+    system("python3 -c \"import uuid;print(\\\"%x\\\" % uuid.getnode())\"");
     return 0;
 }
 

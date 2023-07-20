@@ -1,4 +1,4 @@
-#! /usr/bin/env python2
+#! /usr/bin/env python
 
 import os
 from os import getenv
@@ -62,30 +62,29 @@ if os.environ.get("M3CONFIG", "").lower().find("m3-syscminstallsrcconfig") != -1
     print("backslash problem; environment variable M3CONFIG is " + getenv("M3CONFIG"))
     sys.exit(1)
 
+def Posix():
+    return os.name == "posix"
+
 def IsInterix():
-    return os.name == "posix" and os.uname()[0].lower().startswith("interix")
+    return Posix() and os.uname()[0].lower().startswith("interix")
+
+def Cygwin():
+    return Posix() and os.uname()[0].lower().startswith("cygwin")
 
 env_OS = getenv("OS")
 
 DevNull = "/dev/null"
 
-if env_OS == "Windows_NT" and not IsInterix():
+if Posix():
+    from os import uname
+elif env_OS == "Windows_NT":
     DevNull = "nul:"
     def uname():
         PROCESSOR_ARCHITECTURE = getenv("PROCESSOR_ARCHITECTURE")
         return (env_OS, "", PROCESSOR_ARCHITECTURE, "", PROCESSOR_ARCHITECTURE)
-    #
-    # cmd can run extensionless executables if this code is enabled.
-    # This can be useful for example with I386_CYGWIN following more Posix-ish
-    # naming styles than even Cygwin usually does.
-    #
-    #pathext = getenv("PATHEXT")
-    #if pathext and not "." in pathext.split(";"):
-    #    pathext = ".;" + pathext
-    #    os.environ["PATHEXT"] = pathext
-    #    print("set PATHEXT=.;%PATHEXT%")
 else:
-    from os import uname
+    print("fatal error: unknown host")
+    sys.exit(1)
 
 #-----------------------------------------------------------------------------
 
@@ -166,31 +165,7 @@ def GetPathBaseName(a):
 # print("4:" + GetPathBaseName("a.b/c"))
 # sys.exit(1)
 
-
 #-----------------------------------------------------------------------------
-
-def ConvertToCygwinPath(a):
-    if IsInterix() or env_OS != "Windows_NT" or a == None:
-        return a
-    if (a.find('\\') == -1) and (a.find(':') == -1):
-        return a
-    a = a.replace("\\", "/")
-    if a.find(":/") == 1:
-        a = "/cygdrive/" + a[0:1] + a[2:]
-    return a
-
-#-----------------------------------------------------------------------------
-
-def ConvertFromCygwinPath(a):
-    if IsInterix() or env_OS != "Windows_NT" or a == None:
-        return a
-    a = a.replace("/", "\\")
-    #a = a.replace("\\", "/")
-    if a.startswith("\\cygdrive\\"):
-        a = a[10] + ":" + a[11:]
-    elif a.startswith("\\home\\elego\\"):
-        a = "c:\\cygwin\\" + a
-    return a
 
 def GetFullPath(a):
     # find what separator it as (might be ambiguous)
@@ -205,23 +180,13 @@ def GetFullPath(a):
     a = a.replace(os.path.sep, sep) # put back the original separators
     return a
 
-def ConvertPathForWin32(a):
-    return ConvertFromCygwinPath(a)
-
-if os.name == "posix":
-    def ConvertPathForPython(a):
-        return ConvertToCygwinPath(a)
-else:
-    def ConvertPathForPython(a):
-        return ConvertFromCygwinPath(a)
-
 #-----------------------------------------------------------------------------
 
 def isfile(a):
-    return os.path.isfile(ConvertPathForPython(a))
+    return os.path.isfile(a)
 
 def isdir(a):
-    return os.path.isdir(ConvertPathForPython(a))
+    return os.path.isdir(a)
 
 def FileExists(a):
     return isfile(a)
@@ -243,7 +208,7 @@ def SearchPath(name, paths = getenv("PATH")):
         print("SearchPath returning None 1")
         return None
     (base, exts) = os.path.splitext(name)
-    if not exts and not IsInterix():
+    if not exts and not IsInterix(): # Posix? Cygwin?
         exts = (getenv("PATHEXT") or "").lower()
     for ext in exts.split(";"):
         if ext == ".":
@@ -343,21 +308,18 @@ def _ClearEnvironmentVariable(Name):
 
 def _GetAllTargets():
 
-    # legacy naming
-
     Targets = { }
-    for target in [ "NT386", "LINUXLIBC6", "SOLsun", "SOLgnu", "FreeBSD4" ]:
-        Targets[target] = target
-        Targets[target.lower()] = target
-        Targets[target.upper()] = target
 
-    # systematic naming
-
-    for proc in ["ALPHA", "ALPHA32", "ALPHA64", "AMD64", "ARM", "ARMEL", "ARM64",
-                 "IA64", "I386", "PPC", "PPC32", "PPC64", "SPARC", "SPARC32",
-                 "SPARC64", "MIPS32", "MIPS64EL", "MIPS64", "PA32", "PA64", "RISCV64", "SH"]:
-        for os in ["AIX",  "CE", "CYGWIN", "DARWIN",  "FREEBSD", "HPUX", "INTERIX", "IRIX",
-                   "LINUX", "MINGW", "NETBSD", "NT", "OPENBSD", "OSF", "SOLARIS", "VMS"]:
+    for proc in ["ALPHA", "ALPHA32", "ALPHA64", "AMD64", "ARM", "ARMEL",
+                 "ARM32", "ARM64", "ARM64EC", "IA64", "I386", "PPC", "PPC32",
+                 "PPC64", "SPARC", "SPARC32", "SPARC64", "MIPS32", "MIPS64EL",
+                 "MIPS64", "PA32", "PA64", "RISCV64", "SH"]:
+        for os in ["AIX",  "CE", "CYGWIN", "DARWIN",  "FREEBSD", "HAIKU",
+                   "HPUX", "HPUX32", "HPUX64", "INTERIX", "IRIX", "LINUX",
+                   "MINGW", "NETBSD", "NT", "NT32", "NT64", "OPENBSD", "OSF",
+                   "SOLARIS", "VMS", "VMS32", "VMS64",
+                   "DJGPP" # MSDOS
+                   ]:
                    # "BEOS", "MSDOS" (DJGPP), "OS2" (EMX), "PLAN9"
             target = proc + "_" + os
             Targets[target] = target
@@ -369,26 +331,16 @@ def _GetAllTargets():
 #-----------------------------------------------------------------------------
 
 def TargetOnlyHasCBackend(a):
-    # Many targets have a gcc backend.
-    # NT386 etc. have the integrated backend.
-    # Many targets only have the C backend.
+    # Basically all Unix x86, amd64, mips{32,64}, ppc{32,64}, hppa{32,64},
+    # ia64{32,64}, alpha{32,64}, sparc{32,64}, m68k, arm32 targets
+    # are supported in our old fork of gcc.
     #
-    # The C backend ABI is not the same as the others,
-    # therefore, likely, BuildDir should have "C" appended,
-    # for targets that have C backend and another backend.
+    # The only really missing ones are:
+    #   arm64 riscv {arm,amd64}_nt.
     #
-    # Todo: arm32 is unclear barely existant
-    # Historical targets probably should should gcc backend.
-    # All targets probably should drop gcc backend.
-    # Even NT386 integrated backend is not super interesting.
+    # Nevertheless:
     #
-    a = a.lower()
-    if a == "i386_nt":
-        return false
-    return (a.endswith("_nt") or a.startswith("arm") or a.find("riscv") != -1
-        or a.find("solaris") != -1 or a.startswith("sol") # gcc backend does work
-        or a.find("alpha") != -1 or a.find("osf") != -1 # gcc backend does work
-        or a.find("mingw") != -1 or a.find("cygwin") != -1)
+    return a.lower() != "i386_nt"
 
 _PossibleCm3Flags = ["boot", "keep", "override", "commands", "verbose", "why", "debug", "trace"]
 _SkipGccFlags = ["nogcc", "skipgcc", "omitgcc"]
@@ -404,6 +356,10 @@ for a in _PossibleCm3Flags:
     if a in sys.argv:
         CM3_FLAGS = CM3_FLAGS + " -" + a
 
+for a in sys.argv:
+    if a.startswith("@M3"):
+        CM3_FLAGS = CM3_FLAGS + " " + a
+
 def PassThroughDefines():
     result = " "
     for a in sys.argv:
@@ -413,7 +369,7 @@ def PassThroughDefines():
 
 CM3_FLAGS += PassThroughDefines()
 
-CM3 = ConvertPathForPython(getenv("CM3")) or "cm3"
+CM3 = getenv("CM3") or "cm3"
 CM3 = SearchPath(CM3)
 
 #-----------------------------------------------------------------------------
@@ -422,7 +378,7 @@ CM3 = SearchPath(CM3)
 # if the defaults contain a cm3.
 #
 
-InstallRoot = ConvertPathForPython(getenv("CM3_INSTALL"))
+InstallRoot = getenv("CM3_INSTALL")
 # print("InstallRoot is " + InstallRoot)
 
 if not CM3 and not InstallRoot:
@@ -624,14 +580,11 @@ Q = "" # TBD
 #
 
 Host = None
+print("A working cm3 is required. Checking.")
+print(CM3 + " -version | fgrep host:")
 for a in os.popen(CM3 + " -version 2>" + DevNull):
-    if (StringContains(a, "Critical Mass Modula-3 version 5.1.")
-     or StringContains(a, "Critical Mass Modula-3 version 5.2.")
-     or StringContains(a, "Critical Mass Modula-3 version d5.5.")):
-        if env_OS == "Windows_NT":
-            Host = "NT386"
-            break
     if StringContains(a, "host:"):
+        print(a)
         Host = a.replace("\r", "").replace("\n", "").replace(" ", "").replace("host:", "")
         break
 
@@ -668,26 +621,6 @@ if _CBackend:
 #
 
 GCC_BACKEND = not _CBackend
-
-#-----------------------------------------------------------------------------
-#
-# Append c to BuildDir (i.e. Target) if +c in command line.
-# Previously this was if plain C in argv but this is perhaps a separate factor,
-# least for targets that have other backends. i.e. so NT386 and NT386c build
-# directories can coexist.
-#
-# But not if target only has C backend.
-#
-# TODO
-#
-#_BuildDirC = ["", "c"]["c" in LowercaseArgv]
-#_BuildDirC = ["", "c"]["+c" in LowercaseArgv]
-#_BuildDirC = ["", "c"]["+c" in LowercaseArgv and not TargetOnlyHasCBackend(Target)]
-#_BuildDirC = ["", "c"][_CBackend and not TargetOnlyHasCBackend(Target)]
-#_BuildDirC = ""
-
-# It is confusing as to when c is appended or not, so do it never.
-_BuildDirC = ""
 
 #-----------------------------------------------------------------------------
 #
@@ -741,8 +674,7 @@ if Host != None and (Host.endswith("_NT") or Host == "NT386"):
 
 #-----------------------------------------------------------------------------
 
-BuildDir = ("%(Config)s%(_BuildDirC)s" % vars())
-#BuildDir = Config
+BuildDir = Config
 M3GDB = (M3GDB or CM3_GDB)
 Scripts = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PKGSDB = os.path.join(Scripts, "PKGS")
@@ -752,7 +684,7 @@ CM3_FLAGS = CM3_FLAGS + " -DBUILD_DIR=" + BuildDir
 #-----------------------------------------------------------------------------
 
 def GetConfigForDistribution(Target):
-    b = os.path.join(Root, "m3-sys", "cminstall", "src", "config-no-install", Target)
+    b = os.path.join(Root, "m3-sys", "cminstall", "src", "config", Target)
     # print("GetConfigForDistribution:" + b)
     return b
 
@@ -767,34 +699,6 @@ def SetEnvironmentVariable(Name, Value):
             print("set " + Name + "=" + Value)
 
 #-----------------------------------------------------------------------------
-
-def IsCygwinBinary(a):
-    if IsInterix() or env_OS != "Windows_NT":
-        return False
-    if not isfile(a):
-        FatalError(a + " does not exist")
-    a = a.replace("/cygdrive/c/", "c:\\")
-    a = a.replace("/cygdrive/d/", "d:\\")
-    a = a.replace("/", "\\")
-    a = ConvertFromCygwinPath(a)
-    #print("a is " + a)
-    return (os.system("findstr 2>&1 >" + os.devnull + " /m cygwin1.dll \"" + a + "\"") == 0)
-
-#-----------------------------------------------------------------------------
-
-if _Program != "make-msi.py":
-# general problem of way too much stuff at global scope
-# workaround some of it
-    if IsCygwinBinary(CM3):
-        CM3IsCygwin = True
-        def ConvertPathForCM3(a):
-            return ConvertToCygwinPath(a)
-    else:
-        CM3IsCygwin = False
-        def ConvertPathForCM3(a):
-            return ConvertFromCygwinPath(a)
-
-#-----------------------------------------------------------------------------
 #
 # reflect what we decided back into the environment
 #
@@ -803,10 +707,10 @@ if _Program != "make-msi.py":
 # general problem of way too much stuff at global scope
 # workaround some of it
     SetEnvironmentVariable("CM3_TARGET", Target)
-    SetEnvironmentVariable("CM3_INSTALL", ConvertPathForCM3(InstallRoot))
-    #SetEnvironmentVariable("M3CONFIG", ConvertPathForCM3(os.environ.get("M3CONFIG") or GetConfigForDistribution(Config)))
-    #SetEnvironmentVariable("CM3_ROOT", ConvertPathForCM3(Root).replace("\\", "\\\\"))
-    SetEnvironmentVariable("CM3_ROOT", ConvertPathForCM3(Root).replace("\\", "/"))
+    SetEnvironmentVariable("CM3_INSTALL", InstallRoot)
+    #SetEnvironmentVariable("M3CONFIG", os.environ.get("M3CONFIG") or GetConfigForDistribution(Config))
+    #SetEnvironmentVariable("CM3_ROOT", Root.replace("\\", "\\\\"))
+    SetEnvironmentVariable("CM3_ROOT", Root.replace("\\", "/"))
 
 # sys.exit(1)
 
@@ -820,8 +724,8 @@ if _Program != "make-msi.py":
     DEFS = "-DROOT=%(Q)s%(Root)s%(Q)s -DTARGET=%(Target)s"
 
     NativeRoot = Root
-    #Root = ConvertPathForCM3(Root).replace("\\", "\\\\")
-    Root = ConvertPathForCM3(Root).replace("\\", "/")
+    #Root = Root.replace("\\", "\\\\")
+    Root = Root.replace("\\", "/")
     DEFS = (DEFS % vars())
     Root = NativeRoot
 
@@ -966,24 +870,20 @@ def ShowUsage(args, Usage, P):
 
 def MakePackageDB():
     if not isfile(PKGSDB) or os.path.getmtime(PKGSDB) < os.path.getmtime(os.path.join(Scripts, "pkginfo.txt")):
-        #
         # Look for all files src/m3makefile in the CM3 source
         # and write their relative paths from Root to PKGSDB.
         #
-        def Callback(Result, Directory, Names):
-            if (os.path.basename(Directory) != "src"
-                or Directory.find("_darcs") != -1
-                or Directory.find("examples/web") != -1
-                or Directory.find("examples\\web") != -1
-                or (not "m3makefile" in Names)
-                or (not isfile(os.path.join(Directory, "m3makefile")))):
-                return
-            Result.append(Directory[len(Root) + 1:-4].replace('\\', "/") + "\n")
-
         print("making " + PKGSDB + ".. (slow but rare)")
         Result = [ ]
 
-        os.path.walk(Root, Callback, Result)
+        for dir, children, files in os.walk(Root):
+            if (os.path.basename(dir) == "src"
+                and dir.find("_darcs") == -1
+                and dir.find("examples/web") == -1
+                and dir.find("examples\\web") == -1
+                and ("m3makefile" in files)
+                and (isfile(os.path.join(dir, "m3makefile")))):
+                Result.append(dir[len(Root) + 1:-4].replace('\\', "/") + "\n")
 
         Result.sort()
         open(PKGSDB, "w").writelines(Result)
@@ -1104,7 +1004,11 @@ def _RealCleanFunction(NoAction, PackageDirectory):
 def _MakeTGZ(a):
     out = a + ".tgz"
     DeleteFile(out)
-    Tar = SearchPath("gtar") or SearchPath("tar")
+    if SearchPath("wsl"):
+        #Tar = "wsl tar"
+        Tar = SearchPath("gtar") or SearchPath("tar")
+    else:
+        Tar = SearchPath("gtar") or SearchPath("tar")
     b = Tar + " cfz " + out + " " + a
     print(b + "\n")
     os.system(b)
@@ -1124,587 +1028,6 @@ def _SqueezeSpaces(a):
     a = re.sub(" +$", "", a)
     a = re.sub("^ +", "", a)
     return a
-
-def Boot():
-
-# TODO build a directory tree, one directory per package
-# TODO as a result, support building separate libraries and possibly shared libraries
-# TODO and out-of-tree builds
-# Maybe something autotools or cmake-laden
-
-    global BuildLocal
-    BuildLocal += " -boot -no-m3ship-resolution -group-writable -keep -DM3CC_TARGET=" + Config
-
-    Version = CM3VERSION + "-" + time.strftime("%Y%m%d")
-    BootDir = "./cm3-boot-" + BuildDir + "-" + Version
-
-    RemoveDirectoryRecursive(BootDir)
-    CreateDirectory(BootDir)
-
-    # This information is duplicated from the config files.
-    # TBD: put it only in one place.
-    # The older bootstraping method does get that right.
-
-    vms = StringContainsI(Target, "VMS")
-    nt = Config.startswith("NT") or Config.endswith("NT") or Tagged(Config, "NT")
-    darwin = StringContainsI(Target, "DARWIN")
-    mingw = StringContainsI(Target, "MINGW")
-    solaris = StringContainsI(Target, "SOLARIS")
-    sol = Target.startswith("SOL")
-    hpux = StringContainsI(Target, "HPUX")
-    osf = StringContainsI(Target, "OSF")
-    interix = StringContainsI(Target, "INTERIX")
-    alpha32 = StringContainsI(Target, "ALPHA32")
-    alpha64 = StringContainsI(Target, "ALPHA64")
-    alpha32vms = vms and alpha32
-    alpha64vms = vms and alpha64
-    solsun = Config == "SOLsun"
-    freebsd = StringContainsI(Target, "FreeBSD")
-    netbsd = StringContainsI(Target, "NetBSD")
-    openbsd = StringContainsI(Target, "OpenBSD")
-    cygwin = StringContainsI(Target, "Cygwin")
-    linux = StringContainsI(Target, "Linux")
-    alpha = StringContainsI(Target, "ALPHA")
-    thirtytwo = StringContainsI(Target, "32")
-    sixtyfour = StringContainsI(Target, "64")
-    bsd = StringContainsI(Target, "BSD")
-
-    # pick the compiler
-
-    CBackend = _CBackend
-
-    print("CBackend = " + str(CBackend))
-
-    CCompilerFlags = " "
-    CCompilerOut = ""
-
-    if alpha32vms:
-        CCompiler = "c++"
-        CCompilerFlags = " "
-    elif alpha64vms:
-        CCompiler = "c++"
-        CCompilerFlags = "/pointer_size=64 "
-    elif solaris or solsun:
-        #CCompiler = "/usr/bin/c++"
-        #CCompilerFlags = " -g -mt -xldscope=symbolic "
-        CCompiler = "./c_compiler"
-        CopyFile("./c_compiler", BootDir)
-        CCompilerOut = " -o $@ "
-    elif osf:
-        # There is a problem on my install such that linking with cxx fails, unless I use oldcxx.
-        # This really should be fixed otherwise.
-        CCompiler = "/usr/bin/cxx" # g++ should also work all work, but change -ieee to -mieee
-        CCompilerFlags = " -g -pthread -x cxx -c99 -fprm d "
-        #CCompiler = "g++"
-        #CCompilerFlags = " -g -pthread -mfp-rounding-mode=d "
-        CCompilerOut = " -o $@ "
-    else:
-        # gcc and other platforms
-        CCompiler = {
-            "SOLgnu" : "/usr/sfw/bin/g++",
-            "AMD64_MINGW"   : "x86_64-w64-mingw32-g++",
-            "AMD64_NT"      : "cl",
-            }.get(Config) or "g++"
-
-        # For now, bootstrap does not build any shared libraries and -fPIC is not needed.
-        # -fPIC breaks Interix and is not needed on Cygwin/Mingw.
-        CCompilerFlags = {
-            "I386_INTERIX"  : " -g ", # gcc -fPIC generates incorrect code on Interix
-            "AMD64_MINGW"   : " -g ", # No need for -pthread
-            #"AMD64_NT"      : " -Zi -MD -Gy ",
-            "AMD64_NT"      : " -Zi -Gy ", # hack some problem with exception handling and alignment otherwise
-            }.get(Config) or " -pthread -g "
-
-        CCompilerOut = {
-            "AMD64_NT"      : "-Fo./",
-            "I386_NT"       : "-Fo./",
-            "ARM32_NT"      : "-Fo./",
-            "ARM64_NT"      : "-Fo./",
-            }.get(Config) or "-o $@"
-
-    CCompilerFlags = CCompilerFlags + ({
-        "AMD64_LINUX"     : " -m64 ",
-
-        # 10.5.8 gcc defaults to x86.
-        # 10.10.4 Yosemite defaults to amd64, so be explicit.
-        "I386_DARWIN"     : " -arch i386 ",
-
-        "AMD64_DARWIN"    : " -arch x86_64 ",
-        "PPC64_DARWIN"    : " -arch ppc64 ",
-        "ARM_DARWIN"      : " -march=armv6 -mcpu=arm1176jzf-s ",
-        "LINUXLIBC6"      : " -m32 ",
-        "I386_LINUX"      : " -m32 ",
-        "MIPS64_OPENBSD"  : " -mabi=64 ",
-        "I386_SOLARIS"    : " -xarch=pentium_pro -Kpic ",
-        "AMD64_SOLARIS"   : " -xarch=amd64       -Kpic ",
-        "SOLsun"          : " -xarch=v8plus -xcode=pic32 -xregs=no%appl ",
-        "SPARC32_SOLARIS" : " -xarch=v8plus -xcode=pic32 -xregs=no%appl ",
-        "SPARC64_SOLARIS" : " -xarch=v9     -xcode=pic32 -xregs=no%appl ",
-        "SOLgnu"          : " -m32 -mcpu=v9 -mno-app-regs ",
-        "SPARC32_LINUX"   : " -m32 -mcpu=v9 -mno-app-regs ",
-        "SPARC64_LINUX"   : " -m64 -mno-app-regs ",
-        }.get(Config) or " ")
-
-    LinkExts = { }
-
-    obj = ["o", "obj"][nt]
-    Link = "$(CC) $(CFLAGS) *." + obj + " "
-    #Link = "$(CC) $(CFLAGS)"
-
-    # link flags
-
-    # TBD: add more and retest, e.g. Irix, AIX, HPUX, Android
-    # http://www.openldap.org/lists/openldap-bugs/200006/msg00070.html
-    # http://www.gnu.org/software/autoconf-archive/ax_pthread.html#ax_pthread
-
-    # TODO: All this logic should be in the Makefile so we can make one distribution.
-
-    if darwin:
-        pass
-    elif mingw:
-        Link = Link  +  " -liphlpapi -lrpcrt4 -lcomctl32 -lws2_32 -lgdi32 -luser32 -ladvapi32 "
-    elif solaris or sol:
-        Link = Link  +  " -lpthread -lrt -lm -lnsl -lsocket -lc -pthread "
-    elif hpux:
-        Link = Link + " -lrt -lm -lpthread -pthread "
-    elif osf:
-        # There is a problem on my install such that linking with cxx fails, unless I use oldcxx.
-        # This really should be fixed otherwise.
-        Link = Link + " -lrt -lm -pthread -oldcxx "
-    elif interix:
-        Link = Link + " -lm -pthread "
-    elif nt:
-        if CBackend:
-            #Link = "link /incremental:no /debug /pdb:$(@R).pdb *." + obj + " "
-            Link = "link /incremental:no /debug /pdb:$(@R).pdb "
-            # be sure to get a .pdb out
-            #open("empty.c", "w")
-            #Link = CCompiler + CCompilerFlags + "empty.c /" + Link
-        Link = Link + " user32.lib kernel32.lib ws2_32.lib comctl32.lib gdi32.lib advapi32.lib netapi32.lib iphlpapi.lib "
-    # not all of these tested esp. Cygwin, NetBSD
-    elif freebsd or netbsd or openbsd or cygwin or linux:
-        Link = Link  +  " -lm -pthread "
-    else:
-        Link = Link + " -lm -lpthread -pthread "
-
-    # add -c to compiler but not link (i.e. not CCompilerFlags)
-
-    Compile = "$(CC) $(CFLAGS) " + [" -c ", ""][vms]
-
-    AssembleOnTarget = not vms
-    AssembleOnHost = not AssembleOnTarget
-
-    # pick assembler
-
-    if vms and AssembleOnTarget:
-        Assembler = "macro" # not right, come back to it later
-        AssemblerFlags = "/alpha " # not right, come back to it later
-    elif Target == "AMD64_SOLARIS":
-        # see http://gcc.gnu.org/ml/gcc/2010-05/msg00155.html
-        Assembler = "/usr/ccs/bin/as"
-    elif solaris or sol:
-        # see http://gcc.gnu.org/ml/gcc/2010-05/msg00155.html
-        Assembler = "./assembler"
-        CopyFile("./assembler", BootDir)
-    elif osf:
-        Assembler = "/usr/bin/as"
-    else:
-        Assembler = "as"
-
-    # set assembler flags
-
-    AssemblerFlags = " "
-
-    if not Target in ["PPC32_OPENBSD", "PPC_LINUX", "ARM_LINUX", "ARMEL_LINUX", "ALPHA_LINUX", "ALPHA_OPENBSD"]:
-        if linux or bsd:
-            if sixtyfour or (alpha and not alpha32):
-                AssemblerFlags = AssemblerFlags + " --64"
-            else:
-                AssemblerFlags = AssemblerFlags + " --32"
-
-    AssemblerFlags = (AssemblerFlags + ({
-        "ALPHA_OSF"         : " -nocpp ",
-        "I386_DARWIN"       : " -arch i386 -g ",
-        "AMD64_DARWIN"      : " -arch x86_64 -g ",
-        "PPC64_DARWIN"      : " -arch ppc64 -g ",
-        "PPC_DARWIN"        : " -arch ppc -g ",
-        "ARM_DARWIN"        : " -arch armv6 -g ",
-        "I386_SOLARIS"      : " -Qy -s ",
-        "AMD64_SOLARIS"     : " -Qy -s        -xarch=generic64 ",
-        "SOLgnu"            : " -Qy -s -K PIC -xarch=v8plus ", # Sun assembler
-        "SOLsun"            : " -Qy -s -K PIC -xarch=v8plus ",
-        "SPARC32_SOLARIS"   : " -Qy -s -K PIC -xarch=v8plus ",
-        "SPARC64_SOLARIS"   : " -Qy -s -K PIC -xarch=v9 ",
-        "SPARC32_LINUX"     : " -Qy -s -KPIC -Av9a -32 -relax ",
-        "SPARC64_LINUX"     : " -Qy -s -KPIC -Av9a -64 -no-undeclared-regs -relax ",
-        }.get(Target) or ""))
-
-    GnuPlatformPrefix = {
-        "ARM_DARWIN"    : "arm-apple-darwin8-",
-        # "ARMEL_LINUX" : "arm-linux-gnueabihf-",
-        # "ARM_LINUX"   : "arm-linux-gnueabihf-",
-        "ALPHA32_VMS"   : "alpha-dec-vms-",
-        "ALPHA64_VMS"   : "alpha64-dec-vms-",
-        }.get(Target) or ""
-
-    DeleteRecursiveCommand = ["rm -rf", "rmdir /q/s"][nt]
-    DeleteCommand = ["rm -f", "del /f"][nt]
-
-    if not vms:
-        CCompiler = GnuPlatformPrefix + CCompiler
-    if (not vms) or AssembleOnHost:
-        Assembler = GnuPlatformPrefix + Assembler
-
-    P = FilterPackages([ "m3cc", "m3core", "libm3", "sysutils", "set",
-          "m3middle", "m3quake", "m3objfile", "m3linker", "m3back",
-          "m3front" ])
-    main_packages = ["cm3"]
-
-    # TODO: mklib = TRUE, something is wrong with the Makefile and it is not really needed,
-    # unless we want the minimal bootstrap system to be capable of crossing to NT
-    #if True:
-    if nt:
-        main_packages += ["mklib"]
-    P += main_packages
-
-    #DoPackage(["", "realclean"] + P) or sys.exit(1)
-    DoPackage(["", "buildlocal"] + P) or sys.exit(1)
-
-    link_ext_mo = False
-    link_ext_io = False
-
-    for q in P:
-        dir = GetPackagePath(q)
-        for a in os.listdir(os.path.join(Root, dir, BuildDir)):
-            ext = GetPathExtension(a)
-            ext_io = (ext == "io")
-            ext_mo = (ext == "mo")
-            if ext_mo and not link_ext_mo and not CBackend:
-                link_ext_im = True
-                Link += " *.mo"
-            if ext_io and not link_ext_io and not CBackend:
-                link_ext_io = True
-                Link += " *.io "
-
-    # squeeze runs of spaces and spaces at ends
-    Compile = _SqueezeSpaces(Compile)
-    CCompilerFlags = _SqueezeSpaces(CCompilerFlags)
-    Link = _SqueezeSpaces(Link)
-    Assembler = _SqueezeSpaces(Assembler)
-    AssemblerFlags = _SqueezeSpaces(AssemblerFlags)
-
-    NL = ["\n", "\r\n"][nt]
-    NL2 = NL + NL
-    EXE = ["", ".exe"][nt]
-    Make = open(os.path.join(BootDir, "make.sh"), "wb")
-    VmsMake  = open(os.path.join(BootDir, "vmsmake.com"), "wb")
-    VmsLink  = open(os.path.join(BootDir, "vmslink.opt"), "wb")
-    Makefile = open(os.path.join(BootDir, "Makefile"), "wb")
-    UpdateSource = open(os.path.join(BootDir, "updatesource.sh"), "wb")
-    Objects = { }
-    ObjectsExceptMain = { }
-
-    # main_m.s or main.ms, depending on what we see
-    mainS = ""
-
-    for pkg in main_packages:
-        CreateDirectory(os.path.join(BootDir, pkg + ".d"))
-
-    for a in [Makefile]:
-        a.write("# edit up here" + NL2
-                + "CC=" + CCompiler + NL
-                + "CFLAGS=" + CCompilerFlags + NL)
-        a.write("Compile=" + Compile + NL)
-        if not CBackend:
-            a.write("Assemble=" + Assembler + " " + AssemblerFlags + NL)
-        a.write("Link=" + Link + NL
-                + NL + "# no more editing should be needed" + NL2)
-
-    #Makefile.write("#AssembleOnTarget:" + str(AssembleOnTarget) + NL)
-    #Makefile.write("#CBackend:" + str(CBackend) + NL)
-    #Makefile.write("#BuildDir:" + BuildDir + NL)
-    #Makefile.write("#vms:" + str(vms) + NL)
-
-    if True: #not CBackend:
-        Makefile.write(".SUFFIXES:" + NL
-                       + ".SUFFIXES: .cpp .c .is .ms .s .o .obj .io .mo" + NL2)
-
-    Makefile.write("all: ")
-    for pkg in main_packages:
-        Makefile.write(pkg + EXE + " ")
-    Makefile.write(NL2)
-
-    obj_suffixes = ["o", "mo", "io", "obj"]
-
-    Makefile.write("clean:" + NL)
-    if AssembleOnTarget:
-        for o in obj_suffixes:
-            Makefile.write("\t-" +  DeleteCommand + " *." + o + NL)
-        for pkg in main_packages:
-            Makefile.write("\t-" + DeleteCommand + " " + pkg + ".d/*." + o+ NL)
-    for pkg in main_packages:
-        Makefile.write("\t-" + DeleteCommand + " " + pkg + " " + pkg + ".exe" + NL)
-    Makefile.write(NL)
-
-    for a in [UpdateSource, Make]: # unfinished
-        a.write("#!/bin/sh\n\n"
-                + "set -e\n"
-                + "set -x\n\n")
-
-    for a in [Make]: # unfinished
-        a.write("# edit up here\n\n"
-                + "CC=${CC:-" + CCompiler + "}\n"
-                + "CFLAGS=${CFLAGS:-" + CCompilerFlags + "}\n"
-                + "Compile=" + Compile + "\n")
-        if not CBackend:
-            a.write("Assemble=" + Assembler + " " + AssemblerFlags + "\n")
-        a.write("Link=" + Link + "\n"
-                + "\n# no more editing should be needed\n\n")
-
-    for q in P:
-        dir = GetPackagePath(q)
-        for a in os.listdir(os.path.join(Root, dir, BuildDir)):
-            main_leaf = a
-            ext = GetPathExtension(a)
-            ext_o = (ext == "o")
-            ext_obj = (ext == "obj")
-            ext_c = (ext == "c")
-            ext_cpp = (ext == "cpp")
-            ext_h = (ext == "h")
-            ext_s = (ext == "s")
-            ext_ms = (ext == "ms")
-            ext_is = (ext == "is")
-            ext_io = (ext == "io")
-            ext_mo = (ext == "mo")
-
-            if CBackend and (ext_mo or ext_io or ext_is or ext_ms or ext_obj or ext_o):
-                continue
-
-            if not (ext_c or ext_cpp or ext_h or ext_s or ext_ms or ext_is or ext_io or ext_mo):
-                continue
-            leaf = GetLastPathElement(a)
-            if leaf.startswith("Main.m") or leaf.startswith("Main_m."):
-                mainS = leaf
-            is_main = (not vms) and (leaf.startswith("Main.m") or leaf.startswith("Main_m.")) # TODO vms cleanup
-            fullpath = os.path.join(Root, dir, BuildDir, a)
-            if ext_h or ext_c or not vms or AssembleOnTarget or ext_io or ext_mo:
-                CopyFile(fullpath, os.path.join(BootDir, [".", q + ".d"][is_main], main_leaf))
-            if ext_h or ext_io or ext_mo:
-                continue
-            Object = _GetObjectName(a, obj)
-            if Objects.get(Object):
-                continue
-            Objects[Object] = 1
-            if not is_main:
-                ObjectsExceptMain[Object] = 1
-            if ext_c:
-                VmsMake.write("$ " + Compile + " " + a + "\n")
-            else:
-                if AssembleOnHost:
-                    # must have cross assembler
-                    a = Assembler + " " + fullpath + " -o " + BootDir + "/" + Object
-                    print(a)
-                    os.system(a)
-                else:
-                    VmsMake.write("$ " + Assembler + " " + a + "\n")
-            VmsLink.write(Object + "/SELECTIVE_SEARCH\n")
-
-    # double colon batches and is much faster
-    colon = [":", "::"][nt]
-
-    if CBackend or not nt:
-        # write inference rules: .c => .o, .c => .obj, .cpp => .o, .cpp => .obj
-        for c in ["c", "cpp"]:
-            for o in ["o", "obj"]:
-                Makefile.write("." + c + "." + o + colon + NL + "\t$(Compile) " + CCompilerOut + " $<" + NL2)
-
-        # write inference rules: .is => .io, .s => .o, .ms => .mo
-        if not CBackend:
-            for source_obj in [["is", "io"], ["s", "o"], ["ms", "mo"]]:
-                source = source_obj[0]
-                obj = source_obj[1]
-                Makefile.write("." + source + "." + obj + ":" + NL + "\t$(Assemble) -o $@ $<" + NL2)
-
-    Makefile.write("OBJECTS=")
-    Objects = ObjectsExceptMain.keys()
-    Objects.sort()
-    k = 8
-    for a in Objects:
-        k = k + 1 + len(a)
-        if k > 76: # line wrap
-            Makefile.write(" \\" + NL)
-            k = 1 + len(a)
-        Makefile.write(" " + a)
-
-    Makefile.write(NL2)
-
-    LinkOut = [" -o ", " -out:"][nt]
-
-    maino_ext = "o"
-    if CBackend:
-        maino_ext = "m3.o"
-    elif AssembleOnTarget:
-        for pkg in main_packages:
-            Makefile.write(pkg + ".d/Main.o: " + pkg + ".d/" + mainS + NL)
-            #Makefile.write("\t-mkdir $(@D)" + NL)
-            Makefile.write("\t$(Assemble) -o $@ " + pkg + ".d/" + mainS + NL)
-            Makefile.write(NL)
-
-    # To make it look better, replace double space with single space.
-    if nt:
-        Makefile.write("OBJECTS=$(OBJECTS:  = )" + NL2)
-
-    for pkg in main_packages:
-        # NOTE: We use *.o/*.obj to avoid command line length limits.
-        # TODO: Response files? gcc 4.2 supports them. Visual C++ all
-        # versions support them. TODO: Research xlc, Sun CC, etc.
-        # Or, use libraries (building them from small command lines).
-        #
-        # Use response files at least for Visual C++ linking as we
-        # are over the limits.
-
-        if nt:
-            Makefile.write(pkg + """.exe: $(OBJECTS) $(@R).d/Main.m3.cpp
-	$(Compile) $(@R).d/Main.m3.cpp /Fo$(@R).d/Main.m3.obj
-    $(Link) -out:$@ @<<$(@).responseFile
-$(@R).d/Main.m3.obj
-$(OBJECTS: =
-)
-<<keep
-
-""");
-        else:
-            Makefile.write(pkg + EXE + ":")
-            Makefile.write(" " + "$(OBJECTS) ")
-            Makefile.write(pkg + ".d/Main." + maino_ext)
-            Makefile.write(NL)
-            Makefile.write("\t$(Link) " + pkg + ".d/Main." + maino_ext + LinkOut + "$@" + NL2)
-
-    for o in obj_suffixes:
-        VmsMake.write("$ set file/attr=(rfm=var,rat=none) *." + o + "\n")
-    VmsMake.write("$ link /executable=cm3.exe vmslink/options\n")
-
-    # TODO
-    for a in [Make]:
-        a.write("$(Link) " + LinkOut + "$@" + NL)
-
-    if False:
-        for a in [
-            #
-            # Add to this list as needed.
-            # Adding more than necessary is ok -- assume the target system has no changes,
-            # so we can replace whatever is there.
-            #
-            "m3-libs/libm3/src/os/POSIX/OSConfigPosix.m3",
-            "m3-libs/libm3/src/random/m3makefile",
-            "m3-libs/m3core/src/m3makefile",
-            "m3-libs/m3core/src/Uwaitpid.quake",
-            "m3-libs/m3core/src/thread.quake",
-            "m3-libs/m3core/src/C/m3makefile",
-            "m3-libs/m3core/src/C/" + Target + "/m3makefile",
-            "m3-libs/m3core/src/C/Common/m3makefile",
-            "m3-libs/m3core/src/Csupport/m3makefile",
-            "m3-libs/m3core/src/float/m3makefile",
-            "m3-libs/m3core/src/runtime/m3makefile",
-            "m3-libs/m3core/src/runtime/common/m3makefile",
-            "m3-libs/m3core/src/runtime/common/Compiler.tmpl",
-            "m3-libs/m3core/src/runtime/common/m3text.h",
-            "m3-libs/m3core/src/runtime/common/RTError.h",
-            "m3-libs/m3core/src/runtime/common/RTMachine.i3",
-            "m3-libs/m3core/src/runtime/common/RTProcess.h",
-            "m3-libs/m3core/src/runtime/common/RTSignalC.c",
-            "m3-libs/m3core/src/runtime/common/RTSignalC.h",
-            "m3-libs/m3core/src/runtime/common/RTSignalC.i3",
-            "m3-libs/m3core/src/runtime/common/RTSignal.i3",
-            "m3-libs/m3core/src/runtime/common/RTSignal.m3",
-            "m3-libs/m3core/src/runtime/" + Target + "/m3makefile",
-            "m3-libs/m3core/src/runtime/" + Target + "/RTMachine.m3",
-            "m3-libs/m3core/src/runtime/" + Target + "/RTSignal.m3",
-            "m3-libs/m3core/src/runtime/" + Target + "/RTThread.m3",
-            "m3-libs/m3core/src/text/TextLiteral.i3",
-            "m3-libs/m3core/src/thread/m3makefile",
-            "m3-libs/m3core/src/thread/PTHREAD/m3makefile",
-            "m3-libs/m3core/src/thread/PTHREAD/ThreadPThread.m3",
-            "m3-libs/m3core/src/thread/PTHREAD/ThreadPThreadC.i3",
-            "m3-libs/m3core/src/thread/PTHREAD/ThreadPThreadC.c",
-            "m3-libs/m3core/src/time/POSIX/m3makefile",
-            "m3-libs/m3core/src/unix/m3makefile",
-            "m3-libs/m3core/src/unix/Common/m3makefile",
-            "m3-libs/m3core/src/unix/Common/m3unix.h",
-            "m3-libs/m3core/src/unix/Common/Udir.i3",
-            "m3-libs/m3core/src/unix/Common/UdirC.c",
-            "m3-libs/m3core/src/unix/Common/Usignal.i3",
-            "m3-libs/m3core/src/unix/Common/Ustat.i3",
-            "m3-libs/m3core/src/unix/Common/UstatC.c",
-            "m3-libs/m3core/src/unix/Common/UtimeC.c",
-            "m3-libs/m3core/src/unix/Common/Uucontext.i3",
-            "m3-sys/cminstall/src/config-no-install/SOLgnu",
-            "m3-sys/cminstall/src/config-no-install/SOLsun",
-            "m3-sys/cminstall/src/config-no-install/Solaris.common",
-            "m3-sys/cminstall/src/config-no-install/Unix.common",
-            "m3-sys/cminstall/src/config-no-install/cm3cfg.common",
-            "m3-sys/cminstall/src/config-no-install/" + Target,
-            "m3-sys/m3cc/src/m3makefile",
-            "m3-sys/m3cc/src/gcc/m3cg/parse.c",
-            "m3-sys/m3middle/src/Target.i3",
-            "m3-sys/m3middle/src/Target.m3",
-            "scripts/python/pylib.py",
-            "m3-libs/m3core/src/C/" + Target + "/Csetjmp.i3",
-            "m3-libs/m3core/src/C/" + Target + "/m3makefile",
-            "m3-libs/m3core/src/C/Common/Csetjmp.i3",
-            "m3-libs/m3core/src/C/Common/Csignal.i3",
-            "m3-libs/m3core/src/C/Common/Cstdio.i3",
-            "m3-libs/m3core/src/C/Common/Cstring.i3",
-            "m3-libs/m3core/src/C/Common/m3makefile",
-            ]:
-            source = os.path.join(Root, a)
-            if FileExists(source):
-                name = GetLastPathElement(a)
-                reldir = RemoveLastPathElement(a)
-                destdir = os.path.join(BootDir, reldir)
-                dest = os.path.join(destdir, name)
-                try:
-                    os.makedirs(destdir)
-                except:
-                    pass
-                CopyFile(source, dest)
-
-                for b in [UpdateSource, Make]:
-                    b.write("mkdir -p /dev2/cm3/" + reldir + "\n")
-                    b.write("cp " + a + " /dev2/cm3/" + a + "\n")
-
-    for a in [UpdateSource, Make, Makefile, VmsMake, VmsLink]:
-        a.close()
-
-    # write entirely new custom makefile for NT
-    # We always have object files so just compile and link in one fell swoop.
-    # NOTE: This is quite crude/slow/inefficient. Needs work.
-
-    if nt:
-        DeleteFile("updatesource.sh")
-        DeleteFile("make.sh")
-        if not CBackend:
-            Makefile = open(os.path.join(BootDir, "Makefile"), "wb")
-            Makefile.write("all: cm3.exe mklib.exe\r\n\r\n")
-            Makefile.write("clean:\r\n del cm3.exe mklib.exe\r\n\r\n")
-
-            # -MT is used instead of -MD for the sake of some older toolsets
-            # and this Makefile not handling manifests with mt.exe.
-            #
-            # The larger cm3 config/quake files do handle that.
-
-            Makefile.write("cm3.exe: *.io *.mo *.c cm3.d\\Main.mo\r\n"
-            + " cl -Zi -MT *.c -link *.mo *.io cm3.d\\Main.mo -out:$@ user32.lib kernel32.lib ws2_32.lib comctl32.lib gdi32.lib advapi32.lib netapi32.lib iphlpapi.lib\r\n\r\n")
-
-            Makefile.write("mklib.exe: *.io *.mo *.c mklib.d\\Main.mo\r\n"
-            + " cl -Zi -MT *.c -link *.mo *.io mklib.d\\Main.mo -out:$@ user32.lib kernel32.lib ws2_32.lib comctl32.lib gdi32.lib advapi32.lib netapi32.lib iphlpapi.lib\r\n\r\n")
-
-            Makefile.close()
-
-    if vms or nt:
-        _MakeZip(BootDir[2:])
-    else:
-        _MakeTGZ(BootDir[2:])
 
 #-----------------------------------------------------------------------------
 # map action names to code and possibly other data
@@ -1841,7 +1164,7 @@ def DoPackage(args, PackagesFromCaller = None):
 
     args = filter(lambda a: a != "" and not a.endswith(".py"), args)
     if os.path.dirname(__file__) != "":
-        args = filter(lambda a: not a.startswith(os.path.dirname(__file__)), args)
+        args = list(filter(lambda a: not a.startswith(os.path.dirname(__file__)), args))
 
     # print("args is " + str(args))
     # sys.stdout.flush()
@@ -1899,6 +1222,7 @@ GenericCommand:
         if ((arg == "")
             or (arg.lower() in _AllTargets)
             or (arg in _PossiblePylibFlags)
+            or (arg.startswith("@M3"))
             ):
             continue
         if arg.startswith("-"):
@@ -2008,8 +1332,8 @@ def DeleteFile(a):
     else:
         print("del /f /a " + a)
     if isfile(a):
-        os.chmod(ConvertPathForPython(a), 0o700)
-        os.remove(ConvertPathForPython(a))
+        os.chmod(a, 0o700)
+        os.remove(a)
     if isfile(a):
         FatalError("failed to delete " + a)
 
@@ -2018,7 +1342,7 @@ def MoveFile(a, b):
         print("mv " + a + " " + b)
     else:
         print("move " + a + " " + b)
-    shutil.move(ConvertPathForPython(a), ConvertPathForPython(b))
+    shutil.move(a, b)
 
 #-----------------------------------------------------------------------------
 
@@ -2063,17 +1387,17 @@ def CopyFile(From, To):
     # Cygwin says foo exists when only foo.exe exists, and then remove fails.
     if isfile(To):
         try:
-            os.remove(ConvertPathForPython(To))
+            os.remove(To)
         except:
             pass
     CopyCommand = "copy"
     if os.name != "nt":
         CopyCommand = "cp -Pv"
     print(CopyCommand + " " + From + " " + To)
-    if os.path.islink(ConvertPathForPython(From)):
-        os.symlink(os.readlink(ConvertPathForPython(From)), ConvertPathForPython(To))
+    if os.path.islink(From):
+        os.symlink(os.readlink(From), To)
     else:
-        shutil.copy(ConvertPathForPython(From), ConvertPathForPython(To))
+        shutil.copy(From, To)
     return True
 
 #-----------------------------------------------------------------------------
@@ -2086,36 +1410,7 @@ def CopyFileIfExist(From, To):
 #-----------------------------------------------------------------------------
 
 def DeleteConfig(To):
-    a = os.path.join(Root, "m3-sys", "cminstall", "src")
-    Bin  = os.path.join(To, "bin")
-    RemoveDirectoryRecursive(os.path.join(Bin, "config"))
-    for b in ["config", "config-no-install"]:
-        for File in glob.glob(os.path.join(a, b, "*")):
-            if isfile(File):
-                DeleteFile(os.path.join(Bin, os.path.basename(File)))
-
-#-----------------------------------------------------------------------------
-
-def CopyConfigForDevelopment():
-    #
-    # The development environment is easily reconfigured
-    # for different targets based on environment variables and `uname`.
-    # The use of `uname` is not fully fleshed out (yet).
-    #
-    # The development environment depends on having a source tree, at least the cminstall\src\config directory.
-    #
-
-    To = os.path.join(InstallRoot, "bin")
-    a = os.path.join(Root, "m3-sys", "cminstall", "src")
-
-    #
-    # First delete all the config files.
-    #
-    DeleteConfig(InstallRoot)
-
-    # CopyFile(os.path.join(Root, a, "config", "cm3.cfg"), To) or FatalError()
-    CopyFile(os.path.join(Root, a, "config-no-install", "cm3.cfg"), To) or FatalError()
-    return True
+    RemoveDirectoryRecursive(os.path.join(os.path.join(To, "bin"), "config"))
 
 #-----------------------------------------------------------------------------
 
@@ -2134,11 +1429,17 @@ def CopyConfigForDistribution(To):
     dir = os.path.join(Bin, "config")
     DeleteConfig(To)
     CreateDirectory(dir)
-    for File in glob.glob(os.path.join(Root, "m3-sys", "cminstall", "src", "config-no-install", "*")):
+    for File in glob.glob(os.path.join(Root, "m3-sys", "cminstall", "src", "config", "*")):
         if isfile(File):
             CopyFile(File, dir)
     open(os.path.join(Bin, "cm3.cfg"), "w").write("\
+%-------------------------------------------------------------------\n\
+% defined by cm3, but not the other MxConfig users\n\
+if not defined(\"CR\") CR = \"\\n\" end\n\
+if not defined(\"EOL\") EOL = \"\\n\" end\n\
+if not defined(\"M3_PROFILING\") M3_PROFILING = FALSE end\n\
 if not defined(\"SL\") SL = \"/\" end\n\
+%-------------------------------------------------------------------\n\
 if not defined(\"HOST\") HOST = \"" + Config + "\" end\n\
 if not defined(\"TARGET\") TARGET = HOST end\n\
 INSTALL_ROOT = (path() & SL & \"..\")\n\
@@ -2191,12 +1492,6 @@ def PickBuildDir(a):
     #FatalError("no BuildDir:" + a)
     return a
 
-def ShipBack():
-    if  not GCC_BACKEND:
-        return True
-    return _CopyCompiler(os.path.join(Root, "m3-sys", "m3cc", PickBuildDir(BuildDir)),
-                         os.path.join(InstallRoot, "bin"))
-
 #-----------------------------------------------------------------------------
 
 def ShipFront():
@@ -2206,7 +1501,7 @@ def ShipFront():
 #-----------------------------------------------------------------------------
 
 def ShipCompiler():
-    return (skipgcc or ShipBack()) and ShipFront()
+    return ShipFront()
 
 #-----------------------------------------------------------------------------
 
@@ -2307,9 +1602,6 @@ def SetVisualCPlusPlus2015OrNewer():
             os.environ["CM3_VS2015_OR_NEWER"] = "0"
         #sys.exit(3)
 
-def IsCygwinHostTarget(): # confused
-    return Host!= None and (Host.endswith("_CYGWIN") or (Host == "NT386" and GCC_BACKEND and TargetOS == "POSIX"))
-
 def IsMinGWHostTarget():
     return (Target == "NT386" and GCC_BACKEND and TargetOS == "WIN32") or Target.endswith("_MINGW")
 
@@ -2322,19 +1614,11 @@ def IsNativeNTHostTarget(): # confused
             and (not GCC_BACKEND) and TargetOS == "WIN32")
 
 def SetupEnvironment():
+    # TODO: Most/all of this function should be removed.
+    #
     SystemDrive = os.environ.get("SYSTEMDRIVE")
     if SystemDrive:
         SystemDrive += os.path.sep
-
-    # Do this earlier so that its link isn't a problem.
-    # Looking in the registry HKEY_LOCAL_MACHINE\SOFTWARE\Cygnus Solutions\Cygwin\mounts v2
-    # would be reasonable here.
-
-    if CM3IsCygwin:
-        _SetupEnvironmentVariableAll(
-            "PATH",
-            ["cygwin1.dll"],
-            os.path.join(SystemDrive, "cygwin", "bin"))
 
     # some host/target confusion here..
 
@@ -2580,24 +1864,6 @@ def SetupEnvironment():
             ["sh", "sed", "gawk", "make"],
             os.path.join(SystemDrive, "msys", "1.0", "bin"))
 
-    # some host/target confusion here..
-
-    if IsCygwinHostTarget():
-
-        #_ClearEnvironmentVariable("LIB")
-        #_ClearEnvironmentVariable("INCLUDE")
-
-        #if _HostIsNT:
-        #    _SetupEnvironmentVariableAll(
-        #        "PATH",
-        #        ["cygX11-6.dll"],
-        #        os.path.join(SystemDrive, "cygwin", "usr", "X11R6", "bin"))
-
-        _SetupEnvironmentVariableAll(
-            "PATH",
-            ["gcc", "as", "ld"],
-            os.path.join(SystemDrive, "cygwin", "bin"))
-
 #-----------------------------------------------------------------------------
 
 # ported from scripts/win/sysinfo.cmd
@@ -2687,7 +1953,7 @@ of this software.
 
 def GetStage():
     global STAGE
-    STAGE = ConvertPathForPython(getenv("STAGE"))
+    STAGE = getenv("STAGE")
 
     if (not STAGE):
         #tempfile.tempdir = os.path.join(tempfile.gettempdir(), "cm3", "make-dist")
@@ -2733,7 +1999,7 @@ def TryAddWixToPath():
         if wixFound:
             return wixFound
         for wixCandidate in WixCandidates:
-            b = os.path.join(ConvertPathForPython(a), wixCandidate, "bin")
+            b = os.path.join(a, wixCandidate, "bin")
             #print("a:" + a)
             #print("b:" + b)
             if isdir(b):
@@ -2781,7 +2047,7 @@ def MakeMSIWithWix(input):
         for a in os.listdir(dir):
             b = os.path.join(dir, a)
             if isdir(b):
-                wix.write("""<Directory Id='d%d' Name='%s'>\n""" % (state.dirID, ConvertPathForWin32(a)))
+                wix.write("""<Directory Id='d%d' Name='%s'>\n""" % (state.dirID, a))
                 state.dirID += 1
                 HandleDir(state, b) # recursion!
                 wix.write("</Directory>\n")
@@ -2791,7 +2057,7 @@ def MakeMSIWithWix(input):
                 if state.componentID == 1:
                     wix.write("""<Environment Id="envPath" Action="set" Name="PATH" Part="last" Permanent="no" Separator=";" Value='[INSTALLDIR]bin'/>\n""")
 
-                wix.write("""<File Id='f%d' Name='%s' Source='%s'/>\n""" % (state.fileID, a, ConvertPathForWin32(b)))
+                wix.write("""<File Id='f%d' Name='%s' Source='%s'/>\n""" % (state.fileID, a, b))
                 state.fileID += 1
                 wix.write("</Component>\n")
 
@@ -2822,7 +2088,7 @@ def MakeMSIWithWix(input):
 
     wix.close()
 
-    command = "candle " + ConvertPathForWin32(input) + ".wxs -out " + ConvertPathForWin32(input) + ".wixobj" + " 2>&1"
+    command = "candle " + input + ".wxs -out " + input + ".wixobj" + " 2>&1"
     if os.name == "posix":
         command = command.replace("\\", "\\\\")
     print(command)
@@ -2842,7 +2108,7 @@ placed. Please read the files found in the license directory."""
 {\\*\\generator Msftedit 5.41.15.1515;}\\viewkind4\\uc1\\pard\\lang1033\\f0\\fs20""" + licenseText.replace("\n", " ")
 + "}")
 
-    command = "light -out " + ConvertPathForWin32(input) + ".msi " + ConvertPathForWin32(input) + ".wixobj -ext WixUIExtension -cultures:en-us -dWixUILicenseRtf=" + ConvertPathForWin32(license) + " 2>&1"
+    command = "light -out " + input + ".msi " + input + ".wixobj -ext WixUIExtension -cultures:en-us -dWixUILicenseRtf=" + license + " 2>&1"
     if os.name == "posix":
         command = command.replace("\\", "\\\\")
     print(command)
@@ -2872,8 +2138,8 @@ def BreakHardLinks(links):
         first = links[inode][0]
         for other in links[inode][1:]:
             print("breaking link " + other + " <=> " + first)
-            os.remove(ConvertPathForPython(other))
-            open(ConvertPathForPython(other), "w")
+            os.remove(other)
+            open(other, "w")
 
 def RestoreHardLinks(links):
 #
@@ -2883,8 +2149,8 @@ def RestoreHardLinks(links):
         first = links[inode][0]
         for other in links[inode][1:]:
             print("restoring link " + other + " <=> " + first)
-            os.remove(ConvertPathForPython(other))
-            os.link(ConvertPathForPython(first), ConvertPathForPython(other))
+            os.remove(other)
+            os.link(first, other)
 
 def MoveSkel(prefix):
 #
@@ -2918,9 +2184,6 @@ def RestoreSkel(prefix):
 # see http://www.debian.org/doc/debian-policy/footnotes.html#f73
 
 DebianArchitecture = {
-  "LINUXLIBC6" : "i386",
-  "FreeBSD4" : "i386",
-  "NT386" : "i386",
   "I386" : "i386",
   "IA64" : "ia64",
   "ALPHA" : "alpha",
@@ -2934,8 +2197,6 @@ DebianArchitecture = {
   "PPC" : "powerpc",
   "PPC32" : "powerpc",
   "PPC64" : "ppc",
-  "SOLsun" : "sparc",
-  "SOLgnu" : "sparc",
   "SPARC" : "sparc",
   "SPARC32" : "sparc",
   "SPARC64" : "sparc",
@@ -3016,6 +2277,10 @@ if __name__ == "__main__":
     #
     # run test code if module run directly
     #
+    print("1\n")
+    MakePackageDB()
+    print("2\n")
+    sys.exit(1)
 
     TryAddWixToPath()
     sys.exit(1)
@@ -3030,7 +2295,7 @@ if __name__ == "__main__":
     #os.system("set")
     sys.exit(1)
 
-    CopyConfigForDevelopment()
+    CopyConfigForDistribution(InstallRoot)
     sys.exit(1)
 
     CheckForLinkSwitch("DELAYLOAD")
@@ -3051,23 +2316,7 @@ if __name__ == "__main__":
         print("GetLastPathElement(%s):%s" % (a, GetLastPathElement(a)))
     sys.exit(1)
 
-    print(ConvertFromCygwinPath("\\cygdrive/c/foo"))
-    print(ConvertFromCygwinPath("//foo"))
-    sys.exit(1)
-
     print(SearchPath("juno"))
-    sys.exit(1)
-
-    print(ConvertToCygwinPath("a"))
-    print(ConvertToCygwinPath("a\\b"))
-    print(ConvertToCygwinPath("//a\\b"))
-    print(ConvertToCygwinPath("c:\\b"))
-    print(ConvertToCygwinPath("c:/b"))
-    print(ConvertToCygwinPath("/b"))
-    print(ConvertToCygwinPath("\\b"))
-    sys.exit(1)
-    print(IsCygwinBinary("c:\\cygwin\\bin\\gcc.exe"))
-    print(IsCygwinBinary("c:\\bin\\cdb.exe"))
     sys.exit(1)
 
     print("\n\ncore: " + str(OrderPackages(PackageSets["core"])))

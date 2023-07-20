@@ -1,0 +1,4 @@
+readonly TARGET = "AMD64_HAIKU"
+readonly gxx = "g++"
+include("AMD64.common")
+include("Haiku.common")
