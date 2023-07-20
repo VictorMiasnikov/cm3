@@ -7,17 +7,20 @@ MODULE Main;
 IMPORT Test, Wr, Stdio, Fmt;
 <*FATAL ANY*>
 
+(* VVM 2023-04-18 13-33
 CONST Last32 = 16_7FFFFFFF;
 CONST First32 = - Last32 - 1;
+*)
 
 TYPE
-<<<<<<< HEAD
+(* VVM 2023-04-18 13-33
   Int32A = BITS 32 FOR [First32 .. Last32];
   Int32B = (*BITS 32 FOR*) [First32 .. Last32];
-=======
+*)
+(* VVM 2023-04-18 13-33 *)
   Int32A = BITS 32 FOR [-16_7fffffff-1..16_7FFFFFFF];
   Int32B = (*BITS 32 FOR*) [-16_7fffffff-1..16_7FFFFFFF];
->>>>>>> Using__of__LLVM13__fix__of__m3-tools--m3tk--src--target
+(* *)
 
   EventIDA = ARRAY [0..1] OF Int32A; (* lsw..msw *)
   EventIDB = ARRAY [0..1] OF Int32B; (* lsw..msw *)
@@ -51,13 +54,11 @@ TYPE
 
 (*
   Buckets = REF ARRAY OF EntryA;
-<<<<<<< HEAD
-
-VAR BucketsVal := NEW (Buckets, 1);
-
-=======
 *)
->>>>>>> Using__of__LLVM13__fix__of__m3-tools--m3tk--src--target
+
+(* VVM 2023-04-18 13-33
+VAR BucketsVal := NEW (Buckets, 1);
+*)
 
 PROCEDURE Out (tag: TEXT;  val: INTEGER) =
   BEGIN
@@ -78,13 +79,9 @@ BEGIN
   Test.checkI (BITSIZE (ValueA), BITSIZE (ValueB));
   Out ("Entry", BITSIZE (EntryA));
   Test.checkI (BITSIZE (EntryA), BITSIZE (EntryB));
-<<<<<<< HEAD
+(* VVM 2023-04-18 13-33
   Test.checkI (BITSIZE (BucketsVal^), BITSIZE (EntryA));
   Out ("BucketsVal^", BITSIZE (BucketsVal^));
-=======
-(* outputs 32 or 64 depending on arch
-  Out ("Buckets", BITSIZE (Buckets));
 *)
->>>>>>> Using__of__LLVM13__fix__of__m3-tools--m3tk--src--target
   Test.done ();
 END Main.

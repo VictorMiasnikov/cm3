@@ -63,7 +63,7 @@ CONST
 VAR target_os := ARRAY Compiler.OS OF OSKind{OSKind.Unix, OSKind.Win32}[Compiler.ThisOS];
 VAR d_sep := MxConfigC.DirectorySeparator (); (* forward or backward slash *)
 VAR v_sep := MxConfigC.DeviceSeparator (); (* zero or colon *)
-(*CONST DirSepText = ARRAY Compiler.OS OF TEXT{"/", "\\"}[Compiler.ThisOS];*)
+CONST DirSepText = ARRAY Compiler.OS OF TEXT{"/", "\\"}[Compiler.ThisOS];
 
 PROCEDURE SetTargetOS (kind: OSKind) =
   BEGIN
@@ -131,7 +131,7 @@ PROCEDURE Join (dir, base: TEXT;  k: Kind): TEXT =
         IF dir_len # 0 THEN
           len := Append (buf, len, dir, dir_len);
           IF add_sep THEN
-            buf[len] := Slash; (*d_sep*)
+            buf[len] := d_sep; (*BackSlash*)
             INC (len);
           END;
         END;
@@ -198,7 +198,7 @@ PROCEDURE DoParse (nm_txt: TEXT; len: CARDINAL; VAR nm: ARRAY OF CHAR): T =
       t.dir := NIL;
       start := 0;
     ELSIF (d_index = 0) THEN
-      t.dir := "/"; (*DirSepText*)
+      t.dir := DirSepText; (*"/"*)
       start := 1;
     ELSE
       t.dir := Text.FromChars (SUBARRAY (nm, 0, d_index));
@@ -503,7 +503,7 @@ PROCEDURE PathRemoveDots (VAR p: ARRAY OF CHAR; READONLY start: CARDINAL; VAR le
     (* if there were more ".."s than preceding elements, add back some ".."s *)
     WHILE level # 0 DO
       IF (to # start) AND (NOT IsDirSep (p[to - 1])) THEN
-        p[to] := Slash; (*d_sep*)
+        p[to] := d_sep; (*BackSlash*)
         INC (to);
       END;
       p[to] := '.';
@@ -518,12 +518,12 @@ PROCEDURE PathRemoveDots (VAR p: ARRAY OF CHAR; READONLY start: CARDINAL; VAR le
 
     (* if input started with a separator or two, then so must output *)
     IF IsDirSep (p[from - 1]) AND (len = 0 OR NOT IsDirSep (p[to - 1])) THEN
-      p[to] := Slash; (*d_sep*)
+      p[to] := d_sep; (*BackSlash*)
       INC (to);
       INC (end);
       INC (len);
       IF IsDirSep (p[from - 2]) AND (len = 1 OR NOT IsDirSep (p[to - 2])) THEN
-        p[to] := Slash; (*d_sep*)
+        p[to] := d_sep; (*BackSlash*)
         INC (to);
         INC (end);
         INC (len);

@@ -415,73 +415,6 @@ PROCEDURE CreateEnumerationType (Builder    : BuilderRef;
     RETURN result;
   END CreateEnumerationType;
 
-<<<<<<< HEAD
-(* VVM:
-PROCEDURE CreateSetType (Builder    : BuilderRef;
-                         Scope      : MetadataRef;
-                         Name       : TEXT;
-                         NameLen    : uint32_t;
-                         File       : MetadataRef;
-                         LineNumber : uint;
-                         SizeInBits : uint64_t;
-                         AlignInBits: uint32_t;
-                         BaseTy     : MetadataRef; ): MetadataRef =
-  VAR
-    arg3  : C.char_star;
-    result: MetadataRef;
-  BEGIN
-    arg3 := M3toC.SharedTtoS(Name);
-    result := M3DebugInfoRaw.CreateSetType(
-                Builder, Scope, arg3, NameLen, File, LineNumber,
-                SizeInBits, AlignInBits, BaseTy);
-    M3toC.FreeSharedS(Name, arg3);
-    RETURN result;
-  END CreateSetType;
-*)
-
-(* VVM:
-PROCEDURE GetSubrangeConst (Builder          : BuilderRef;
-                            Scope            : MetadataRef;
-                            Name             : TEXT;
-                            NameLen          : uint32_t;
-                            File, BaseTy     : MetadataRef;
-                            LowerBound, Count: int64_t;     ):
-  MetadataRef =
-  VAR
-    arg3  : C.char_star;
-    result: MetadataRef;
-  BEGIN
-    arg3 := M3toC.SharedTtoS(Name);
-    result :=
-      M3DebugInfoRaw.GetSubrangeConst(
-        Builder, Scope, arg3, NameLen, File, BaseTy, LowerBound, Count);
-    M3toC.FreeSharedS(Name, arg3);
-    RETURN result;
-  END GetSubrangeConst;
-*)
-
-(* VVM:
-PROCEDURE GetSubrangeExpr (Builder                        : BuilderRef;
-                           Scope                          : MetadataRef;
-                           Name                           : TEXT;
-                           NameLen                        : uint32_t;
-                           File, BaseTy, LowerBound, Count: MetadataRef; ):
-  MetadataRef =
-  VAR
-    arg3  : C.char_star;
-    result: MetadataRef;
-  BEGIN
-    arg3 := M3toC.SharedTtoS(Name);
-    result :=
-      M3DebugInfoRaw.GetSubrangeExpr(
-        Builder, Scope, arg3, NameLen, File, BaseTy, LowerBound, Count);
-    M3toC.FreeSharedS(Name, arg3);
-    RETURN result;
-  END GetSubrangeExpr;
-*)
-
-=======
->>>>>>> rodney-new
 PROCEDURE CreateUnionType (Builder    : BuilderRef;
                            Scope      : MetadataRef;
                            Name       : TEXT;
@@ -526,26 +459,6 @@ PROCEDURE CreateArrayType (Builder      : BuilderRef;
              Builder, Size, AlignInBits, Ty, Subscripts, NumSubscripts);
   END CreateArrayType;
 
-<<<<<<< HEAD
-(* VVM:
-PROCEDURE CreateDynamicArrayType
-  (Builder                                  : BuilderRef;
-   Size                                     : uint64_t;
-   AlignInBits                              : uint32_t;
-   Ty                                       : MetadataRef;
-   Subscripts                               : UNTRACED REF MetadataRef;
-   NumSubscripts                            : uint;
-   DataLocation, Associated, Allocated, Rank: MetadataRef;              ):
-  MetadataRef =
-  BEGIN
-    RETURN M3DebugInfoRaw.CreateDynamicArrayType(
-             Builder, Size, AlignInBits, Ty, Subscripts, NumSubscripts,
-             DataLocation, Associated, Allocated, Rank);
-  END CreateDynamicArrayType;
-*)
-
-=======
->>>>>>> rodney-new
 PROCEDURE CreateVectorType (Builder      : BuilderRef;
                             Size         : uint64_t;
                             AlignInBits  : uint32_t;
@@ -1226,17 +1139,6 @@ PROCEDURE LLVMGetMetadataKind (Metadata: MetadataRef; ): CARDINAL =
     RETURN M3DebugInfoRaw.LLVMGetMetadataKind(Metadata);
   END LLVMGetMetadataKind;
 
-<<<<<<< HEAD
-(* VVM:
-PROCEDURE LLVMReplaceArrays (Builder    : BuilderRef;
-                             T, Elements: UNTRACED REF MetadataRef;
-                             NumElements: uint;                     ) =
-  BEGIN
-    M3DebugInfoRaw.LLVMReplaceArrays(Builder, T, Elements, NumElements);
-  END LLVMReplaceArrays;
-*)
-=======
->>>>>>> rodney-new
 
 BEGIN
 END M3DebugInfo.

@@ -73,16 +73,16 @@ VAR (* never reset *)
   reserved    : ARRAY [0..MaxRsrvd] OF M3.Value;
 
 VAR (* explicitly reset *)
-  input       : File.T;
-  input_buf   : InputBuffer;
-  input_ptr   : InputBufferIndex;
-  input_len   : INTEGER;
-  ch          : CHAR;
-  ignore      : IDList;
-  accepted    : INTEGER := 2;
-  tos         : INTEGER;
-  stack       : ARRAY [0..MaxStack] OF FileState;
-  buf         : StringBuffer;
+  input                  : File.T;
+  input_buf              : InputBuffer;
+  input_ptr              : InputBufferIndex;
+  input_len              : INTEGER;
+  ch                     : CHAR;
+  ignore                 : IDList;
+  accepted               : INTEGER := 2;
+  tos                    : INTEGER;
+  stack_of_Scanner_m3    : ARRAY [0..MaxStack] OF FileState;
+  buf                    : StringBuffer;
 
 PROCEDURE Initialize () =
   BEGIN
@@ -143,7 +143,7 @@ PROCEDURE Reset () =
 PROCEDURE Push (name: TEXT;  file: File.T;  is_main: BOOLEAN) =
   BEGIN
     INC (nPushed);
-    WITH z = stack[tos] DO
+    WITH z = stack_of_Scanner_m3[tos] DO
       z.ch      := ch;
       z.offs    := offset;
       z.sym     := cur;
@@ -164,10 +164,10 @@ PROCEDURE Push (name: TEXT;  file: File.T;  is_main: BOOLEAN) =
     input     := file;
     input_ptr := 0;
     input_len := -1;  (* not 0 ==> EOF *)
-    input_buf := stack[tos].buf;
+    input_buf := stack_of_Scanner_m3[tos].buf;
     IF (input_buf = NIL) THEN
       input_buf := NEW (InputBuffer);
-      stack[tos].buf := input_buf;
+      stack_of_Scanner_m3[tos].buf := input_buf;
     END;
     IF (file # NIL) THEN GetToken (); (* prime the input stream *) END;
   END Push;
@@ -175,7 +175,7 @@ PROCEDURE Push (name: TEXT;  file: File.T;  is_main: BOOLEAN) =
 PROCEDURE Pop () =
   BEGIN
     DEC (tos);
-    WITH z = stack[tos] DO
+    WITH z = stack_of_Scanner_m3[tos] DO
       ch        := z.ch;
       offset    := z.offs;
       cur       := z.sym;

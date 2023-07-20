@@ -26,14 +26,13 @@ TYPE
   T = M3AST_LX.SrcPos;
 
 CONST
-  Null = T{line := 0, col := 0, len := 0};
+  Null = 0;
 
-<*INLINE*> PROCEDURE Set(line, offset, len: CARDINAL): T RAISES {};
+<*INLINE*> PROCEDURE Pack(line, offset: CARDINAL): T RAISES {};
+<*INLINE*> PROCEDURE Unpack(t: T; VAR offset: CARDINAL): CARDINAL RAISES {};
 
 PROCEDURE Compare(pos1, pos2: T): INTEGER RAISES {};
 (* Returns less than 0 if pos1 < pos2, 0 if pos1 = pos2, greater than 0 if
 pos1 > pos2 *)
-
-PROCEDURE Hash(t : T) : INTEGER;
 
 END M3CSrcPos.

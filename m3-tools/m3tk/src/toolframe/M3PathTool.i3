@@ -4,7 +4,7 @@
 
 INTERFACE M3PathTool;
 
-IMPORT M3Extension, M3FindFile, M3Args;
+IMPORT M3Extension, M3FindFile;
 
 (* This tool provides control over the search path used by an "M3TK"
 application. The "Define_Arg" and "TFile_Arg" arguments are "prefix"
@@ -53,8 +53,5 @@ CONST
 PROCEDURE Check(exts := M3Extension.All): M3FindFile.T;
 (* Check for the tool arguments, set up the search path accordingly,
 and return a finder for the given set of extensions. *)
-
-PROCEDURE GetTool() : M3Args.T;
-(* return the tool handle *)
 
 END M3PathTool.

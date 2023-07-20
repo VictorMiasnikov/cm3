@@ -1598,7 +1598,6 @@ PROCEDURE FulfilExecPromise(ep : ExecPromise) : QPromise.ExitCode
   RAISES { Error, Thread.Alerted } = 
   VAR
     start : Time.T;
-    exit_code := 0;
     ccommand  : Ctypes.char_star := NIL;
   BEGIN
     IF ep.timer # NIL THEN
@@ -1614,7 +1613,9 @@ PROCEDURE FulfilExecPromise(ep : ExecPromise) : QPromise.ExitCode
         FlushIO ();
       END;
       ccommand := M3toC.SharedTtoS (ep.cmd);
-      exit_code := Cstdlib.system (ccommand);
+     VAR
+      exit_code : QPromise.ExitCode := ABS( Cstdlib.system (ccommand) );
+     BEGIN
       M3toC.FreeSharedS (ep.cmd, ccommand);
       FlushIO ();
       IF exit_code # 0 AND NOT ep.ignore_errors THEN
@@ -1626,6 +1627,7 @@ PROCEDURE FulfilExecPromise(ep : ExecPromise) : QPromise.ExitCode
         END;
         RETURN exit_code
       END
+     END (*VAR*)
     EXCEPT (* unfortunately this code is duplicated *)
     | Thread.Alerted =>
         RAISE Thread.Alerted;

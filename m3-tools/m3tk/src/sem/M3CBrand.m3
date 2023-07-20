@@ -81,10 +81,9 @@ PROCEDURE UnnamedBrand(
     RAISES {}=
   VAR
     unitSep := UnitSep(unitId);
-    line, pos: CARDINAL;
+    pos: CARDINAL;
+    line := M3CSrcPos.Unpack(srcPos, pos);
   BEGIN
-    line := srcPos.line;
-    pos := srcPos.col;
     RETURN TextToExp_value(TextExtras.Join(
         UnitText(unitId), unitSep, Fmt.Int(line), unitSep, Fmt.Int(pos)));
   END UnnamedBrand;

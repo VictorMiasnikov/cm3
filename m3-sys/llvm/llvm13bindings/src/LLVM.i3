@@ -18,7 +18,7 @@
 <*EXTERNAL*> INTERFACE LLVM;
 
 FROM Cstdint IMPORT uint8_t, uint32_t, uint64_t;
-FROM Ctypes IMPORT int, unsigned, unsigned_int, char_star, 
+FROM Ctypes IMPORT int, unsigned, char_star, 
                    const_char_star, char_star_star,
                    unsigned_long_long, double, long_long;
 IMPORT Word;
@@ -4317,11 +4317,5 @@ PROCEDURE LLVMGetTargetMachineData(T: TargetMachineRef): TargetDataRef;
 PROCEDURE LLVMTargetMachineEmitToFile(
     T: TargetMachineRef; M: ModuleRef; Filename: char_star;
     codegen: CodeGenFileType; VAR ErrorMessage: char_star): Bool;
-
-
-(* VVM: *)
-<* EXTERNAL LLVMreplaceArrays *>
-PROCEDURE LLVMreplaceArrays
-  (Builder: ADDRESS; T, Elements: ADDRESS; NumElements: unsigned_int; );
 
 END LLVM.
