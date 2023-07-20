@@ -1,5 +1,6 @@
 "../Main.m3", line 35: warning: exception is never raised: Main.e
 "../Main.m3", line 9: warning: exception is never raised: <ANY>
+<<<<<<< HEAD
 "../Main.m3", line 59: warning: unreachable statement
 "../Main.m3", line 64: warning: unreachable statement
 "../Main.m3", line 71: warning: unreachable statement
@@ -7,3 +8,6 @@
 "../Main.m3", line 86: warning: unreachable statement
 "../Main.m3", line 68: warning: unreachable statement
 8 warnings encountered
+=======
+2 warnings encountered
+>>>>>>> Using__of__LLVM13__fix__of__m3-tools--m3tk--src--target
