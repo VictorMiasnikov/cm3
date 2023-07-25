@@ -12,7 +12,7 @@ jobs:
     timeout-minutes: 60
 
     env:
-      BOOTSTRAP: https://github.com/VictorMiasnikov/cm3/releases/download/d5.11.9-ZZYYXX-20230721_16-29/cm3-boot-AMD64_LINUX-None.tar.xz
+      BOOTSTRAP: https://github.com/VictorMiasnikov/cm3/releases/download/d5.11.9-ZZYYXX-20230721_17-25/cm3-boot-AMD64_LINUX-None.tar.xz
 
     steps:
     - name: Install prerequisites
