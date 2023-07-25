@@ -52,6 +52,7 @@ jobs:
         cmake --build ..\build
         cmake --install ..\build --config Debug
         echo %CM3_INSTALL%\bin>>%GITHUB_PATH%
+        cm3 -version
 
     - name: Fetch sources
       uses: actions/checkout@v2
