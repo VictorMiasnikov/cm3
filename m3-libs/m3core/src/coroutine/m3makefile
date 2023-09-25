@@ -10,7 +10,7 @@ include_dir ("Common")
 % deduplicate them, and chose which to build later).
 %
 %if equal (TARGET, "AMD64_LINUX")
-  include_dir("UCONTEXT")
+%  include_dir("UCONTEXT")
 %else
-%  include_dir("DUMMY")
+  include_dir("DUMMY")
 %end
