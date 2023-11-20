@@ -13,7 +13,7 @@ on:
         required: false
         type: string
       bootstrap:
-        default: cm3-boot-I386_NT-None.7z
+        default: cm3-boot-I386_NT-None-d5.11.4.7z
         required: false
         type: string
 
