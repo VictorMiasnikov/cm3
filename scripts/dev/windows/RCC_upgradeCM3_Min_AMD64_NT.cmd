@@ -48,7 +48,7 @@ set _cm3_CfgDone=FALSE
 set _cm3_Repeat=1
 set _cm3_DO=
 set _z_ctrlArgs=
-set _z_Stage3=all
+set _z_Stage3=min
 
 
 
@@ -297,7 +297,7 @@ if not exist "%CM3_ROOT%\bin\cm3.exe" goto StageFailure
 goto :EOF
 
 :StageFailure
-set _cm3_CM3Failure=TRUE_But_It_is_planed_in_LLVM13_case_
+set _cm3_CM3Failure=TRUE
 set _z_ExitCode=5
 echo ERROR: Stage Failure--cm3.exe was not created successfully!  Aborting...
 goto :EOF
