@@ -297,7 +297,7 @@ if not exist "%CM3_ROOT%\bin\cm3.exe" goto StageFailure
 goto :EOF
 
 :StageFailure
-set _cm3_CM3Failure=TRUE
+set _cm3_CM3Failure=TRUE_But_It_is_planed_in_LLVM13_case_
 set _z_ExitCode=5
 echo ERROR: Stage Failure--cm3.exe was not created successfully!  Aborting...
 goto :EOF

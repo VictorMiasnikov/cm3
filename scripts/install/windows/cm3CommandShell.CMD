@@ -105,6 +105,13 @@ ver | (find /I "Version 5.2"   >NUL:) && ((set _cm3_ThisOS=XP)    & goto ver_XP)
 ver | (find /I "Version 6.0.6" >NUL:) && ((set _cm3_ThisOS=Vista) & goto ver_Vista)
 ver | (find /I "Version 6.1.7" >NUL:) && ((set _cm3_ThisOS=Win7)  & goto ver_7)
 
+rem VVM: by any key avoid this:
+rem ERROR:  Unable to determine host operating system.                                       
+rem ERROR:  This script supports only Microsoft Windows 2000/XP/Vista/7 and Server 2003/2008.
+rem 
+
+(set _cm3_ThisOS=Win7)  & goto ver_7
+
 :UnsupportedOS
 echo.
 echo %0
