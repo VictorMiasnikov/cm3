@@ -2,6 +2,7 @@
 /* All rights reserved.                                       */
 /* See the file COPYRIGHT for a full description.             */
 
+#ifndef __DJGPP__
 #ifndef INCLUDED_M3CORE_H
 #include "m3core.h"
 #endif
@@ -43,14 +44,14 @@ static m3_hostent_t* native_to_m3hostent(const struct hostent* native, m3_hosten
     return m3;
 }
 
-M3_DLL_EXPORT m3_hostent_t* __cdecl
+m3_hostent_t* __cdecl
 Unetdb__gethostbyname(const char* name, m3_hostent_t* m3)
 {
     Scheduler__DisableSwitching();
     return native_to_m3hostent(gethostbyname(name), m3);
 }
 
-M3_DLL_EXPORT m3_hostent_t* __cdecl
+m3_hostent_t* __cdecl
 Unetdb__gethostbyaddr(const char* addr, int len, int type, m3_hostent_t* m3)
 {
     Scheduler__DisableSwitching();
@@ -58,3 +59,4 @@ Unetdb__gethostbyaddr(const char* addr, int len, int type, m3_hostent_t* m3)
 }
 
 M3EXTERNC_END
+#endif

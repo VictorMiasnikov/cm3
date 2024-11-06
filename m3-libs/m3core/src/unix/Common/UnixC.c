@@ -41,6 +41,9 @@ extern "C"
 {
 #endif
 
+//m3core_trace_t m3core_trace = {-1};
+m3core_trace_t m3core_trace;
+
 void __cdecl
 Unix__Assertions(void)
 {
@@ -78,7 +81,9 @@ Unix__Assertions(void)
     CHECK_M3_TYPE_SIZE(nlink_t);
     CHECK_M3_TYPE_SIZE(off_t);
     CHECK_M3_TYPE_SIZE(pid_t);
+#ifndef __DJGPP__
     CHECK_M3_TYPE_SIZE(pthread_t);
+#endif
     CHECK_M3_TYPE_SIZE(uid_t);
 
     M3_STATIC_ASSERT(IS_TYPE_SIGNED(pid_t));
@@ -86,10 +91,105 @@ Unix__Assertions(void)
     Usocket__Assertions();
 }
 
-M3WRAP3_(int, open, const char*, int, m3_mode_t)
+#ifdef __DJGPP__
+int _fmode = O_BINARY; // Does this work? We do not depend on it. See open/creat.
+#endif
+
+M3_NO_INLINE // because alloca
+int __cdecl Unix__open (const char* path, int flags, m3_mode_t mode)
+{
+    int result;
+
+#ifdef __DJGPP__
+    flags |= O_BINARY;
+#endif
+
+    Scheduler__DisableSwitching ();
+#ifdef _WIN32
+    result = _open (path, flags, (int)mode);
+#else
+    result = open (path, flags, (mode_t)mode);
+    if (m3core_trace.s.open)
+    {
+        char* buf = (char*)alloca (256 + strlen (path));
+        int len = sprintf (buf, "open (%s):%d\n", path, result);
+        write (1, buf, len);
+    }
+#endif
+    Scheduler__EnableSwitching ();
+    return result;
+}
+
+M3_NO_INLINE // because alloca
+int __cdecl Unix__creat (const char* path, m3_mode_t mode)
+{
+#ifdef __DJGPP__
+    // cannot add O_BINARY otherwise except maybe via _fmode
+    return Unix__open (path, O_WRONLY|O_CREAT|O_TRUNC, mode);
+#else
+  int result;
+
+    Scheduler__DisableSwitching ();
+#ifdef _WIN32
+    result = _creat (path, mode);
+#else
+    result = creat (path, mode);
+    if (m3core_trace.s.creat)
+    {
+        char* buf = (char*)alloca (256 + strlen (path));
+        int len = sprintf (buf, "creat (%s):%d\n", path, result);
+        write (1, buf, len);
+    }
+#endif
+    Scheduler__EnableSwitching ();
+    return result;
+#endif
+}
+
+M3_NO_INLINE // because alloca
+int __cdecl Unix__close (int fd)
+{
+    int result;
+
+    Scheduler__DisableSwitching ();
+#ifdef _WIN32
+    result = _close (fd);
+#else
+    result = close (fd);
+    if (m3core_trace.s.close)
+    {
+        char* buf = (char*)alloca (256);
+        int len = sprintf (buf, "close (%d):%d\n", fd, result);
+        write (1, buf, len);
+    }
+#endif
+    Scheduler__EnableSwitching ();
+    return result;
+}
+
+M3_NO_INLINE // because alloca
+int __cdecl Unix__chdir (const char* path)
+{
+    int result;
+
+    Scheduler__DisableSwitching ();
+#ifdef _WIN32
+    result = _chdir (path);
+#else
+    result = chdir (path);
+    if (m3core_trace.s.chdir)
+    {
+        char* buf = (char*)alloca (256 + strlen (path));
+        int len = sprintf (buf, "chdir (%s):%d\n", path, result);
+        write (1, buf, len);
+    }
+#endif
+    Scheduler__EnableSwitching ();
+    return result;
+}
+
 M3WRAP1_(m3_mode_t, umask, m3_mode_t)
 M3WRAP2_(int, chmod, const char*, m3_mode_t)
-M3WRAP2_(int, creat, const char*, m3_mode_t)
 M3WRAP1_(int, dup, int)
 M3WRAP1(int, system, const char*)
 M3WRAP1_(int, isatty, int)
@@ -97,8 +197,6 @@ M3WRAP2(int, rename, const char*, const char*)
 M3WRAP1_(int, rmdir, const char*)
 M3WRAP1_(int, unlink, const char*)
 M3WRAP2_(int, access, const char*, int)
-M3WRAP1_(int, chdir, const char*)
-M3WRAP1_(int, close, int)
 M3WRAP2_(int, dup2, int, int)
 
 #ifdef __sun
@@ -131,7 +229,7 @@ M3WRAP2(int, fchmod, int, m3_mode_t)
 M3WRAP3(int, mknod, const char*, m3_mode_t, m3_dev_t)
 
 #if 0 /* See RTProcess.Fork. */
-M3_DLL_EXPORT m3_pid_t __cdecl
+m3_pid_t __cdecl
 Unix__fork(void)
 {
 #ifdef __sun
@@ -150,13 +248,13 @@ Unix__fork(void)
 #endif /* vms */
 #endif /* win32 */
 
-M3_DLL_EXPORT void __cdecl
+void __cdecl
 Unix__underscore_exit(int exit_code)
 {
     _exit(exit_code);
 }
 
-M3_DLL_EXPORT void __cdecl
+void __cdecl
 Unix__exit(int i)
 {
     exit(i);
@@ -165,14 +263,14 @@ Unix__exit(int i)
 #ifdef _WIN32
 
 #if 0
-M3_DLL_EXPORT char* __cdecl
+char* __cdecl
 Unix__getcwd(char* name, size_t len)
 {
     assert(len < INT_MAX);
     return _getcwd(name, (int)len);
 }
 
-M3_DLL_EXPORT int __cdecl
+int __cdecl
 Unix__gethostname(char* name, size_t len)
 {
     assert(len < INT_MAX);
@@ -180,13 +278,13 @@ Unix__gethostname(char* name, size_t len)
 }
 #endif
 
-M3_DLL_EXPORT int __cdecl
+int __cdecl
 Unix__mkdir(const char* path, m3_mode_t mode)
 {
     return _mkdir(path);
 }
 
-M3_DLL_EXPORT int __cdecl
+int __cdecl
 UnixC__pipe (int* files)
 {
     return _pipe(files, 0, _O_BINARY);
@@ -194,13 +292,13 @@ UnixC__pipe (int* files)
 
 #if _MSC_VER >= 1000
 
-M3_DLL_EXPORT m3_off_t __cdecl
+m3_off_t __cdecl
 Unix__lseek(int fd, m3_off_t offset, int whence)
 {
     return _lseeki64(fd, offset, whence);
 }
 
-M3_DLL_EXPORT m3_off_t __cdecl
+m3_off_t __cdecl
 Unix__tell(int fd)
 {
     return _telli64(fd);
@@ -220,7 +318,7 @@ typedef struct m3_flock_t {
   INTEGER whence;
 } m3_flock_t;
 
-M3_DLL_EXPORT int __cdecl
+int __cdecl
 Unix__fcntl(int fd, INTEGER request, INTEGER m3_arg)
 /* fcntl is actually fcntl(fd, request, ...).
  * Wrapper is needed on some systems to handle varargs.
@@ -269,7 +367,7 @@ Unix__fcntl(int fd, INTEGER request, INTEGER m3_arg)
     return r;
 }
 
-M3_DLL_EXPORT int __cdecl
+int __cdecl
 Unix__ioctl(int fd, INTEGER request, ADDRESS argp)
 /* ioctl is varargs. See fcntl. */
 {

@@ -1,0 +1,57 @@
+% Copyright 1996 Critical Mass, Inc. All rights reserved.
+%
+% common configuration file for various Linux platforms
+%
+
+readonly TARGET_OS = "LINUX"
+
+M3_MAIN_M3CC = TRUE
+
+if not defined ("SYSTEM_CXXXC")
+   SYSTEM_CXXXC = SYSTEM_CC
+end
+
+% use the gold linker for large links in preference to the system linker
+% if you have lld installed it is better still
+%LD_PREF = " "
+LD_PREF = " -fuse-ld=gold"
+%LD_PREF = " -fuse-ld=lld"
+
+SYSTEM_LD = SYSTEM_CXXXC
+  & LD_PREF
+  & " -Wl,-z,now"
+  & " -Wl,-z,origin"
+  & " -Bsymbolic"
+  & " -Wl,--fatal-warnings"
+  & " -Wl,-rpath,\\$ORIGIN"
+  & " -Wl,-rpath,\\$ORIGIN/../lib"
+  & " -Wl,--warn-common"
+
+include("Unix.common")
+include("gnuld.common")
+
+% Look for MariaDB in the location expected by the SWIG wrappers.
+MARIADB = fs_exists("/usr/include/mariadb/mysql.h")
+
+if MARIADB
+  MYSQLLIB = "-L/usr/lib"
+  MYSQLDB  = "-lmariadbclient"
+% The MySQL library currently only builds for MariaDB.
+%else
+%  MYSQLLIB = "-L/usr/local/mysql/lib"
+%  MYSQLDB  = "-lmysqlclient"
+end
+
+if defined("MYSQLLIB")
+  SYSTEM_LIBS{"MYSQL"} = [ MYSQLLIB, MYSQLDB ]
+end
+
+if defined("M3_USE_STACK_WALKER")
+  SYSTEM_LIBS{"UNWIND"} = [ "-L/usr/lib/x86_64-linux-gnu",
+                            "-lunwind-x86_64",
+                            "-lunwind",
+                            "-lunwind-generic" ]
+end
+
+%SYSTEM_LIBS{"ODBC"}       = [ "-lodbc" ]
+%SYSTEM_LIBS{"POSTGRES95"} = [ "-L/usr/local/pgsql/lib", "-lpq" ]

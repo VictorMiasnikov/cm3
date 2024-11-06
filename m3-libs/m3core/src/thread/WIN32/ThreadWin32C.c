@@ -30,11 +30,12 @@
 #endif
 #endif
 
-#include <windows.h>
 #include <assert.h>
+#include <malloc.h>
 #include <setjmp.h>
 #include <stddef.h>
 #include <string.h>
+#include <windows.h>
 
 #if 0
 //#include <stdio.h>
@@ -52,8 +53,6 @@ void ThreadWin32_AssertFailed(const char* file, unsigned long line, const char* 
 }
 #endif
 
-#define M3_FIELD_SIZE(type, field) (sizeof((type*)0)->field)
-
 /* const is extern const in C, but static const in C++,
  * but gcc gives a warning for the correct portable form "extern const" */
 #if defined(__cplusplus) || !defined(__GNUC__)
@@ -69,7 +68,9 @@ extern "C" {
 /*-------------------------------------------------------------------------*/
 /* context */
 
-#if defined(_AMD64_)
+#if defined(_ARM_) || defined(_ARM64_) || defined(_ARM64EC_)
+#define STACK_REGISTER Sp
+#elif defined(_AMD64_)
 #define STACK_REGISTER Rsp
 #elif defined(_X86_)
 #define STACK_REGISTER Esp
@@ -156,20 +157,28 @@ void __cdecl ThreadWin32__ProcessStopped(
 
 void __cdecl ThreadWin32__ProcessLive(char *bottom, void (*p)(void *start, void *limit))
 {
-  jmp_buf jb;
+  // Wrap in struct to avoid warning about taking address of array.
+  struct {
+    jmp_buf jb;
+  } s;
 
-  if (setjmp(jb) == 0) /* save registers to stack */
+  if (setjmp(s.jb) == 0) /* save registers to stack */
 #ifdef _IA64_
-    longjmp(jb, 1); /* flush register windows */
+    longjmp(s.jb, 1); /* flush register windows */
   else
 #endif
   {
-    char *top = (char*)&top;
+#ifdef __GNUC__
+    char* top = (char*)__builtin_alloca(1);
+#else
+    char* top = (char*)_alloca(1);
+#endif
     assert(bottom);
-    /* assert(stack_grows_down); */
-    assert(top < bottom);
-    p(top, bottom);
-    p(&jb, ((char *)&jb) + sizeof(jb));
+    if (top < bottom)
+        p(top, bottom);
+    else if (top > bottom)
+        p(bottom, top);
+    p(&s, 1 + &s);
 #ifdef _IA64_
 #error ia64?
     p(bottom, __getReg(?)); /* bsp? bspstore? try numbers until we find it? */

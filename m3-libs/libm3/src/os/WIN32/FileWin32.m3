@@ -52,7 +52,7 @@ PROCEDURE New(handle: WinNT.HANDLE; ds: DirectionSet)
   : File.T RAISES {OSError.E}=
   VAR
     ft := WinBase.GetFileType(handle);
-    cm: WinDef.DWORD;
+    cm: WinDef.DWORD := 0;
   BEGIN 
     CASE ft OF
     | WinBase.FILE_TYPE_DISK =>
@@ -78,7 +78,7 @@ PROCEDURE NewPipe(handle: WinNT.HANDLE; ds: DirectionSet): Pipe.T =
 
 PROCEDURE FileWrite(h: File.T; READONLY b: ARRAY OF File.Byte)
   RAISES {OSError.E} =
-  VAR nWritten: INTEGER;
+  VAR nWritten: INTEGER := 0;
   BEGIN
     IF NOT(Direction.Write IN h.ds) THEN BadDirection(); END;
     IF WinBase.WriteFile(h.handle, ADR(b[0]), NUMBER(b),
@@ -99,6 +99,9 @@ PROCEDURE FileStatus(h: File.T): File.Status  RAISES {OSError.E}=
     status: File.Status;
     ft := WinBase.GetFileType(h.handle);
   BEGIN
+    ffd.nFileSizeHigh := 0;
+    ffd.nFileSizeLow := 0;
+    ffd.ftLastWriteTime := WinBase.FILETIME {0, 0};
     CASE ft OF
     | WinBase.FILE_TYPE_DISK =>
         IF WinBase.GetFileInformationByHandle(h.handle, ADR(ffd)) = 0 THEN
@@ -126,8 +129,8 @@ PROCEDURE PipeRead(
   : INTEGER RAISES {OSError.E} =
   VAR
     numToRead: WinDef.DWORD := NUMBER(b);
-    numAvail, numRead: WinDef.DWORD;
-    err: INTEGER;
+    numAvail, numRead: WinDef.DWORD := 0;
+    err: INTEGER := 0;
   BEGIN
     IF NOT(Direction.Read IN h.ds) THEN BadDirection(); END;
     IF NOT mayBlock THEN
@@ -163,8 +166,8 @@ PROCEDURE TerminalRead(
   : INTEGER RAISES {OSError.E} =
   VAR
     numToRead: WinDef.DWORD := NUMBER(b);
-    numAvail, numRead: WinDef.DWORD;
-    err: INTEGER;
+    numAvail, numRead: WinDef.DWORD := 0;
+    err: INTEGER := 0;
   BEGIN
     IF NOT h.isConsole THEN RETURN RegularFileRead(h, b, mayBlock) END;
     IF NOT(Direction.Read IN h.ds) THEN BadDirection(); END;
@@ -204,7 +207,7 @@ PROCEDURE TerminalRead(
 PROCEDURE RegularFileRead(h: (*Regular*)File.T;
     VAR (*out*) b: ARRAY OF File.Byte;
     <* UNUSED *>mayBlock: BOOLEAN := TRUE): INTEGER RAISES {OSError.E} =
-  VAR numRead: INTEGER;
+  VAR numRead: INTEGER := 0;
   BEGIN
     IF NOT(Direction.Read IN h.ds) THEN BadDirection(); END;
     IF NUMBER(b) <= 0 THEN RETURN 0; END;
@@ -231,7 +234,7 @@ PROCEDURE RegularFileFlush(h: RegularFile.T) RAISES {OSError.E}=
   END RegularFileFlush;
 
 PROCEDURE RegularFileLock(h: RegularFile.T): BOOLEAN RAISES {OSError.E}=
-  VAR err: INTEGER;
+  VAR err: INTEGER := 0;
   BEGIN
     IF WinBase.LockFile(
            hFile := h.handle,

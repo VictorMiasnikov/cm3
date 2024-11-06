@@ -843,6 +843,7 @@ VAR
     gotSigs := SET OF Sig { };
 
 PROCEDURE switch_thread (sig: int) RAISES {Alerted} =
+  VAR state := DisableInterrupts ();
   BEGIN
     allow_sigvtalrm ();
 
@@ -860,6 +861,9 @@ PROCEDURE switch_thread (sig: int) RAISES {Alerted} =
     IF inCritical = 0 AND heapState.inCritical = 0 THEN
       InternalYield ()
     END;
+
+    EnableInterrupts (state);
+
   END switch_thread;
 
 (*------------------------------------------------------------- scheduler ---*)
@@ -1130,7 +1134,9 @@ PROCEDURE WaitProcess (pid: int; VAR status: int): int =
       WITH r = Uexec.waitpid(pid, ADR(status), Uexec.WNOHANG) DO
         IF r # 0 THEN RETURN r END;
       END;
-      SigPause(Delay, SIGCHLD);
+      IF SIGCHLD # 0 THEN
+        SigPause(Delay, SIGCHLD);
+      END;
     END;
   END WaitProcess;
 

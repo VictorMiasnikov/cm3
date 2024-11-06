@@ -1,11 +1,26 @@
 #ifndef INCLUDED_M3CORE_H
 #include "m3core.h"
 #endif
+
+#if defined (_WIN32) || defined (__CYGWIN__)
 #include <windows.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+// TODO: Consolidate RTOSs.c
+BOOLEAN __cdecl RTOS__Cygwin (void)
+{
+#ifdef __CYGWIN__
+    return TRUE;
+#else
+    return FALSE;
+#endif
+}
+
+#if defined (_WIN32) || defined (__CYGWIN__)
 
 #if 0
 
@@ -28,7 +43,11 @@ ADDRESS __cdecl RTOS__GetMemory(INTEGER isize)
 ADDRESS __cdecl RTOS__GetMemory(INTEGER isize)
 {
     WORD_T const Size = (WORD_T)isize; // Modula-3 lacks unsigned types, pass as signed and cast.
-    return (ADDRESS)VirtualAlloc(NULL, Size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    void* p;
+    Scheduler__DisableSwitching ();
+    p = VirtualAlloc(NULL, Size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    Scheduler__EnableSwitching ();
+    return (ADDRESS)p;
 }
 
 #elif 0
@@ -52,7 +71,9 @@ ADDRESS __cdecl RTOS__GetMemory(INTEGER isize)
     RTOSMemoryLogEntry_t LogEntry;
     
     LogEntry.Size = Size;
+    Scheduler__DisableSwitching ();
     LogEntry.Result = VirtualAlloc(NULL, Size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    Scheduler__EnableSwitching ();
 
     /* It does not matter if this is thread safe or not. */
 
@@ -60,6 +81,8 @@ ADDRESS __cdecl RTOS__GetMemory(INTEGER isize)
 
     return (ADDRESS)LogEntry.Result;
 }
+
+#endif
 
 #endif
 

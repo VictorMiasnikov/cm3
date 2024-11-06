@@ -45,8 +45,10 @@ PROCEDURE Init (t: T;  f: File.T;  map: Quake.IDMap): T =
      WITH stat = f.status () 
      DO 
       size := VAL(stat.size, INTEGER);
+      IF size < 0 THEN RETURN NIL; END;
+      IF size > 10_1640000000 THEN RETURN NIL; END;
       t.buffer := NEW (REF ARRAY OF CHAR, MAX (0, size) + 1);
-      t.buflen := M3File.Read (f, t.buffer^, size);
+      t.buflen := M3File.Read (f, t.buffer^, MAX (0, size));
       IF (t.buflen # size) THEN RETURN NIL; END;
       t.buffer [t.buflen] := EOFChar;
      END;

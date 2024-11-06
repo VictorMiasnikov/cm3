@@ -1,4 +1,4 @@
-#! /usr/bin/env python2
+#! /usr/bin/env python
 
 import sys
 import os.path
@@ -266,9 +266,7 @@ def Setup(ExistingCompilerRoot, NewRoot):
 
     CopyConfigForDistribution(NewRoot) or sys.exit(1)
 
-    reload(pylib) or FatalError()
-
-    os.environ["CM3_INSTALL"] = ConvertToCygwinPath(NewRoot)
+    os.environ["CM3_INSTALL"] = NewRoot
 
 Setup(InstallRoot, InstallRoot_CompilerWithPrevious)
 RealClean(Packages) or FatalError()

@@ -1,0 +1,105 @@
+readonly TARGET_ENDIAN = "LITTLE"  % { "BIG" OR "LITTLE" }
+readonly TARGET_ARCH = "I386"
+readonly WORD_SIZE = "32BITS"      % { "32BITS" or "64BITS" }
+readonly OS_TYPE = "POSIX" % "WIN32" or "POSIX"
+
+% This is MS-DOS but probably worth giving it this more specific name.
+readonly TARGET_OS = "DJGPP"
+readonly TARGET = "I386_DJGPP"
+
+readonly NOPTHREAD = 1 % user threads
+
+% No networking, no gui.
+SYSTEM_LIBS =
+{
+  "LIBC" : [ ],
+}
+
+SYSTEM_LIBORDER = [ "LIBC" ]
+
+% Autotools did not work and has not been debugged.
+%
+% include("Autotools.common")
+
+% TODO config for cross
+% SYSTEM_CC = "/usr/bin/i586-pc-msdosdjgpp-g++.exe"
+
+M3_BACKEND_MODE = "C"
+
+% This should work, but does not.
+% It would not provide any performance gain,
+% as DJGPP is both single-threaded and single-processed.
+% https://github.com/modula3/cm3/issues/936
+%
+% M3_PARALLEL_BACK = 20              % host vs. target confusion
+
+include ("cm3cfg.common")
+
+proc compile_c(source, object, options, optimize, debug) is
+  % Something elsewhere is forming the paths incorrectly.
+  options       = escape(subst_chars(options, "\\", "/"))
+% driver has problems, skip it
+% i.e. it does not run a specific version, and many fail, or learn more flags to specify version?
+%
+% copy files locally to ease specifying output and language, there are not many
+% This way we can say gxx or cc1plus foo.x.cpp and get C++ compilation and output foo.x.o
+% without switches for either. This only affects hand written C++ in m3core,
+% not C++ backend output. Granted, by running cc1plus we are also affecting language choice.
+%
+  base = pn_lastbase (source)
+  local cpp = base & ".cpp"
+  if not equal (source, pn_last (source))
+    %symbolic_link_file (source, pn_last (source))
+    cp_if (source, cpp)
+    source = cpp
+  end
+
+% return try_exec ("gpp -c", source, "-o", object)
+
+  % -remap handles filenames like c++config vs. cxxconfig
+  % User might want to edit these paths.
+  local proc gcc (options, source, base) is
+    local gcc_versions = [10,
+                          9,
+                          8,
+                          7,
+                          "6.50",
+                          "5.50",
+                          "4.94",
+                          "4.85",
+                          "4.74",
+                          "3.46"]
+    foreach gccver in gcc_versions
+      local a = try_exec ("/libexec/gcc/djgpp/" & gccver & "/cc1plus -remap -quiet -g -o", base & ".s", options, source)
+      if equal (a, 0)
+        return a
+      end
+    end
+    return 1
+  end
+  local a = gcc (options, source, base)
+  if not equal (a, 0)
+    return a
+  end
+  return try_exec ("as", base & ".s", "-o", object)
+end
+
+proc m3_link(prog, options, objects, imported_libs, shared) is
+  % Something elsewhere is forming the paths incorrectly.
+  imported_libs = subst_chars(imported_libs, "\\", "/")
+  objects       = subst_chars(objects, "\\", "/")
+  exec ("gpp", "-v -o", prog, options, arglist("@", [objects, imported_libs]))
+  return 0
+end
+
+proc skip_lib(lib, shared) is
+  deriveds ("", [lib & ".lib"])
+  return 0
+end
+
+proc make_lib(lib, options, objects, imported_libs, shared) is
+  lib = "lib" & lib & ".a"
+  deriveds ("", [lib])
+  exec("ar", "cr", lib, arglist("@", objects))
+  return 0
+end

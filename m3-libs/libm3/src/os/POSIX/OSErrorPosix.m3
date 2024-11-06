@@ -7,20 +7,22 @@
 MODULE OSErrorPosix EXPORTS OSError, OSErrorPosix;
 
 IMPORT Atom, AtomList, Cerrno, Fmt, OSError, Text, Uerror;
+IMPORT RTIO, <*NOWARN*>RTParams;
 
-VAR cache := ARRAY [0..Uerror.Max] OF Atom.T {NIL, ..};
+VAR debug: BOOLEAN;
+VAR cache_of_OSErrorPosix_m3 := ARRAY [0..Uerror.Max] OF Atom.T {NIL, ..};
 (* The table is initialized lazily. *)
 
-PROCEDURE NewAtom (n: CARDINAL): Atom.T =
+PROCEDURE NewAtom (n: INTEGER): Atom.T =
   BEGIN
     RETURN Atom.FromText("errno=" & Fmt.Int(n));
   END NewAtom;
 
-PROCEDURE ErrnoAtom(n: CARDINAL): Atom.T =
+PROCEDURE ErrnoAtom(n: INTEGER): Atom.T =
   BEGIN
-    IF (n < NUMBER (cache)) THEN
-      IF cache[n] = NIL THEN cache[n] := NewAtom(n) END;
-      RETURN cache[n]
+    IF n >= 0 AND n < NUMBER (cache_of_OSErrorPosix_m3) THEN
+      IF cache_of_OSErrorPosix_m3[n] = NIL THEN cache_of_OSErrorPosix_m3[n] := NewAtom(n) END;
+      RETURN cache_of_OSErrorPosix_m3[n]
     ELSE
       RETURN NewAtom (n);
     END;
@@ -28,8 +30,9 @@ PROCEDURE ErrnoAtom(n: CARDINAL): Atom.T =
 
 EXCEPTION CheckedRuntimeError; <*FATAL CheckedRuntimeError*>
 
-PROCEDURE AtomToErrno(a: Atom.T): CARDINAL =
+PROCEDURE AtomToErrno(a: Atom.T): INTEGER =
   VAR t := Atom.ToText(a); n := 0; c: CHAR;
+      sign := 1;
   BEGIN
     IF NOT Text.Equal(Text.Sub(t, 0, 6), "errno=") THEN
       RAISE CheckedRuntimeError
@@ -38,12 +41,29 @@ PROCEDURE AtomToErrno(a: Atom.T): CARDINAL =
       c := Text.GetChar(t, i);
       IF '0' <= c AND c <= '9' THEN
         n := n * 10 + (ORD(c) - ORD('0'))
+      ELSIF c = '-' AND sign = 1 THEN
+        sign := -1;
       ELSE
         RAISE CheckedRuntimeError
       END
     END;
-    RETURN n
+    RETURN n * sign
   END AtomToErrno;
+
+PROCEDURE Raise0T (errno: INTEGER; t: TEXT) RAISES {OSError.E} =
+  BEGIN
+    IF t # NIL AND debug THEN
+      RTIO.PutText (t);
+      RTIO.PutText ("\n");
+      RTIO.Flush ();
+    END;
+    Raise0 (errno);
+  END Raise0T;
+
+PROCEDURE RaiseT (t: TEXT) RAISES {OSError.E} =
+  BEGIN
+    Raise0T (Cerrno.GetErrno (), t);
+  END RaiseT;
 
 PROCEDURE Raise0(errno: INTEGER) RAISES {OSError.E} =
   BEGIN
@@ -57,4 +77,5 @@ PROCEDURE Raise() RAISES {OSError.E} =
   END Raise;
 
 BEGIN
+  (* debug := RTParams.IsPresent ("debug-OSErrorPosix"); *)
 END OSErrorPosix.

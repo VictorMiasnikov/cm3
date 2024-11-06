@@ -1,7 +1,7 @@
 (* Copyright (C) 2017 Peter McKinna. All rights reserved. *)
 (* See file COPYRIGHT-BSD for details. *)
 
-UNSAFE MODULE Sudoku EXPORTS Main;
+MODULE Sudoku EXPORTS Main;
 
 IMPORT IntSeq,IntRefTbl,Random,RandomPerm,Text,Word;
 IMPORT IO,Fmt;
@@ -11,6 +11,7 @@ CONST
   Rank = N * N;
   Square = Rank * Rank;
   All = SetType{1,2,3,4,5,6,7,8,9};
+  GridLine = "---------------------------------------";
   
 EXCEPTION Contradict;
 EXCEPTION NotFound;
@@ -197,15 +198,13 @@ PROCEDURE Init() =
 
 PROCEDURE DisplayGrid(READONLY grid : ValuesType) =
   VAR
-    s,line : TEXT := "";
+    s : TEXT := "";
   BEGIN
-    FOR i := 0 TO 80 DO
-      line := Text.Cat(line,"-");
-    END;
     IO.Put("\n");
+    IO.Put(GridLine & "\n");
     FOR i := FIRST(Size) TO LAST(Size) DO
       s := Format(grid[i]);
-      IO.Put(Fmt.Pad(s,8));
+      IO.Put(Fmt.Pad(s,4));
       IF (i + 1) MOD N = 0 THEN
         IO.Put("|");
       END;
@@ -213,7 +212,7 @@ PROCEDURE DisplayGrid(READONLY grid : ValuesType) =
         IO.Put("\n");      
       END;
       IF (i+1) MOD (Rank * N) = 0 THEN
-        IO.Put("\n" & line & "\n");
+        IO.Put(GridLine & "\n");
       END;
     END;
   END DisplayGrid;
@@ -354,7 +353,7 @@ PROCEDURE ParseGrid(READONLY puzzle : ARRAY OF CHAR) : ValuesType RAISES {Contra
   END ParseGrid;
     
 (* Depth first search for a solution *)
-PROCEDURE Search(values : ValuesType) : RefVal RAISES {NotFound} = <*NOWARN*>
+PROCEDURE Search(READONLY values : ValuesType) : RefVal RAISES {NotFound} =
   VAR
     min : Size;
     sol : RefVal;
@@ -388,7 +387,7 @@ PROCEDURE Solve(puz : TEXT) =
     values : ARRAY Size OF CHAR;
     solution : RefVal;
   BEGIN
-    IO.Put(puz & "\n");
+    IO.Put("\n" & puz & "\n");
 
     Text.SetChars(values,puz);
     TRY

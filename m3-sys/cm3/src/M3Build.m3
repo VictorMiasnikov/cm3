@@ -1469,6 +1469,10 @@ PROCEDURE DoLibrary (m: QMachine.T;  <*UNUSED*> n_args: INTEGER)
     lib_a   := M3Path.Join (NIL, name, UK.M3LIB);
     lib_m3x := M3Path.Join (NIL, name, UK.LIBX);
     IF (t.mode = MM.Build) THEN
+      IF GetConfigBool (t, "TFILE") THEN
+        DoGenTFile(t,0);
+        RETURN;
+      END;
       Builder.BuildLib (name, t.units, SysLibs (t), t.build_shared, t);
       InstallDerived (t, lib_a);
       InstallDerived (t, lib_m3x);
@@ -1518,6 +1522,11 @@ PROCEDURE BuildProgram (t: T;  nm: M3ID.T)
   CONST Junk = ARRAY OF TEXT { ".map", ".lst", ".pdb" };
   VAR name := M3ID.ToText (nm);
   BEGIN
+    (* if we detect this flag just generate the .M3IMPTAB file and return *)
+    IF GetConfigBool (t, "TFILE") THEN
+      DoGenTFile(t,0);
+      RETURN;
+    END;
     (*** AddDerived (t, nm, UK.EXE, hidden := TRUE);  -- not needed ***)
     GenM3Exports (t, "_define_pgm(\"" & name & QRPCR);
     IF (t.mode = MM.Build) THEN

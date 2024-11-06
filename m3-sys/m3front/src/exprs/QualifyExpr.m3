@@ -134,7 +134,11 @@ PROCEDURE MethodType (e: Expr.T): Type.T =
 PROCEDURE Bounder (p: P;  VAR min, max: Target.Int) =
   BEGIN
     Resolve (p);
-    IF (p.inGetBounds) THEN Value.IllegalRecursion (p.rhsValue) END;
+    IF (p.inGetBounds) THEN
+      Value.IllegalRecursion (p.rhsValue);
+      EVAL Type.GetBounds (p.type, min, max);
+      RETURN;
+    END;
     p.inGetBounds := TRUE;
     CASE Value.ClassOf (p.rhsValue) OF
     | Value.Class.Expr => Expr.GetBounds (Value.ToExpr (p.rhsValue), min, max);
@@ -217,6 +221,7 @@ PROCEDURE ResolveTypes (p: P) =
       Value.IllegalRecursion (p.rhsValue);
       p.type := ErrType.T;
       p.repType := p.type;
+      RETURN;
     ELSE
       p.inTypeOf := TRUE;
       p.type := Value.TypeOf (p.rhsValue);
@@ -321,7 +326,7 @@ PROCEDURE QualifyExprAlign (p: P): Type.BitAlignT =
           fieldsAlign
             := MAX (fieldsAlign, ObjectType.FieldAlignment (lhsRepType) );
         END;
-        result := CG.GCD (fieldsAlign, fieldInfo.offset);
+        result := CG.GCD (MAX (fieldsAlign, fieldTypeAlign), fieldInfo.offset);
         <*ASSERT result MOD fieldTypeAlign = 0 *>
         RETURN result;
     END (*CASE*)
@@ -398,7 +403,7 @@ PROCEDURE Prep (p: P) =
         IF Host.doIncGC AND info.isTraced THEN
           CASE info.class OF
           | Type.Class.Object, Type.Class.Opaque, Type.Class.Ref =>
-            Compile (p);
+            Compile (p, StaticOnly := FALSE);
             RunTyme.EmitCheckLoadTracedRef ();
             p.temp := CG.Pop ();
           ELSE
@@ -412,7 +417,7 @@ PROCEDURE Prep (p: P) =
         IF Host.doIncGC AND info.isTraced THEN
           CASE info.class OF
           | Type.Class.Object, Type.Class.Opaque, Type.Class.Ref =>
-            Compile (p);
+            Compile (p, StaticOnly := FALSE);
             RunTyme.EmitCheckLoadTracedRef ();
             p.temp := CG.Pop ();
           ELSE
@@ -428,12 +433,13 @@ PROCEDURE Prep (p: P) =
     END;
   END Prep;
 
-PROCEDURE Compile (p: P) =
+PROCEDURE Compile (p: P; StaticOnly: BOOLEAN) =
   VAR
     obj_offset, obj_align: INTEGER;
     fieldInfo: Field.Info;
     method: Method.Info;
   BEGIN
+    IF StaticOnly THEN RETURN END;
     CASE p.class OF
     | Class.importDecl =>
         IF p.temp # NIL THEN
@@ -554,9 +560,10 @@ PROCEDURE PrepLV (p: P; traced: BOOLEAN) =
     END;
   END PrepLV;
 
-PROCEDURE CompileLV (p: P;  traced: BOOLEAN) =
+PROCEDURE CompileLV (p: P;  traced: BOOLEAN; StaticOnly: BOOLEAN) =
   VAR obj_offset, obj_align: INTEGER;  field: Field.Info;
   BEGIN
+    <* ASSERT NOT StaticOnly *>
     CASE p.class OF
     | Class.importDecl =>
         CASE Value.ClassOf (p.rhsValue) OF

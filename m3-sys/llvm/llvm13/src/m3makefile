@@ -1,0 +1,20 @@
+import("libm3")
+import("m3middle")
+import("m3quake")
+if equal (OS_TYPE, "POSIX")
+  LIB_DIR = ""
+  import_lib("LLVM-13",LIB_DIR) 
+end
+import("llvm13bindings")
+
+include("version.quake")
+version_impl("Version")
+
+module("M3CG_LLVM")
+
+implementation("Main")
+
+% ideally:
+%build_standalone()
+% but there are problems with it.
+Program("m3llvm")

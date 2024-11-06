@@ -48,7 +48,7 @@ set _cm3_CfgDone=FALSE
 set _cm3_Repeat=1
 set _cm3_DO=
 set _z_ctrlArgs=
-set _z_Stage3=min
+set _z_Stage3=all
 
 
 
@@ -113,7 +113,7 @@ cd ..
 if exist "bin\cm3.exe" if exist "pkg" set CM3_ROOT=%CD%& popd & goto FoundRoot
 cd ..
 if exist "bin\cm3.exe" if exist "pkg" set CM3_ROOT=%CD%& popd & goto FoundRoot
-if exist "C:\cm3\bin\cm3.exe" if exist "C:\cm3\pkg" set CM3_ROOT=C:\cm3& popd & goto FoundRoot
+if exist "D:\cm3\bin\cm3.exe" if exist "D:\cm3\pkg" set CM3_ROOT=D:\cm3& popd & goto FoundRoot
 popd
 rem otherwise, search the existing PATH environment variable to try and find the root of the cm3 installation
 for %%F in (cm3.exe) do set CM3_ROOT=%%~dp$PATH:F..
@@ -138,7 +138,7 @@ echo.
 if /I "%_cm3_CommandReady%"=="TRUE" goto FindPkgInfo
 echo Setting up environment variables for CM3 ...
 echo.
-call c:\cm3\bin\cm3CommandShell.CMD SameWindow
+call d:\cm3\bin\cm3CommandShell.CMD SameWindow
 @echo off
 if /I not "%_cm3_CommandReady%"=="TRUE" goto FatalSetupCM3
 
@@ -232,13 +232,13 @@ if /I not "%_cm3_CfgDone%"=="TRUE" call :FN_UpdateConfig
 echo Creating config ...
 if not exist "%CM3_ROOT%\bin\config" mkdir %CM3_ROOT%\bin\config
 if not exist "%CM3_ROOT%\bin\config" echo ERROR:  Unable to create folder "%CM3_ROOT%\bin\config" & (set _cm3_ExitCode=5) & goto END
-copy /y %_cm3_PkgTree%m3-sys\cminstall\src\config-no-install\* %CM3_ROOT%\bin\config
+copy /y %_cm3_PkgTree%m3-sys\cminstall\src\config\* %CM3_ROOT%\bin\config
 if errorlevel 1 echo ERROR:  Problem copying files. & (set _cm3_ExitCode=5) & goto END
 echo Creating "%CM3_ROOT%\bin\cm3.cfg" ...
 if exist "%CM3_ROOT%\bin\cm3.cfg" del /f %CM3_ROOT%\bin\cm3.cfg
 REM OLD: echo INSTALL_ROOT = path() ^& "/..">%CM3_ROOT%\bin\cm3.cfg
-REM OLD: echo include(path() ^& "/config/NT386")>>%CM3_ROOT%\bin\cm3.cfg
-copy /y %_cm3_PkgTree%m3-sys\cminstall\src\config-no-install\cm3.cfg %CM3_ROOT%\bin\cm3.cfg
+REM OLD: echo include(path() ^& "/config/I386_NT")>>%CM3_ROOT%\bin\cm3.cfg
+copy /y %_cm3_PkgTree%m3-sys\cminstall\src\config\cm3.cfg %CM3_ROOT%\bin\cm3.cfg
 if errorlevel 1 echo ERROR:  Problem copying files. & (set _cm3_ExitCode=5) & goto END
 if not exist "%CM3_ROOT%\bin\cm3.cfg" echo ERROR:  Problem copying files. & (set _cm3_ExitCode=5) & goto END
 if not "%_cm3_Verbose%"=="TRUE" goto SkipCFGlist
@@ -287,12 +287,12 @@ goto END
 :FN_FinishStage
 :--------------
 if "%_cm3_CM3Failure%"=="TRUE" echo ...skipping installation of cm3.exe due to errors... & goto :EOF
-if not exist "%_cm3_PkgTree%m3-sys\cm3\NT386\cm3.exe" goto StageFailure
+if not exist "%_cm3_PkgTree%m3-sys\cm3\I386_NT\cm3.exe" goto StageFailure
 echo ...installing new cm3.exe as "%CM3_ROOT%\bin\cm3.exe" ...
 if exist "%CM3_ROOT%\bin\cm3.exe" del /f "%CM3_ROOT%\bin\cm3.exe"
 if exist "%CM3_ROOT%\bin\cm3.pdb" del /f "%CM3_ROOT%\bin\cm3.pdb"
-copy "%_cm3_PkgTree%m3-sys\cm3\NT386\cm3.exe" "%CM3_ROOT%\bin\cm3.exe"
-if exist "%_cm3_PkgTree%m3-sys\cm3\NT386\cm3.pdb" copy "%_cm3_PkgTree%m3-sys\cm3\NT386\cm3.pdb" "%CM3_ROOT%\bin\cm3.pdb"
+copy "%_cm3_PkgTree%m3-sys\cm3\I386_NT\cm3.exe" "%CM3_ROOT%\bin\cm3.exe"
+if exist "%_cm3_PkgTree%m3-sys\cm3\I386_NT\cm3.pdb" copy "%_cm3_PkgTree%m3-sys\cm3\I386_NT\cm3.pdb" "%CM3_ROOT%\bin\cm3.pdb"
 if not exist "%CM3_ROOT%\bin\cm3.exe" goto StageFailure
 goto :EOF
 
@@ -307,7 +307,6 @@ goto :EOF
 :FN_UpdateConfig
 :---------------
 echo Removing obsolete configuration files from %CM3_ROOT%\bin ...
-for %%f in (%_cm3_PkgTree%m3-sys\cminstall\src\config-no-install\*) do call :Zap %%f %CM3_ROOT%\bin
 for %%f in (%_cm3_PkgTree%m3-sys\cminstall\src\config\*) do call :Zap %%f %CM3_ROOT%\bin
 echo.
 set _cm3_CfgDone=TRUE

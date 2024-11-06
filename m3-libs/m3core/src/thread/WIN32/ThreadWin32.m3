@@ -55,7 +55,7 @@ REVEAL
     END;
 
   TYPE ActState = { Starting, Started, Stopping, Stopped };
-  TYPE Activation = UNTRACED BRANDED REF RECORD
+REVEAL Activation = UNTRACED BRANDED REF RECORD
       frame: ADDRESS := NIL;            (* exception handling support; this field is accessed MANY times
                                          * so perhaps therefore should be first *)
       next, prev: Activation := NIL;    (* LL = activeLock; global doubly-linked, circular list of all active threads *)
@@ -412,7 +412,7 @@ PROCEDURE Alert(t: T) =
   END Alert;
 
 PROCEDURE XTestAlert(self: Activation): BOOLEAN =
-  VAR wait: DWORD;
+  VAR wait: DWORD := 0;
   BEGIN
     IF self = NIL THEN
       (* Not created by Fork; not alertable *)
@@ -454,7 +454,7 @@ PROCEDURE Self (): T =
 
 PROCEDURE AssignSlot (t: T) =
   (* LL = 0, cause we allocate stuff with NEW! *)
-  VAR n: CARDINAL;  old_slots, new_slots: REF ARRAY OF T;
+  VAR n: CARDINAL := 0;  old_slots, new_slots: REF ARRAY OF T := NIL;
       retry := TRUE;
   BEGIN
     EnterCriticalSection(ADR(slotLock));
@@ -544,7 +544,7 @@ PROCEDURE CreateT (act: Activation): T =
   END CreateT;
 
 PROCEDURE CleanThread(r: REFANY) =
-  VAR t: T;
+  VAR t: T := NIL;
   BEGIN
     IF r # NIL THEN
       t := NARROW(r, T);
@@ -714,8 +714,8 @@ PROCEDURE AlertPause(n: LONGREAL) RAISES {Alerted} =
 
 PROCEDURE XPause(self: Activation; n: LONGREAL; alertable: BOOLEAN) RAISES {Alerted} =
   VAR amount := n;
-      thisTime: LONGREAL;
-      wait: DWORD;
+      thisTime: LONGREAL := 0.0d0;
+      wait: DWORD := 0;
       alerted := FALSE;
   CONST LAST_CARDINAL32 = 16_7FFFFFFF;
         Limit = FLOAT(LAST_CARDINAL32, LONGREAL) / 1000.0D0 - 1.0D0;
@@ -789,13 +789,13 @@ VAR suspend_cnt: CARDINAL := 0; (* LL = activeLock *)
 
 PROCEDURE SuspendOthers () =
   (* LL=0. Always bracketed with ResumeOthers which releases "activeLock". *)
-  VAR me: Activation;
-      act: Activation;
-      retry: BOOLEAN;
+  VAR me: Activation := NIL;
+      act: Activation := NIL;
+      retry: BOOLEAN := FALSE;
   BEGIN
     EnterCriticalSection(ADR(activeLock));
 
-    <* ASSERT suspend_cnt = 0 *>
+    (* <* ASSERT suspend_cnt = 0 *> *)
     INC (suspend_cnt);
     IF suspend_cnt # 1 THEN
       RETURN
@@ -814,17 +814,25 @@ PROCEDURE SuspendOthers () =
              * Calling GetThreadContext DOES ensure it is. This is NOT documented.
              * It can be seen experimentally and matches what SSCLI does.
              *)
-  	    IF GetThreadContext(act.handle, act.context) = 0 THEN Choke(ThisLine()) END;
-  	    act.stackPointer := StackPointerFromContext(act.context);
-            IF act.heapState.inCritical # 0 THEN
-              IF ResumeThread(act.handle) = -1 THEN Choke(ThisLine()) END;
-              retry := TRUE;
-              SetState(act, ActState.Started);
+  	    IF GetThreadContext(act.handle, act.context) # 0 THEN 
+  	      act.stackPointer := StackPointerFromContext(act.context);
+              IF act.heapState.inCritical = 0 THEN
+                INC(act.suspendCount);
+                <* ASSERT act.suspendCount = 1 *>
+                SetState(act, ActState.Stopped);
+              ELSE
+                IF ResumeThread(act.handle) = -1 THEN Choke(ThisLine()) END;
+                retry := TRUE;
+                SetState(act, ActState.Started);
+              END;
             ELSE
-              INC(act.suspendCount);
-              <* ASSERT act.suspendCount = 1 *>
-              SetState(act, ActState.Stopped);
-            END;
+                Choke(ThisLine()) 
+  	      (* VVM Temporary Off 
+                IF ResumeThread(act.handle) = -1 THEN Choke(ThisLine()) END;
+                retry := TRUE;
+                SetState(act, ActState.Started);
+              *)
+  	    END;
           END;
         END;
         act := act.next;
@@ -838,10 +846,10 @@ PROCEDURE SuspendOthers () =
 
 PROCEDURE ResumeOthers () =
   (* LL=activeLock.  Always preceded by SuspendOthers. *)
-  VAR act: Activation;
-      me: Activation;
+  VAR act: Activation := NIL;
+      me: Activation := NIL;
   BEGIN
-    <* ASSERT suspend_cnt = 1 *>
+    (* <* ASSERT suspend_cnt = 1 *> *)
     DEC (suspend_cnt);
     IF suspend_cnt = 0 THEN
       me := GetActivation();
@@ -1019,7 +1027,7 @@ PROCEDURE Init() =
  *       Assertion failures depend on some of Init having run. (e.g. SetActivation)
  *       Test by making the ASSERT fail.
  *)
-  VAR self: T;
+  VAR self: T := NIL;
       me := NEW(Activation);
   BEGIN
     WinBase.InitializeCriticalSection(ADR(activeLock));

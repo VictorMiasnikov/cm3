@@ -17,12 +17,23 @@ Module("FilePosix")
 
 implementation("FSPosix")
 implementation("PipePosix")
-implementation("PathnamePosix")
-implementation("SocketPosix")
+
+% TODO: Portable source, portable bootstrap, remove this if.
+if equal (TARGET_OS, "DJGPP")
+  % Path is like c:/foo so use ../Win32/PathnameWin32
+  implementation("SocketNone")
+else
+  implementation("SocketPosix")
+  implementation("PathnamePosix")
+end
+
 implementation("OSConfigPosix")
 
 module("ProcessPosixCommon")
-if equal (TARGET, "NT386")
+
+% Cygwin can use faster spawn sometimes instead of fork/exec.
+% TODO: Portable source, portable bootstrap, remove this if.
+if equal (TARGET_OS, "CYGWIN")
     implementation("ProcessCygwin")
 else
     implementation("ProcessPosix")
