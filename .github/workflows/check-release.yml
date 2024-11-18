@@ -9,7 +9,7 @@ on:
         required: true
 
 env:
-  CM3RELEASE: https://github.com/modula3/cm3/releases/download/${{ github.event.inputs.tag }}
+  CM3RELEASE: https://github.com/VictorMiasnikov/cm3/releases/download/${{ github.event.inputs.tag }}
 
 jobs:
   AMD64_DARWIN:
