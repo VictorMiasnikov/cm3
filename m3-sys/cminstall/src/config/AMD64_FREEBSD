@@ -1,8 +1,7 @@
-readonly TARGET = "AMD64_NETBSD"
-readonly GNU_PLATFORM = "amd64-netbsd" % "cpu-os" string for GNU
+readonly TARGET = "AMD64_FREEBSD"
+readonly GNU_PLATFORM = "amd64-freebsd" % "cpu-os" string for GNU
 
-SYSTEM_CC = "g++ -g -m64 -fPIC -g"
-SYSTEM_LD = SYSTEM_CC & " -Wl,-z,now"
+SYSTEM_CC = "c++ -fPIC -g"
 
 % Sometimes stabs are incorrect for C.
 % But Dwarf interferes with m3gdb.
@@ -30,4 +29,4 @@ readonly SYSTEM_ASM = "as -64"
 readonly POSITION_INDEPENDENT_EXECUTABLE = "-no-pie"
 
 include("AMD64.common")
-include("NetBSD.common")
+include("FreeBSD.common")
