@@ -1,8 +1,33 @@
-readonly TARGET = "AMD64_FREEBSD"
-readonly GNU_PLATFORM = "amd64-freebsd" % "cpu-os" string for GNU
+readonly TARGET = "AMD64_NETBSD"
+readonly GNU_PLATFORM = "amd64-netbsd" % "cpu-os" string for GNU
 
-SYSTEM_CC = "c++ -fPIC"
+SYSTEM_CC = "g++ -g -m64 -fPIC -g"
+SYSTEM_LD = SYSTEM_CC & " -Wl,-z,now"
+
+% Sometimes stabs are incorrect for C.
+% But Dwarf interferes with m3gdb.
+% https://gcc.gnu.org/bugzilla/show_bug.cgi?id=99457
+%
+if defined("M3_BACKEND_MODE")
+  if not equal(M3_BACKEND_MODE, "C")
+    SYSTEM_CC = SYSTEM_CC & "stabs+"
+    SYSTEM_CXXC = SYSTEM_CXXC & "stabs+"
+  end
+else
+  % It will likely not default to C.
+  SYSTEM_CC = SYSTEM_CC & "stabs+"
+  SYSTEM_CXXC = SYSTEM_CXXC & "stabs+"
+end
+
 readonly SYSTEM_ASM = "as -64"
 
+%uncomment this define to use zero cost exception handling
+%M3_USE_STACK_WALKER = TRUE
+
+% PIE debugging requires gdb 7.1 or newer, even for C
+% see http://www.gnu.org/software/gdb/download/ANNOUNCEMENT
+%uncomment this define to use m3gdb
+readonly POSITION_INDEPENDENT_EXECUTABLE = "-no-pie"
+
 include("AMD64.common")
-include("FreeBSD.common")
+include("NetBSD.common")
