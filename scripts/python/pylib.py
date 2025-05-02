@@ -2029,8 +2029,15 @@ def MakeMSIWithWix(input):
     wix = open(input + ".wxs", "w")
     wix.write("""<?xml version='1.0' encoding='windows-1252'?>
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
-    <Product Name='Modula-3' Id='%s' Language='1033' Codepage='1252' Version='1.0.0' Manufacturer='.'>
-        <Package Id='*' Keywords='.' Description="." Comments='.' Manufacturer='.' InstallerVersion='100' Languages='1033' Compressed='yes' SummaryCodepage='1252'/>
+    <Product Name='Modula-3 5.11.9.25041221' Id='%s' UpgradeCode='ba24912d-ba68-4235-8573-bf977ad82faf' Language='1033' Codepage='1252' Version='5.11.9.25041221' Manufacturer='.'>
+        <Package Id='ab24912d-ba68-4235-8573-bf977ad82faf' Keywords='.' Description="." Comments='.' Manufacturer='.' InstallerVersion='100' Languages='1033' Compressed='yes' SummaryCodepage='1252'/>
+        <Upgrade Id='ba24912d-ba68-4235-8573-bf977ad82faf'>
+            <UpgradeVersion 
+                Minimum="5.11.4.00000000"  IncludeMinimum="yes"
+                Maximum="5.11.9.25041221"  IncludeMaximum="no"
+                Property="PREVIOUSVERSIONSINSTALLED" 
+            />
+        </Upgrade>
         <Media Id='1' Cabinet='Sample.cab' EmbedCab='yes'/>
         <Directory Id='TARGETDIR' Name='SourceDir'>
             <Directory Id='INSTALLDIR' Name='cm3'>""" % (str(uuid.uuid4()).upper()))
@@ -2080,8 +2087,12 @@ def MakeMSIWithWix(input):
     wix.write("""
         </Feature>
         <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR"/>
+        <Property Id="PREVIOUSVERSIONSINSTALLED" Secure="yes" />
         <UIRef Id="WixUI_InstallDir" />
         <UIRef Id="WixUI_ErrorProgressText" />
+        <InstallExecuteSequence>
+          <RemoveExistingProducts After='InstallInitialize' />
+        </InstallExecuteSequence>
     </Product>
 </Wix>
 """)
