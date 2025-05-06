@@ -12,6 +12,9 @@ jobs:
   AMD64_DARWIN:
     uses: VictorMiasnikov/cm3/.github/workflows/amd64_darwin.yml@d5.11.9-ZZYYXX-20250412_21-05
 
+  ARM64_DARWIN:
+    uses: VictorMiasnikov/cm3/.github/workflows/arm64_darwin.yml@d5.11.9-ZZYYXX-20250412_21-05
+
   AMD64_LINUX:
     uses: VictorMiasnikov/cm3/.github/workflows/amd64_linux.yml@d5.11.9-ZZYYXX-20250412_21-05
 

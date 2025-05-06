@@ -5,7 +5,7 @@ on:
   workflow_call:
     inputs:
       os:
-        default: macos-latest
+        default: macos-latest-large
         required: false
         type: string
       release:
@@ -20,7 +20,7 @@ on:
 jobs:
   build-and-test:
     runs-on: ${{ inputs.os }}
-    timeout-minutes: 75
+    timeout-minutes: 80
 
     strategy:
       fail-fast: false
