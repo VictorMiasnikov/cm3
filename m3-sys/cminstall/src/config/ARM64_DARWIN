@@ -1,4 +1,4 @@
-readonly M3_BACKEND_MODE = "C"
+M3_BACKEND_MODE = "C"
 readonly TARGET = "ARM64_DARWIN"
 
 readonly DarwinArch = "arm64"
