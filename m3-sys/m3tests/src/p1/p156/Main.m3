@@ -31,6 +31,8 @@ CONST
   s = SET OF CHAR {'0' .. '9'};
 
 BEGIN
+  Test.check ('7' IN s);
+  Test.check (NOT ('A' IN s));
   Test.check (E.a2 IN p);
   Test.check (NOT (E.b3 IN p));
   Test.check (E.c4 IN p);
