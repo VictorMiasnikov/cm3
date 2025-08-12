@@ -1,0 +1,18 @@
+/*                   This file is part of m2tom3
+       (C) 1991-1994 Lehrstuhl fuer Informatik III, RWTH Aachen
+                         All Rights Reserved
+*/
+
+m3_option       ("-O")
+
+import          ("libm3")
+
+include_dir     ("Utilities")
+include_dir     ("SourceGraphs")
+include_dir     ("Analyzer")
+include_dir     ("Generator")
+include_dir     ("GraphView")
+
+implementation  ("M2toM3")
+
+Program         ("m2tom3")

@@ -1,0 +1,31 @@
+/*                   This file is part of m2tom3
+       (C) 1991-1994 Lehrstuhl fuer Informatik III, RWTH Aachen
+                         All Rights Reserved
+*/
+
+m3_option       ("-O")
+
+import          ("libm3")
+
+if equal (TARGET, "SPARC")
+  include_dir   ("sunos-4-x")
+else if equal (TARGET, "SOLgnu") or equal (TARGET, "SOLsun")
+  include_dir   ("solaris-2-x")
+else
+  error ("unsupported target: " & TARGET & CR)
+end end
+
+Module          ("M2UnixParam")
+Module          ("M2InOut")
+Module          ("M2Text")
+Module          ("M2String")
+Module          ("M2Convert")
+Module          ("M2Clock")
+Module          ("M2MathLib")
+Module          ("M2ConvertReal")
+
+Module          ("Storage")
+Interface       ("CCALL")
+Module          ("SYSTEM")
+
+Library         ("m2libs")

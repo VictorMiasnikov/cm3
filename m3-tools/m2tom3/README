@@ -1,0 +1,1468 @@
+----------------------------------------------------------------------
+                         m2tom3 version 2.03
+       (C) 1991-1995 Lehrstuhl fuer Informatik III, RWTH Aachen
+                         All Rights Reserved
+
+            Peter Klein (pk@i3.informatik.rwth-aachen.de)
+                              04.09.1995
+----------------------------------------------------------------------
+
+This is the README file for m2tom3 2.03. This system is free software;
+you can redistribute it and/or modify it under the terms of the GNU
+Library General Public License as published by the Free Software
+Foundation; either version 2 of the License, or (at your option) any
+later version.
+
+This library is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Library General Public License for more details.
+
+You should have received a copy of the GNU Library General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+----------------------------------------------------------------------
+
+Contents
+
+ 1.    What is m2tom3?
+ 2.    Requirements
+ 3.    Installation
+ 4.    The Converter
+  4.1. Overview
+  4.2. Known Bugs and Quirks
+  4.3. A Tour through the Internals
+ 5.    The Library
+ 6.    Contributions
+ 7.    History & Credits
+
+ A.    Conversion Details
+ B.    The Modula-2 Grammar
+ C.    Changes since Version 2.00
+
+----------------------------------------------------------------------
+
+1. What is m2tom3?
+
+m2tom3 is a system to port Modula-2 programs to Modula-3. It consists
+of two parts:
+
+ - A conversion program which tries to create a Modula-3 source text
+   with the same semantics as the Modula-2 input while retaining the
+   original look and feel as good as possible.
+
+ - A base library which tries to emulate the Modula-2 standard library
+   using the Modula-3 standard library.
+
+----------------------------------------------------------------------
+
+2. Requirements
+
+The system was developed and tested with Modula-3 3.3 on SPARC/SunOS
+4.1.3. The conversion program should be quite platform-independent,
+since no low-level operations are used. The base library, however,
+depends in parts on an underlying Unix system and might be unusable on
+other platforms. From version 2.03 on, m2tom3 and m2libs should work
+with Solaris 2.4 and Modula-3 3.5.x as well.
+
+----------------------------------------------------------------------
+
+3. Installation
+
+Unpack the distribution in an appropriate directory. To build the base
+library, run m3build in the m2libs subdirectory. To build the
+converter, run m3build in the m2tom3 subdirectory.
+
+----------------------------------------------------------------------
+
+4. The Converter
+
+4.1. Overview
+
+The m2tom3 program tries to create a Modula-3 source text with the
+same semantics as its Modula-2 input. Although the languages look
+quite similar in appearance, their semantics are pretty different in
+some points. Some differences between them can be handled readily,
+some are quite intricate, and some are practically impossible to
+translate. For a detailed description of the differences we found
+between Modula-2 and Modula-3 and if resp. how they are addressed by
+the converter, see the appendix.
+
+The program takes a few options, some of which are for development
+purposes only. To see all the options, start the executable with
+-h. The following options are useful for the final user:
+
+Reporting:
+-q      quiet: report no warnings, only errors
+-v      verbose: report course of action to stdout
+-F      File: include errors and warnings in the generated Modula-3
+        source code as special comments
+
+Paths:
+-I path Include: add a search path for Modula-2 imports
+-O path Output: set path for Modula-3 output
+
+Transformation (see appendix):
+-f      for: do not change FOR-loops into WHILE-loops
+-s      string: do not change string literals
+-r      make all call-by-value ARRAYs READONLY
+
+Misc:
+-h      help: show all options
+
+All other parameters are supposed to be Modula-2 input files which
+should be converted. For every <file>.def/<file>.mod input file, a
+corresponding <file>.i3/<file>.m3 file is created.
+
+Note 1: No recovery or extended type checking is performed. So, if you
+feed the converter with source text which doesn't run through a
+Modula-2 compiler, m2tom3 might produce wrong output or even crash.
+
+Note 2: The quality of the Modula-3 output depends heavily on the fact
+that m2tom3 can reach all declarations/definitions for the things you
+use in your source text. Therefore, m2tom3 will analyse all definition
+modules which are imported by the current unit. If m2tom3 can't find
+them in the current directory, additional search paths should be set
+up using the -I option. If a definition module cannot be found, m2tom3
+is restricted in the transformations it can perform on the source
+text.
+
+Note 3: The converter can take an arbitrary number of source texts as
+input. All these units are scanned and parsed into one big data
+structure. This is advantageous because often used interfaces are
+scanned and parsed only once and not over and over again for every
+input unit which uses this interface. However, if the overall input
+size passes a certain limit (depending on your machine), this data
+structure gets so big that m2tom3's performance deteriorates
+drastically.
+
+4.2. Known Bugs and Quirks (also see Appendix A, Conversion Details)
+
+Firstly and most important, m2tom3 is a Class A Resource Hog. The more
+complex your input gets, the converter will run almost forever while
+using an incredible amount of swap space, especially during the
+identifier linkage phase. Right now, I don't know how to change
+this. Sorry.
+
+The converter makes some transformations on standard functions /
+types. If you use their names for other purposes, m2tom3 may crash or
+produce strange results. Particularly, check that you don't (re)define
+the following identfiers: ADR, VAL, CHR, BYTE, SIZE, TSIZE, ODD, MIN,
+MAX, HIGH.
+
+Even if your Modula-2 compiler allows, don't reuse module names for
+anything else. The identifier linker may get a headache.
+
+If an enumeration type literal is also used for some other identifier,
+m2tom3 gets mixed up.
+
+Using anonymous types (i.e. types which are not explicitely named) for
+FOR-loop index variables causes m2tom3 to use a NoType instead of
+copying the type specification into the expression.
+
+On several occasions, m2tom3 moves or copies identifiers from one
+source text to another without bothering whether this identifier is
+declared (imported) in the target unit.
+
+In the declaration of variant records, the qualification of
+enumeration type literals in the case label sequence is not removed if
+there is more than one label.
+
+* If you encounter problems not listed here, please let me know. *
+
+4.3. A Tour through the Internals
+
+m2tom3 was designed to allow transformations to be added or changed
+easily. For those who want to tune the transformations to their needs,
+this section gives an overview on how m2tom3 works. However, m2tom3
+depends heavily on the underlying Modula-2 grammar which is given in
+the appendix. If you want to convert source text which does not
+correspond to this grammar, major changes to the program might be
+inevitable.
+
+The converter works in three phases:
+
+ 1. Analyzing
+  1.1. The Scanner transforms the source text into a token stream.
+  1.2. The Parser creates a concrete (!) syntax tree from the token
+       stream. This tree is build on top of the token stream in the
+       same data structure, i.e. the leafs of the syntax tree have
+       pointers to the corresponding tokens in the stream.
+  1.3. The IdentifierLinker adds edges to the syntax tree which
+       connect applying and defining usages of identifiers.
+  1.4. The ParameterLinker adds edges to the syntax tree which connect
+       actual parameters in procedure calls to the types of the
+       corresponding formal parameters in the procedure's
+       definition/declaration.
+
+  If you change anything in the Analyzer, the Generator may or may not
+  break down completely.
+
+ 2. Generating
+  The Generator runs through the syntax tree and looks for things to
+  convert. Most transformations are handled in separate modules, you
+  might take a look e.g. at the CHRGen module for a simple example.
+  Most of the time, these modules traverse the syntax structure of the
+  source to gather information and to insert or remove text at the
+  right place. This is the reason for the generator being so dependent
+  on the grammar: if you change the syntax tree structure, it is often
+  very hard to determine which navigation operations have to be
+  modified.
+
+  The generation of new Modula-3 source text is handled only on token
+  level, i.e. the syntax tree itself is not changed during the
+  transformation. Furthermore, no tokens are actually removed from the
+  token stream. Instead, each token knows to which language(s) it
+  belongs. Initially, all tokens are assumed to be Modula-2 as well as
+  Modula-3 tokens. During the transformation, new tokens are inserted
+  which are Modula-3 tokens only, and other tokens are recognized not
+  to be Modula-3 tokens.
+
+ 3. Saving
+  Finally, the generated result is saved by traversing the token
+  stream and writing all Modula-3 tokens to a file.
+
+----------------------------------------------------------------------
+
+5. The Library
+
+After a source text has been converted using m2tom3, the resulting
+Modula-3 program will generally not compile because the Modula-2
+standard modules used by the program are not compatible with the
+Modula-3 standard library. Therefore, the system provides some modules
+which emulate this Modula-2 standard library. Note, however, that this
+library is very restricted. First of all, it is based on the the
+Modula-2 standard library from the Sun Modula-2 compiler, also
+available in the EPC Modula-2 compiler. Even here, the emulation is
+far from being complete. Furthermore, the library modules are written
+to run on a Unix system. Last but not least, a Modula-3 program using
+the Modula-2 library emulation instead of corresponding Modula-3
+library functions will be much slower. So, if your program was written
+for a compiler with a different standard library, you have to extend
+the emulation library accordingly or modify the program to use the
+Modula-3 library.
+
+----------------------------------------------------------------------
+
+6. Contributions
+
+Since the m2tom3 system was developed in a project course, I won't be
+able to put much work into it. But if you find errors in the program
+or library, or if you make extensions or changes which might be useful
+to others, please let me know. I will try to include them in future
+releases.
+
+----------------------------------------------------------------------
+
+7. History & Credits
+
+The historical roots of m2tom3 lie in a recursive-descendent Modula-2
+parser written by Frank Hoefer in 1990. We used it to build several
+Modula-2 applications like a pretty printer, a lint program, and a tag
+file generator for Modula-2.
+
+In 1991, I modified the pretty printer to produce Modula-3 instead of
+Modula-2 output where possible. Of course, this approach could handle
+only simple syntactical conversions. Later, I bootstrapped the system
+by porting it to Modula-3. This was the first release of m2tom3, 1.00.
+
+In the following years, only two minor bug fixes brought m2tom3 to
+version 1.02.
+
+In 1994, a project course was dedicated to a complete new
+implementation of m2tom3. The course was supervised by Albert Zuendorf
+and myself and attended by Roland Baumann, Gerhard Bosch, Kai Michael
+Degner, Andre Eylmanns, Juergen Goebbels, Reiner Gombert, Joachim
+Herrmann, Markus Jansen, Robert Kiehne, Marc Lindner, Reiner Nix,
+Jean-Baptiste Petat, Alexander Poensgen, Jean-Luc Richard, Thomas
+Stockheim, and Andreas Winter.
+
+Version 2.01 is a bugfix release. Some errors and patches were
+contributed by Rodney Bates (bates@salsv6.boeing.com).
+
+Version 2.02 is another bugfix release. Most important, a bugfix in
+2.01 introduced an even more serious bug. I hope this is solved now.
+
+Version 2.03 contains minor bugfixes, support for the -r flag (makes
+call-by-value ARRAY parameters READONLY), introduces Solaris 2.x
+versions of OS-related interfaces, and adds M2MathLib and
+M2ConvertReal modules to m2libs (credits to Roland Baumann).
+
+See appendix C for a detailed description of the changes made since
+version 2.00.
+
+I'd like to thank all of the above for their efforts.
+
+----------------------------------------------------------------------
+
+Appendix A. Conversion Details
+
+( 1) WITH Statement
+
+    Modula-2:
+      A WITH statement opens a new scope where the record fields
+      of the designated record are visible. The designator is
+      calculated once (important to side effects).
+
+    Changes to Modula-3:
+      The record fields aren't visible any more. The designator part
+      of the statement doesn't match Modula-3 syntax.
+
+    Handling:
+      A Modula-3 WITH statement is introduced which declares an
+      identifier. This identifier is assigned the expression from
+      the Modula-2 WITH statement. Occurences of record components
+      within the statement are qualified by the new identifier.
+
+( 2) Grammar Rule of Block
+
+    Modula-2:
+      Block ::= {Declaration} ['BEGIN' StatementSequence] END
+
+    Changes to Modula-3:
+      Block ::= {Declaration} BEGIN StatementSequence END
+
+      The keyword BEGIN can't be ommited.
+
+    Handling:
+      The BEGIN keyword is inserted if not present.
+
+( 3) Local Modules
+
+    Modula-2:
+      Every declaration part may contain local modules.
+
+    Changes to Modula-3:
+      Local modules aren't supported.
+
+    Handling:
+      None.
+
+( 4) Empty Procedure Signature
+
+    Modula-2:
+      A procedure specification, definition, declaration or call may
+      omit parentheses when the signature is empty. This problem
+      includes also procedure variables and procedure assignments.
+
+    Changes to Modula-3:
+      At least parentheses must be written.
+
+    Handling:
+      Missing parentheses are inserted.
+
+( 5) String and CHAR Literals
+
+    Modula-2:
+      1. The type of string literals is ARRAY [0..n] OF CHAR.
+      2. String literals may be enclosed by single or double quotes.
+      3. 'a', "a" may be a string or CHAR literal.
+
+    Changes to Modula-3:
+      1. The type of string literal is TEXT.
+      2. String literals are enclosed by double quotes.
+      3. CHAR literals are enclosed by single quotes.
+
+    Handling:
+      1. String literals are converted to ARRAY OF CHARs using an
+         array constructor. We have four different cases:
+         - The literal occurs in a constant declaration.
+           Then, an array with an additional zero character at the
+           end is generated. The size of the array is generated to
+           exactly contain all characters.
+         - The literal occurs as an actual parameter, and the type
+           of the corresponding formal parameter is an ARRAY OF CHAR.
+           This is handled as above.
+         - The literal occurs as an actual parameter, and the type
+           of the corresponding formal parameter is some
+           X = ARRAY [a..b] OF CHAR.
+           Here, an X constructor is generated with {\000,  ..} at
+           the end. Note that this may fail if the literal contains
+           exactly as many characters as X can hold.
+         - The literal occurs in the RHS of an assignment.
+           Then, a constructor without zero character is generated on
+           the RHS and a SUBARRAY expression is generated for the LHS.
+           The zero character is appended if the RHS variable is big
+           enough.
+         Note that this conversion can be switched off with the -s
+         option.
+         Note also that the cases in which the array occurs as an
+         actual parameter won't be handled if the procedure is called
+         via a procedure variable.
+      2., 3. This is handled by the Scanner using a heuristic. This
+             fails frequently when a one-character ARRAY OF CHAR is
+             found.
+
+( 6) Enumeration Types
+
+    Modula-2:
+      1. Enumeration elements in an enumeration type declaration
+         are enclosed in round brackets.
+      2. Enumeration literals are implicitly visible.
+
+    Changes to Modula-3:
+      1. Enumeration elements in an enumeration type declaration
+         are enclosed in braces.
+      2. Enumeration literals are qualified by their enumeration
+         type name.
+
+    Handling:
+      1. The brackets are replaced.
+      2. Handled by qualifying the enumeration literals.
+         This fails, of course, if the enumeration type is
+         anonymous.
+
+( 7) Variant Records
+
+    Modula-2:
+      A record definition may contain a variant part.
+
+    Changes to Modula-3:
+      Variant records aren't supported.
+
+    Handling:
+      The variant record is 'flattened', i.e. all variant field
+      will become regular fields.
+      Since the variant record may have been used for casting,
+      the applying occurences of variant record fields are marked
+      by warnings. There is no way for the converter to handle
+      this case in general.
+
+( 8) Operator Precedence
+
+    Modula-2:
+      Operator NOT has priority over all other operators.
+
+    Changes to Modula-3:
+      Operator NOT has lower priority than most other operators
+      (may be there are more changes).
+
+    Handling:
+      Handled by inserting parentheses around SimpleExpr, Term,
+      NotFactor if these items are not atomic.
+
+( 9) Typetransfer Using Type Names
+
+    Modula-2:
+      A type name may be used like a function to transfer the type of
+      an expression:
+
+        VAR
+          s: S;
+          t: T;
+        BEGIN
+          s := S(t);
+        END
+
+    Changes to Modula-3:
+      The unsafe type transfer operator LOOPHOLE should be used:
+
+          s := LOOPHOLE(t, S);
+
+    Handling:
+      Works for predefined types only.
+
+(10) Predefined (Standard) Datatypes
+
+    Modula-2:
+      Some standard or widely common datatypes are predefined like:
+      BITSET, BYTE, WORD, SHORTCARD, LONGCARD, SHORTINT, LONGINT,
+      LONGREAL.
+
+    Changes to Modula-3:
+      These types don't exist.
+
+    Handling:
+      Some of the types are defined in the m2libs SYSTEM module,
+      and an IMPORT is generated for them. CARDINAL is converted
+      into Word.T to retain unsigned int values.
+
+(11) CCALL Statements
+
+    Modula-2:
+      CCALL statements are used to call C procedures directly out of
+      the program. The called procedure is passed to CCALL as a string
+      in double quotes, an arbitrary number of parameters are passed
+      to the called C procedure by CCALL. CCALL has either no return
+      value or type integer depending on the called C procedure.
+
+          CCALL("bcopy", from, to, len);
+
+    Changes to Modula-3:
+      CCALL doesn't exist.
+
+    Handling:
+      The C procedures are assumed to be implemented in the Modula-3
+      module CCALL. The implementation may use external pragma.
+      The Modula-2 CCALL statement is replaced by importing the module
+      CCALL and calling the procedure determined by first argument of
+      the old statement, like in
+
+          CCALL.bcopy(from, to, len);
+
+(12) NEW and DISPOSE Pseudo Procedures
+
+    Modula-2:
+      NEW and DISPOSE are pseudo procedures.
+
+          NEW(t);
+          DISPOSE(t);
+
+      They will be expanded by the compiler to:
+
+        BEGIN
+          ALLOCATE(t, TSIZE(T));
+          DEALLOCATE(t, TSIZE(T));
+        END
+
+      Where t is assumed to be of type POINTER TO T. Procedures named
+      ALLOCATE and DEALLOCATE are assumed to be imported from an
+      arbitrary module.
+
+    Changes to Modula-3:
+      Syntax and semantic of NEW and DISPOSE change.
+      The procedures are internally realized statements.
+
+    Handling:
+      The pseudo procedures will be expanded to:
+
+          ALLOCATE(LOOPHOLE(t, ADDRESS), BYTESIZE(T));
+          DEALLOCATE(LOOPHOLE(t, ADDRESS), BYTESIZE(T));
+
+(13) Opaque Types
+
+    Modula-2:
+      An opaque type is declared in an interface by omitting its
+      realization. Originally, opaque types are restricted to pointer
+      types (T) but some implementations allow also other types (S).
+      Opaque types are realized by using a normal type declaration in
+      the appropriate implementation.
+
+      DEFINITION MODULE M;
+        TYPE T;
+        TYPE S;
+      END M.
+
+      IMPLEMENTATION MODULE M;
+        TYPE T = POINTER TO TRep;
+        TYPE S = SRep;
+      END M.
+
+    Changes to Modula-3:
+      Because of the generalization of the concept, the syntax of the
+      definition changes. Case (S) is not allowed. The realization uses
+      the REVEAL keyword:
+
+      INTERFACE M;
+        TYPE T <: ADDRESS;
+        TYPE S = SRep;
+      END M.
+
+      MODULE M;
+        REVEAL T = UNTRACED BRANDED REF TRep;
+      END M.
+
+    Handling:
+      (a) regular opaque types (T) are declared as subtypes of ADDRESS
+          and revealed with the old internal representation.
+
+      (b) other opaque types (S) are completely declared in the
+          interface. They are deleted from the implementation.
+
+(14) Standard Type ADDRESS
+
+    Modula-2:
+      The standard type ADDRESS is compatible to all pointer types:
+
+        PROCEDURE P (VAR adr: ADDRESS);
+        VAR t: POINTER TO T;
+        BEGIN
+          P(t);
+        END;
+
+    Changes to Modula-3:
+      The compatibility rules with respect to ADDRESS are more
+      restricted: ADDRESS is only a subtype of UNTRACED REF T. As a
+      result of the modified compability rules, it isn't necessary to
+      transform assignments but you can't pass an arbitrary pointer to
+      a variable argument of type ADDRESS. You should use the LOOPHOLE
+      operation:
+
+        PROCEDURE P (VAR adr: ADDRESS);
+        VAR t: POINTER TO T;
+        BEGIN
+          P(LOOPHOLE(t, ADDRESS));
+        END;
+
+    Handling:
+      Handled by casting the type using LOOPHOLE.
+
+(15) Standard Types BYTE / WORD
+
+    Modula-2:
+      (a) The standard types WORD and BYTE denote types which are
+          assignment compatible to all other types of the same size.
+
+      (b) In particular, formal parameters of type ARRAY OF BYTE,
+          ARRAY OF WORD are compatible to nearly arbitrary types.
+
+    Changes to Modula-3:
+      These types and the related exceptional compatibility rules
+      don't exist.
+
+    Handling:
+      BYTE and WORD are regularly declared integer types in the
+      m2libs module SYSTEM.
+      For the ARRAY OF BYTE type, LOOPHOLEs are introduced at the
+      caller's side. An especially nasty case is the following:
+
+      PROCEDURE P(a: ARRAY OF INTEGER; b: ARRAY OF BYTE);
+      BEGIN
+         P(a, a);
+      END P;
+
+      Here, an open ARRAY OF AnythingButBYTE is passed to an
+      ARRAY OF BYTE. This is handled as follows:
+         <Create tmp: ARRAY OF BYTE with the byte size of a>
+         <Copy a into tmp bytewise>
+         <Call the procedure with tmp instead of a>
+         <Copy tmp's value back to a>
+
+      Note that all of these conversions won't work if the procedure
+      is called via a procedure variable.
+
+(16) Unit Identification
+
+    Modula-2:
+      Modula-2 knows MODULE, IMPLEMENTATION MODULE, and DEFINITION
+      MODULE to determine the module type.
+
+    Changes to Modula-3:
+      Modula-3 has MODULE and INTERFACE instead.
+
+    Handling:
+      The keywords are changed. For the MODULE, an additional
+      EXPORTS Main is generated. Furthermore, all units are marked
+      UNSAFE since it is very unlikely that any output from m2tom3
+      is safe (in the Modula-3 sense).
+
+(17) ADR Operator
+
+    Modula-2:
+      The ADR operator may be used to determine the address of a
+      variable.
+
+    Changes to Modula-3:
+      Using Modula-3's ADR on an array will return a pointer to a
+      structure which contains the array shape followed by its
+      contents, not a pointer to the contents itself.
+
+    Handling:
+      ADR(x) is replaced by ADR(x[FIRST(x)]) if x is an array. This
+      may fail if x is multi-dimensional.
+
+(18) VAL Operator
+
+    Modula-2:
+      Modula-2's VAL operator allows conversion between discrete types.
+
+    Changes to Modula-3:
+      The order of the VAL operands is reversed.
+
+    Handling:
+      The operand order is reversed.
+
+(19) CHR Operator
+
+    Modula-2:
+      Modula-2's CHR operator allows conversion from CARDINAL to CHAR.
+
+    Changes to Modula-3:
+      The CHR operator is not supported.
+
+    Handling:
+      The CHR operator is replaced by an appropriate VAL operator.
+
+(20) FOR Loops
+
+    Modula-2:
+      Modula-2 has the FOR loop construct
+        FOR <x> := <a> TO <b> BY <s> DO <Block> END;
+
+    Changes to Modula-3:
+      The FOR loop in Modula-3 looks quite the same, but here the
+      index variable is implicitly declared and read-only.
+
+    Handling:
+      FOR loops are converted into WHILE loops to retain the same
+      semantics. You can turn this off with the -f switch.
+
+(21) Pointers
+
+    Modula-2:
+      Pointers are declared with POINTER TO <Type>.
+
+    Changes to Modula-3:
+      Pointers are declared with REF. Modula-3 distinguishes between
+      traced and untraced pointer types.
+
+    Handling:
+      POINTER TO is translated into UNTRACED BRANDED REF.
+
+(22) Procedure Types
+
+    Modula-2:
+      When declaring procedure types, Modula-2 takes only the
+      corresponding formal parameter types.
+
+    Changes to Modula-3:
+      Signatures are just as in any procedure definition.
+
+    Handling:
+      Dummy parameter names are inserted, commas are replaced by
+      semicolons.
+
+(23) SET Operations
+
+    Modula-2:
+      Uses INCL and EXCL to add or remove elements from a set.
+
+    Changes to Modula-3:
+      Uses + and - with set constructors for this.
+
+    Handling:
+      None.
+
+(24) Language Interfacing
+
+    Modula-2:
+      Uses a DEFINITION FOR C MODULE (in Sun's M2C) or something
+      similar for setting up interfaces to foreign-language objects.
+      
+    Changes to Modula-3:
+      Uses the <* EXTERNAL *> pragma for this.
+
+    Handling:
+      None.
+
+(25) Empty Statements
+
+    Modula-2:
+      The Modula-2 grammar allows empty statements, introduced e.g.
+      by successive semicolons or semicolons before an END, UNTIL,
+      ELSE etc.
+
+    Changes to Modula-3:
+      Modula-3 doesn't allow this.
+
+    Handling:
+      None.
+
+(26) CASE Statement
+
+    Modula-2:
+      1. Labels and statements are separated by colons.
+      2. Cases may be empty, resulting in one or more bars with
+         no following label.
+
+    Changes to Modula-3:
+      1. Labels and statements are separated by =>.
+      2. Empty cases are not allowed.
+
+    Handling:
+      1. Separators are replaced.
+      2. Bars with no subsequent case are removed.
+
+----------------------------------------------------------------------
+
+Appendix B. The Modula-2 Grammar
+
+CompilationUnit         ::= DefinitionModule | ProgramModule
+
+DefinitionModule        ::= `DEFINITION` ForIdentOpt `MODULE` PublicScope
+PublicScope             ::= DIdent `;` DefinitionScope `END` AIdent `.`
+ForIdentOpt             ::= e | `FOR` Ident
+DefinitionScope         ::= ImportList ExportList DefinitionList
+
+ProgramModule           ::= ImplementationOpt `MODULE` PrivateScope
+PrivateScope            ::= DIdent `;` ProgramScope AIdent `.`
+ImplementationOpt       ::= e | `IMPLEMENTATION`
+ProgramScope            ::= ImportList Block
+
+
+DefinitionList          ::= e | Definition DefinitionList
+Definition              ::= ConstDefinition | TypeDefinition | VarDefinition | ProcedureDefinition
+
+ConstDefinition         ::= `CONST` ConstList
+ConstList               ::= e | DIdent `=` ConstExpr `;` ConstList
+
+TypeDefinition          ::= `TYPE` TypeOptList
+TypeOptList             ::= e | DIdent TypeOpt `;` TypeOptList
+TypeOpt                 ::= e | `=` Type
+
+VarDefinition           ::= `VAR` VarList
+VarList                 ::= e | DIdent DIdentList `:` Type `;` VarList
+
+
+ProcedureDefinition     ::= `PROCEDURE` DIdent FormalScope `;`
+FormalScope             ::= FormalParametersOpt
+
+
+ImportList              ::= e | Import ImportList
+Import                  ::= QualifiedImport | UnqualifiedImport
+
+QualifiedImport         ::= `IMPORT` QEntryScope
+QEntryScope             ::= DAIdent DAIdentList `;`
+
+UnqualifiedImport       ::= `FROM` UEntryScope `IMPORT` ImportScope`;`
+UEntryScope             ::= DAIdent
+ImportScope             ::= DAIdent DAIdentList
+
+
+ExportList              ::= e | Export ExportList
+ExportOpt               ::= e | Export
+Export                  ::= `EXPORT` QualifiedOpt ExportScope `;`
+
+QualifiedOpt            ::= e | `QUALIFIED`
+ExportScope             ::= DAIdent DAIdentList
+
+
+Block                   ::= DeclarationList BlockStatementsOpt `END`
+BlockStatementsOpt      ::= e | `BEGIN` StatementOptSeq
+
+
+DeclarationList         ::= e | Declaration DeclarationList
+Declaration             ::= ConstDefinition | TypeDeclaration | VarDefinition |
+                            ModuleDeclaration | ProcedureDeclaration
+
+TypeDeclaration         ::= `TYPE` TypeDeclarationList
+TypeDeclarationList     ::= e | DIdent `=` Type `;` TypeDeclarationList
+
+
+ModuleDeclaration       ::= `MODULE` DIdent PriorityOpt `;` ModuleScope AIdent `;`
+PriorityOpt             ::= e | `[` ConstExpr `]`
+ModuleScope             ::= ImportList ExportOpt Block
+
+
+[1]
+ProcedureDeclaration    ::= `PROCEDURE` DIdent OuterScope
+OuterScope              ::= FormalParametersOpt  `;` ProcedureTail
+ProcedureTail           ::= `FORWARD` | ProcedureBody
+ProcedureBody           ::= InnerScope ExtraScope
+InnerScope              ::= Block
+ExtraScope              ::= AIdent `;`
+
+
+FormalParametersOpt     ::= e | FormalParameters
+FormalParameters        ::= `(` ParameterSectionSeqOpt `)` ReturnParameterOpt
+
+ReturnParameterOpt      ::= e | `:` QualIdent
+
+
+ParameterSectionSeqOpt  ::= e | ParameterSection ParameterSectionList
+ParameterSectionList    ::= e | `;` ParameterSection ParameterSectionList
+ParameterSection        ::= VarOpt DIdent DIdentList `:` FormalType
+
+VarOpt                  ::= e | `VAR`
+
+
+Type                    ::= ProcedureType | PointerType | SetType | ArrayType | RecordType | SimpleType
+
+
+ProcedureType           ::= `PROCEDURE` FormalSignatureOpt
+
+
+FormalSignatureOpt      ::= e | FormalSignature
+FormalSignature         ::= `(` SignatureSectionSeqOpt `)` ReturnSignatureOpt
+
+ReturnSignatureOpt      ::= e | `:` SimpleType
+
+SignatureSectionSeqOpt  ::= e | SignatureSection SignatureSectionList
+SignatureSectionList    ::= e | `,` SignatureSection SignatureSectionList
+SignatureSection        ::= VarOpt FormalType
+
+
+FormalType              ::= ArrayOpt QualIdent
+ArrayOpt                ::= e | `ARRAY` `OF`
+
+
+PointerType             ::= `POINTER` `TO` Type
+
+
+SetType                 ::= `SET` `OF` Type
+
+
+ArrayType               ::= `ARRAY` SimpleType SimpleTypeList `OF` Type
+SimpleTypeList          ::= e | `,` SimpleType SimpleTypeList
+
+
+RecordType              ::= `RECORD` RecordScope `END`
+RecordScope             ::= FieldOptSeq
+
+
+FieldOptSeq             ::= FieldOpt FieldOptList
+FieldOptList            ::= e | `;` FieldOpt FieldOptList
+FieldOpt                ::= e | Field
+
+
+Field                   ::= SimpleField | CaseField
+
+SimpleField             ::= DIdent DIdentList `:` Type
+CaseField               ::= `CASE` DIdentOpt `:` QualIdent `OF` VariantOpt VariantOptList ElseFieldOpt `END`
+ElseFieldOpt            ::= e | `ELSE` FieldOptSeq
+
+
+VariantOptList          ::= e | `|` VariantOpt VariantOptList
+VariantOpt              ::= e | CaseLabelSeq `:` FieldOptSeq
+
+
+SimpleType              ::= Enumeration | Subrange | QualIdentOrSubrange
+
+Enumeration             ::= `(` EnumerationScope `)`
+EnumerationScope        ::= DIdent DIdentList
+
+SubrangeOpt             ::= e | Subrange
+Subrange                ::= `[` ConstExpr `..` ConstExpr `]`
+
+QualIdentOrSubrange     ::= QualIdent SubrangeOpt
+
+
+
+StatementOptSeq         ::= StatementOpt StatementOptList
+StatementOptList        ::= e | `;` StatementOpt StatementOptList
+StatementOpt            ::= e | Statement
+Statement               ::= AssignmentOrCallStatement | IfStatement | CaseStatement | WhileStatement |
+                            RepeatStatement | LoopStatement | ForStatement | WithStatement |
+                            ExitStatement | ReturnStatement
+
+AssignmentOrCallStatement ::= Designator AssignmentOrCall
+AssignmentOrCall        ::= Assignment | ActualParametersOpt
+Assignment              ::= `:=` Expr
+
+ExitStatement           ::= `EXIT`
+ReturnStatement         ::= `RETURN` ExprOpt
+
+
+IfStatement             ::= `IF` Expr `THEN` StatementOptSeq ElseIfList ElseOpt `END`
+ElseIfList              ::= e | `ELSIF` Expr `THEN` StatementOptSeq ElseIfList
+ElseOpt                 ::= e | `ELSE` StatementOptSeq
+
+
+CaseStatement           ::= `CASE` Expr `OF` CaseOptSeq ElseOpt `END`
+
+
+CaseOptSeq              ::= CaseOpt CaseOptList
+CaseOptList             ::= e | `|` CaseOpt CaseOptList
+CaseOpt                 ::= e | Case
+Case                    ::= CaseLabelSeq `:` StatementOptSeq
+
+
+CaseLabelSeq            ::= CaseLabel CaseLabelList
+CaseLabelList           ::= e | `,` CaseLabel CaseLabelList
+CaseLabel               ::= ConstExpr CaseRangeOpt
+
+CaseRangeOpt            ::= e | `..` ConstExpr
+
+
+WhileStatement          ::= `WHILE` Expr `DO` StatementOptSeq `END`
+
+
+RepeatStatement         ::= `REPEAT` StatementOptSeq `UNTIL` Expr
+
+
+ForStatement            ::= `FOR` AIdent `:=` Expr `TO` Expr ByExprOpt `DO` StatementOptSeq `END`
+ByExprOpt               ::= e | `BY` Expr
+
+
+LoopStatement           ::= `LOOP` StatementOptSeq `END`
+
+
+WithStatement           ::= `WITH` Designator `DO` WithScope `END`
+WithScope               ::= StatementOptSeq
+
+
+Designator              ::= AIdent DesignatorTailList
+DesignatorTailList      ::= e | DesignatorTail DesignatorTailList
+DesignatorTail          ::= DesignatorScope | Reference | SubscriptionScope
+
+DesignatorScope         ::= `.` AIdent
+
+Reference               ::= `^`
+
+SubscriptionScope       ::= `[` Expr ExprList `]`
+
+
+ActualParametersOpt     ::= e | ActualParameters
+ActualParameters        ::= `(` ExprSeqOpt `)`
+
+
+ExprSeqOpt              ::= e | Expr ExprList
+ExprList                ::= e | `,` Expr ExprList
+ExprOpt                 ::= e | Expr
+Expr                    ::= SimpleExpr RelationOpt
+
+RelationOpt             ::= e | Relation SimpleExpr
+Relation                ::= `=` | `#` | `<` | `<=` | `>` | `>=` | `IN`
+
+
+SimpleExpr              ::= UnaryAddOpt Term AddTermList
+UnaryAddOpt             ::= e | UnaryAdd
+UnaryAdd                ::= `+` | `-`
+AddTermList             ::= e | BinaryAdd Term AddTermList
+BinaryAdd               ::= `+` | `-` | `OR`
+
+
+Term                    ::= Factor MulFactorList
+MulFactorList           ::= e | Mul Factor MulFactorList
+Mul                     ::= `*` | `/` | `DIV` | `MOD` | `REM` | `AND` | `&`
+
+
+Factor                  ::= Integer | Long | String | Char | Real |
+                            FactorExpr | NotFactor | QualSetOrCall | Set
+
+FactorExpr              ::= `(` Expr `)`
+
+NotFactor               ::= `NOT` Factor
+
+QualSetOrCall           ::= QualIdent SetOrCall
+SetOrCall               ::= Set | Call
+Call                    ::= DesignatorTailList ActualParametersOpt
+
+
+Set                     ::= `{` ElementSeqOpt `}`
+
+
+ElementSeqOpt           ::= e | Element ElementList
+ElementList             ::= e | `,` Element ElementList
+Element                 ::= Expr ElementRangeOpt
+
+ElementRangeOpt         ::= e | `..` Expr
+
+
+ConstExprSeqOpt         ::= e | ConstExpr ConstExprList
+ConstExprList           ::= e | `,` ConstExpr ConstExprList
+ConstExpr               ::= SimpleConstExpr SimpleRelationOpt
+
+SimpleRelationOpt       ::= e | Relation SimpleConstExpr
+
+
+SimpleConstExpr         ::= UnaryAddOpt ConstTerm AddSimpleTermList
+AddSimpleTermList       ::= e | BinaryAdd ConstTerm AddSimpleTermList
+
+
+ConstTerm               ::= ConstFactor MulConstFactorList
+MulConstFactorList      ::= e | Mul ConstFactor MulConstFactorList
+
+
+ConstFactor             ::= Integer | Long | String | Char | Real |
+                            ConstFactorExpr | NotConstFactor | QualConstSetOrCall | ConstSet
+
+ConstFactorExpr         ::= `(` ConstExpr `)`
+
+NotConstFactor          ::= `NOT` ConstFactor
+
+QualConstSetOrCall      ::= QualIdent ConstSetOrCall
+ConstSetOrCall          ::= ConstSet | ConstActualParametersOpt
+
+ConstActualParametersOpt::= e | `(` ConstExprSeqOpt `)`
+
+
+ConstSet                ::= `{` ConstElementSeqOpt `}`
+
+
+ConstElementSeqOpt      ::= e | ConstElement ConstElementList
+ConstElementList        ::= e | `,` ConstElement ConstElementList
+ConstElement            ::= ConstExpr ConstRangeOpt
+
+ConstRangeOpt           ::= e | `..` ConstExpr
+
+
+DIdentOpt               ::= e | DIdent
+DIdentList              ::= e | `,` DIdent DIdentList
+
+DAIdentList             ::= e | `,` DAIdent DAIdentList
+
+QualIdent               ::= AIdent QualificationScope
+QualificationScope      ::= e | `.` AIdent QualificationScope
+
+
+[1] (ProcedureDeclaration)
+  The identifier seems to be declaring if the procedure is a
+  forward-declaration or if it is a complete declaration without a
+  forward. Otherwise, when used as complete declaration with forward,
+  it seems to be an applying identifier.
+  This grammar handles the identifier only as declaring because this
+  information is only used when linking the identifiers, and this code
+  part doesn't ignore that the procedure is declared twice.
+
+----------------------------------------------------------------------
+
+Appendix C. Changes since Version 2.00
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Mon Sep  4 12:18:55 MET DST 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2tom3/src/Generator CaseGen.m3 
+  Log:
+
+Modula-2 allows a case to be empty, Modula-3 doesn't. Bars in a
+CASE-Statement with no subsequent case are therefore removed. 
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Mon Sep  4 11:01:03 MET DST 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2libs/src m3makefile 
+  Log:
+
+New Modules M2MathLib and M2ConvertReal.
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Mon Sep  4 11:00:36 MET DST 1995
+
+                   ------------------------- 
+  Added:       m2tom3/m2libs/src M2MathLib.i3 M2MathLib.m3 M2ConvertReal.i3 
+                        M2ConvertReal.m3 
+  Log:
+
+
+=====================================================================
+
+AUTHOR:     m2tom3
+DATE/TIME:  Wed Aug 30 18:26:03 MET DST 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2tom3/src/Generator CHRGen.m3 
+  Log:
+
+Bug fixed: CHRs may also appear in constant expressions.
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Tue Aug 15 16:36:50 MET DST 1995
+
+                   ------------------------- 
+  Added:       m2tom3/m2libs/src/solaris-2-x M2Directory.i3 M2Directory.m3 
+                        M2Files.i3 M2Files.m3 M2UnixDirectory.i3 
+                        M2UnixDirectory.m3 m3makefile 
+               m2tom3/m2libs/src/sunos-4-x M2Directory.i3 M2Directory.m3 
+                        M2Files.i3 M2Files.m3 M2UnixDirectory.i3 
+                        M2UnixDirectory.m3 m3makefile 
+  Log:
+
+Separate versions for solaris 2 and sunos 4.
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Tue Aug 15 16:35:03 MET DST 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2libs/src m3makefile 
+  Removed:     m2tom3/m2libs/src M2Directory.i3 M2Directory.m3 M2Files.i3 
+                        M2Files.m3 M2UnixDirectory.i3 M2UnixDirectory.m3 
+  Log:
+
+New separate solaris 2 and sunos 4 versions.
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Wed Mar 29 16:00:01 MET DST 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2libs/src M2Files.m3 
+  Log:
+
+SetFilePos now works when the file is in end error state.
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Wed Mar 15 12:49:52 MET 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2libs/src Storage.m3 
+  Log:
+
+Pointers are reset to NIL after deallocation.
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Wed Mar 15 12:49:14 MET 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2libs/src M2Files.m3 
+  Log:
+
+Read/WriteBlock now use NUMBER instead of BYTESIZE to compute the
+number of bytes in the array.
+Flush resets the file state from endError to ok.
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Thu Mar  2 11:41:10 MET 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2libs/src M2Files.i3 M2Files.m3 
+  Log:
+
+File is now an untraced pointer.
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Tue Feb 14 16:37:57 MET 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2tom3/src/Utilities Configuration.i3 
+                        Configuration.m3 
+  Log:
+
+Support for -r flag inserted.
+
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Tue Feb 14 16:37:30 MET 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2tom3/src/Generator SimpleGen.m3 
+  Log:
+
+Call to InsertReadonly inserted.
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Tue Feb 14 16:37:00 MET 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2tom3/src/Generator SignatureGen.i3 SignatureGen.m3 
+  Log:
+
+New InsertReadonly procedure makes call-by-value ARRAY parameters
+READONLY.
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Tue Feb 14 13:17:11 MET 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2tom3/src/SourceGraphs SyntaxGraph.i3 SyntaxGraph.m3 
+                        SyntaxSupport.i3 SyntaxSupport.m3 
+  Log:
+
+Some unnecessary exception handling removed.
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Tue Feb 14 13:16:54 MET 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2tom3/src/Generator GeneratorSupport.m3 
+                        VariantGen.m3 
+  Log:
+
+Some unnecessary exception handling removed.
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Tue Feb 14 13:16:42 MET 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2tom3/src/Analyzer IdentifierLinker.m3 
+  Log:
+
+Some unnecessary exception handling removed.
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Wed Jan 25 16:27:01 MET 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2tom3/src/Analyzer IdentifierLinker.m3 
+  Log:
+
+Finding a decl for an appl now immediately terminates if the we are
+looking for a predefined type (should speed things up a bit).
+
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Wed Jan 25 16:16:34 MET 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2tom3/src/Analyzer IdentifierLinker.m3 
+  Log:
+
+Last solution for the WITH problem was buggy. Now recursion is only
+terminated if the identifier appeared inside a WITH statement.
+
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Tue Jan 24 17:16:08 MET 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2tom3/src/Analyzer ActualToFormalType.m3 
+  Log:
+
+Short parameter list check now also for empty actual parameter list.
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Tue Jan 24 12:43:33 MET 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2tom3/src/Generator ADRGen.m3 
+  Log:
+
+Copying the array identifier into the FIRST expression now respects
+the fact that there might be m3 source generated before the
+identifier.
+
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Tue Jan 24 11:52:30 MET 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2libs/src CCALL.i3 
+  Log:
+
+open, lockf, close deleted.
+
+
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Tue Jan 24 11:50:03 MET 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2libs/src CCALL.i3 
+  Log:
+
+New CCALL resources bzero, open, lockf, close.
+
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Tue Jan 24 11:43:26 MET 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2tom3/src/Generator VariantGen.m3 
+  Log:
+
+In variant records with anonymous discriminants, the type identifier
+was not removed if it was converted previously, because the generated
+new identifier lies outside the subtree under which the flag is
+reset. Now, the flag is removed in a loop on token level.
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Fri Jan 20 17:18:19 MET 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2tom3/src/Analyzer Scanner.m3 
+  Log:
+
+Besides C, now c is also allowed for denoting character literals in
+the 0C form.
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Thu Jan 19 15:26:39 MET 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2tom3/src/Analyzer IdentifierLinker.m3 
+  Log:
+
+Inside a WITH statement for a record variable whose type is imported,
+the scope of the imported interface overrode the module's scope
+(thanks to Rodney Bates).
+
+The problem is that the identifier linker first searched the scope
+introduced by the RECORD type definition (thereby entering the scope
+of the definition module), and when he couldn't find the definition
+there, he recursively tried the record definition's server scope,
+which is the interface. Now, the recursion is terminated if the search
+started at a record scope, so that a new recursion starts in the
+original scope of the WITH statement.
+
+I suspect that the same problem can be triggered by other situations,
+but I can't think of one right now.
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Tue Jan 17 15:21:47 MET 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2tom3/src/Analyzer IdentifierLinker.m3 
+  Log:
+
+New check prevents crash if non-records are qualified (thanks to
+Rodney Bates).
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Tue Jan 17 11:53:11 MET 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2tom3/src/Utilities Message.i3 Message.m3 
+  Log:
+
+New warning message for short actual parameter lists (thanks to Rodney
+Bates).
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Tue Jan 17 11:52:00 MET 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2tom3/src/Analyzer ActualToFormalType.m3 
+  Log:
+
+Short actual parameter lists now produce a warning instead of a crash
+(thanks to Rodney Bates).
+
+=====================================================================
+
+AUTHOR:     pk
+DATE/TIME:  Tue Jan 17 11:05:40 MET 1995
+
+                   ------------------------- 
+  Modified:    m2tom3/m2tom3/src/Analyzer IdentifierLinker.m3 
+  Log:
+
+Type change from Syntax to Symbol avoids NARROW fault on WITH
+statements with simple typed identifiers (thanks to Rodney Bates).
+
+=====================================================================

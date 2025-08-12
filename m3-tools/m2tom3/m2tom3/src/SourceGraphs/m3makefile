@@ -1,0 +1,40 @@
+/*                   This file is part of m2tom3
+       (C) 1991-1994 Lehrstuhl fuer Informatik III, RWTH Aachen
+                         All Rights Reserved
+*/
+
+Module          ("ClusterTable")
+Module          ("BaseGraph")
+
+Module          ("BaseNode")
+Interface       ("BaseEdge")
+
+Module          ("Symbol")
+
+Module          ("Token")
+Module          ("TokenEdge")
+Module          ("TokenAnchor")
+Module          ("TokenGraph")
+Module          ("TokenSupport")
+
+Module          ("Syntax")
+Module          ("SyntaxEdge")
+Module          ("SyntaxAnchor")
+Module          ("SyntaxGraph")
+
+Module          ("SyntaxStack")
+Module          ("SyntaxSupport")
+
+Module          ("UnitAnchor")
+Module          ("UnitGraph")
+
+Module          ("MakeEdge")
+Module          ("MakeGraph")
+
+Module          ("ScopeToDeclEdge")
+Module          ("ServerToClientEdge")
+Module          ("DeclToApplEdge")
+Module          ("DeclGraph")
+Module          ("DeclSupport")
+
+Interface       ("SourceGraph")

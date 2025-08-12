@@ -1,0 +1,13 @@
+/*                   This file is part of m2tom3
+       (C) 1991-1994 Lehrstuhl fuer Informatik III, RWTH Aachen
+                         All Rights Reserved
+*/
+
+Module          ("ScanBuffer")
+Module          ("Scanner")
+Module          ("Parser")
+Module          ("ImportClosure")
+Module          ("Standard")
+Module          ("ScopeQueue")
+Module          ("IdentifierLinker")
+Module          ("ActualToFormalType")
