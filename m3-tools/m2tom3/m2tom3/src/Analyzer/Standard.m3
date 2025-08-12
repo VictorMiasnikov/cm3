@@ -22,7 +22,7 @@ IMPORT Symbol;
 IMPORT Token;
 IMPORT Syntax;
 IMPORT SourceGraph;
-IMPORT TextF, Text;
+IMPORT Text;
 
 
 PROCEDURE IsPredefinedType (graph: SourceGraph.T; symbol: Symbol.T):
@@ -97,17 +97,17 @@ PROCEDURE FindSub (t, sub: TEXT; VAR index: CARDINAL): BOOLEAN RAISES {} =
       IF (lsub <= lt) THEN
         VAR
           lastStart := lt - lsub;
-          firstCh   := sub[0];
+          firstCh   := Text.GetChar(sub,0);   (* firstCh   := sub[0]; *)
         BEGIN
           WHILE (i <= lastStart) DO
-            IF (t[i] = firstCh) THEN
+            IF ( Text.GetChar(t,i) = firstCh) THEN     (* IF (t[i] = firstCh) THEN *)
               VAR j: CARDINAL := 1;
               BEGIN
                 LOOP
                   IF (j = lsub) THEN
                     index := i;
                     RETURN TRUE;
-                  ELSIF (i + j >= lt OR t[i + j] # sub[j]) THEN
+                  ELSIF (i + j >= lt OR Text.GetChar(t,i + j) # Text.GetChar(sub,j)) THEN      (* ELSIF (i + j >= lt OR t[i + j] # sub[j]) THEN *)
                     EXIT;
                   ELSE
                     INC(j);
