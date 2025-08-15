@@ -130,21 +130,21 @@ CONST
 <*EXTERNAL*> PROCEDURE hypot (x, y: LONGREAL): LONGREAL;
 (* returns sqrt (x*x + y*y). *)
 
-PROCEDURE cabs (z: Complex): LONGREAL;
+<*EXTERNAL*> PROCEDURE cabs (z: Complex): LONGREAL;
 TYPE Complex = RECORD x, y: LONGREAL END;
 (* returns sqrt (z.x*z.x + z.y*z.y) *)
 
 
 (*---- Floating point representations ----*)
 
-PROCEDURE frexp (x: LONGREAL;  VAR exp: int): LONGREAL;
+<*EXTERNAL*> PROCEDURE frexp (x: LONGREAL;  VAR exp: int): LONGREAL;
 (* returns a value y and sets exp such that x = y * 2^exp,
     where ABS(y) is in the interval [0.5, 1). *)
 
 <*EXTERNAL*> PROCEDURE ldexp (x: LONGREAL; exp: int): LONGREAL;
 (* returns x * 2^exp. *)
 
-PROCEDURE modf (x: LONGREAL; VAR(*OUT*) i: LONGREAL): LONGREAL;
+<*EXTERNAL*> PROCEDURE modf (x: LONGREAL; VAR(*OUT*) i: LONGREAL): LONGREAL;
 (* splits the argument "x" into an integer part "i" and a fractional part "f"
    such that "f + i = x" and such that "f" and "i" both have the same sign as
    "x", and returns "f". Although "i" is a LONGREAL, it is set to an integral
