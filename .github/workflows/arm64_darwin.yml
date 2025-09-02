@@ -25,11 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-<<<<<<< HEAD
         backend: [c]
-=======
-        backend: [c, gcc]
->>>>>>> modula3/master
 
     env:
       CM3_TARGET: ARM64_DARWIN
@@ -56,11 +52,7 @@ jobs:
     - name: Fetch sources
       uses: actions/checkout@v2
 
-<<<<<<< HEAD
     - name: Build all the things
-=======
-    - name: Build everything
->>>>>>> modula3/master
       run: |
         scripts/concierge.py full-upgrade --backend "${{ matrix.backend }}" headless -m3gdb
 
@@ -78,7 +70,3 @@ jobs:
         max-annotations: 49
         path: m3-sys/m3tests/m3tests-results.xml
         reporter: java-junit
-<<<<<<< HEAD
-=======
-
->>>>>>> modula3/master
