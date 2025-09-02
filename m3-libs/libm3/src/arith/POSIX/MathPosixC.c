@@ -14,11 +14,14 @@
 
 #include <math.h>
 
+<<<<<<< HEAD
 #ifdef __cplusplus
 extern "C"
 {           
 #endif
 
+=======
+>>>>>>> parent of d6fdff2a71 (Prepare MathPosix.m3 MathPosixC.c fo delete)
 double
 MathPosixC__frexp_result_glue(double x)
 {
@@ -56,7 +59,10 @@ MathPosixC__modf_intpart_glue(double x)
 }
 
 
+<<<<<<< HEAD
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
+=======
+>>>>>>> parent of d6fdff2a71 (Prepare MathPosix.m3 MathPosixC.c fo delete)
 
