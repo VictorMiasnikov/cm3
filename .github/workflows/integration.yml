@@ -15,9 +15,6 @@ jobs:
   ARM64_DARWIN:
     uses: VictorMiasnikov/cm3/.github/workflows/arm64_darwin.yml@d5.11.9-ZZYYXX-20250509_19-45
 
-  ARM64_DARWIN:
-    uses: modula3/cm3/.github/workflows/arm64_darwin.yml@master
-
   AMD64_LINUX:
     uses: VictorMiasnikov/cm3/.github/workflows/amd64_linux.yml@d5.11.9-ZZYYXX-20250509_19-45
 
