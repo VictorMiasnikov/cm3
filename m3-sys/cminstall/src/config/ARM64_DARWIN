@@ -1,7 +1,4 @@
-<<<<<<< HEAD
 M3_BACKEND_MODE = "C"
-=======
->>>>>>> modula3/master
 readonly TARGET = "ARM64_DARWIN"
 
 readonly DarwinArch = "arm64"
