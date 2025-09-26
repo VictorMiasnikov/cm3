@@ -349,8 +349,8 @@ class Platform:
             ["FreeBSD4", "I386_CYGWIN", "I386_FREEBSD", "I386_LINUX", "I386_NETBSD", "LINUXLIBC6", "SOLgnu"]
 
     def has_integrated_backend(self):
-        "The integrated backend supports only 32-bit Windows"
-        return self.name() in ["NT386", "I386_NT"]
+        "The integrated backend supports only 32-bit Windows and I386_LINUX"
+        return self.name() in ["NT386", "I386_NT", "I386_LINUX"]
 
     def has_serial(self):
         return self.is_win32()
