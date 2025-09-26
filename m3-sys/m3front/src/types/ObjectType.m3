@@ -479,13 +479,10 @@ PROCEDURE Compiler (p: P) =
     GenOverrides (methods, FALSE);
     GenFields (fields, FALSE);
 
-    GetOffsets(p, TRUE);
-
     (* declare myself, my fields, and my methods *)
     CG.Declare_object (Type.GlobalUID (p), Type.GlobalUID (p.superType),
                        Brand.ToText (p.brand), p.isTraced, nFields,
-                       nMethods, nOverrides, p.fieldSize,
-                       p.fieldOffset, p.methodOffset);
+                       nMethods, nOverrides, p.fieldSize);
     GenMethods (methods, TRUE);
     GenOverrides (methods, TRUE);
     GenFields (fields, TRUE);

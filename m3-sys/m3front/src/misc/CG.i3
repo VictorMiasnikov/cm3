@@ -123,8 +123,7 @@ PROCEDURE Declare_formal (n: Name;  t: TypeUID; <*UNUSED*>typename := M3ID.NoID)
 PROCEDURE Declare_raises (n: Name);
 
 PROCEDURE Declare_object (t, super: TypeUID;  brand: TEXT;  traced: BOOLEAN;
-                 n_fields, n_methods, n_overrides: INTEGER;  field_size: Size;
-                 field_offset, method_offset : INTEGER);
+                 n_fields, n_methods, n_overrides: INTEGER;  field_size: Size);
 PROCEDURE Declare_method (n: Name;  signature: TypeUID;  dfault: M3.Expr);
 PROCEDURE Declare_override (n: Name;  dfault: M3.Expr);
 PROCEDURE Declare_opaque (t, super: TypeUID);

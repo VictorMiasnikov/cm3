@@ -370,11 +370,10 @@ PROCEDURE Declare_raises (n: Name) =
 
 PROCEDURE Declare_object (t, super: TypeUID;  brand: TEXT;  traced: BOOLEAN;
                            n_fields, n_methods, n_overrides: INTEGER;
-                           field_size: Size;
-                           field_offset, method_offset : INTEGER) =
+                           field_size: Size) =
   BEGIN
     cg.declare_object (t, super, brand, traced,
-                       n_fields, n_methods, field_size, field_offset, method_offset);
+                       n_fields, n_methods, field_size);
     WebInfo.Declare_object (t, super, brand, traced,
                             n_fields, n_methods, n_overrides, field_size);
   END Declare_object;
