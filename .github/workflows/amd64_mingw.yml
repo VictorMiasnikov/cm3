@@ -9,7 +9,7 @@ on:
         required: false
         type: string
       release:
-        default: https://github.com/VictorMiasnikov/cm3/releases/download/d5.11.9-ZZYYXX-20250903_22-58
+        default: https://github.com/VictorMiasnikov/cm3/releases/download/d5.11.9-ZZYYXX-20250929_00-00
         required: false
         type: string
       bootstrap:
