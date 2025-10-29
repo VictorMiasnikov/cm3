@@ -6,11 +6,7 @@
 
 UNSAFE MODULE Main64 EXPORTS Main;
 
-<<<<<<< HEAD:m3-sys/m3tests/src/p0/p047/Main.m3
-FROM Test IMPORT checkI,checkN,checkR,checkL,checkX,done;
-=======
 FROM Test IMPORT checkI,checkR,checkL,checkX,checkN,done;
->>>>>>> modula3/master:m3-sys/m3tests/src/p0/p047/Main64.m3
 
 TYPE
   Int32 = [0..16_7FFFFFFF];
@@ -20,10 +16,9 @@ TYPE
 
 PROCEDURE Test() =
   VAR
+    i : INTEGER;
     l : LONGINT;
-(*  re-enable after enable sub-test  a := LOOPHOLE(l1,ADDRESS);
     a : ADDRESS;
-*)
     r1 : REAL;
     l1 : LONGREAL;
     e1 : EXTENDED;
@@ -53,24 +48,15 @@ PROCEDURE Test() =
     (* LONGREAL *)
     
     l1 := 1.234D0;
+    i := LOOPHOLE(l1,INTEGER);
+    checkI(4608236261112822104,i);
     
     l := LOOPHOLE(l1,LONGINT);
     checkN(4608236261112822104L,l);
 
-<<<<<<< HEAD:m3-sys/m3tests/src/p0/p047/Main.m3
-    l1 := LOOPHOLE(l,LONGREAL);
-    checkL(1.234D0,l1);
-
-    l := LOOPHOLE(l1,LONGINT);
-
- (* a := LOOPHOLE(l1,ADDRESS);
-    Making this 32/64-bit adaptable won't test much anyway. *)
-
-=======
     l1 := LOOPHOLE(i,LONGREAL);
     checkL(1.234D0,l1);
 
->>>>>>> modula3/master:m3-sys/m3tests/src/p0/p047/Main64.m3
     (* EXTENDED *)
     
     l1 := 1.234D0;
