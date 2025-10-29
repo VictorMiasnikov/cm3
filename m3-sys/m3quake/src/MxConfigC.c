@@ -195,7 +195,7 @@ MxConfigC__HOST(void)
     (hppa = (strstr(uname_machine, "HPPA") || strstr(uname_machine, "PARISC"))) ||
     (mips = !! strstr(uname_machine, "MIPS")) ||                                   // 32 or 64, big or little endian
     (powerpc64 = (uname64 && (strstr(uname_machine, "PPC64") || strstr(uname_machine, "POWERPC64")))) || // before plain powerpc
-    (powerpc = (strstr(uname_machine, "PPC") || strstr(uname_machine, "POWERPC"))) ||
+    (powerpc = (strstr(uname_machine, "PPC") || strstr(uname_machine, "POWERPC") || strstr(uname_machine, "POWER MACINTOSH"))) ||
     (arm64 = (uname64 && (strstr(uname_machine, "AARCH64") || strstr(uname_machine, "ARM64")))) ||
     (arm = (strstr(uname_machine, "AARCH") || strstr(uname_machine, "ARM"))) ||
     (riscv64 = (uname64 && strstr(uname_machine, "RISCV64"))) ||
