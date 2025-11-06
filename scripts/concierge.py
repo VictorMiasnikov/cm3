@@ -1650,8 +1650,8 @@ class InstallCommand(ConciergeCommand):
         build   = ["cmake", "--build",   build_dir]
         install = ["cmake", "--install", build_dir]
         if self.target().is_nt():
-            build   = build + ["--config", "Debug"]
-            install = install + ["--config", "Debug"]
+            build   = build + ["--config", "RelWithDebInfo"]
+            install = install + ["--config", "RelWithDebInfo"]
 
         # Execute cmake steps.
         for command in [setup, build, install]:

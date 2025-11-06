@@ -26,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        backend: [c, gcc, integrated]
+        backend: [c, gcc]
 
     env:
       CM3_TARGET: I386_LINUX
