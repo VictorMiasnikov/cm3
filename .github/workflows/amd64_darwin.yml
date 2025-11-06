@@ -5,7 +5,7 @@ on:
   workflow_call:
     inputs:
       os:
-        default: macos-latest-large
+        default: macos-14-large
         required: false
         type: string
       release:
