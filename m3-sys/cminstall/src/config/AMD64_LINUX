@@ -21,9 +21,13 @@ end
 
 readonly SYSTEM_ASM = "as --64" % Assembler
 
+include("AMD64.common")
+include("Linux.common")
+
 %uncomment this define to use zero cost exception handling
 %M3_USE_STACK_WALKER = TRUE
 
+<<<<<<< HEAD
 % PIE debugging requires gdb 7.1 or newer, even for C
 % see http://www.gnu.org/software/gdb/download/ANNOUNCEMENT
 %uncomment this define to use m3gdb
@@ -31,3 +35,14 @@ readonly POSITION_INDEPENDENT_EXECUTABLE = "-no-pie"
 
 include("AMD64.common")
 include("Linux.common")
+=======
+if defined("M3_USE_STACK_WALKER")
+  SYSTEM_LIBS{"UNWIND"} = [ "-L/usr/lib/x86_64-linux-gnu",
+                            "-lunwind-x86_64",
+                            "-lunwind",
+                            "-lunwind-generic" ]
+end
+
+
+
+>>>>>>> modula3/master
