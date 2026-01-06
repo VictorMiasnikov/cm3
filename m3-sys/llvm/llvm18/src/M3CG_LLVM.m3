@@ -1739,13 +1739,21 @@ PROCEDURE declare_raises (self: U; n: Name) =
     INC(procRef.raisesIdx);
   END declare_raises;
 
-PROCEDURE declare_object (self: U; t, super: TypeUID; brand: TEXT;  traced: BOOLEAN; n_fields, n_methods: INTEGER; field_size: BitSize; superTypeName : Name) =
+PROCEDURE declare_object (self               : U;
+                          t, super           : TypeUID;
+                          brand              : TEXT;
+                          traced             : BOOLEAN;
+                          n_fields, n_methods: INTEGER;
+                          field_size         : BitSize;
+                          field_offset       : INTEGER;
+                          method_offset      : INTEGER;
+                          super_typename     : Name     ) =
   VAR
     objectRef,parentRef : ObjectDebug;
     superObj : REFANY;
     found : BOOLEAN;
   BEGIN
-    objectRef := NEW(ObjectDebug, tUid := t, superType := super, brand := brand, traced := traced, numFields := n_fields, numMethods := n_methods, fieldSize := VAL(field_size,LONGINT), bitSize := VAL(field_size,LONGINT), align := ptrBits, opaque := FALSE, eltTypeName := superTypeName);
+    objectRef := NEW(ObjectDebug, tUid := t, superType := super, brand := brand, traced := traced, numFields := n_fields, numMethods := n_methods, fieldSize := VAL(field_size,LONGINT), bitSize := VAL(field_size,LONGINT), align := ptrBits, opaque := FALSE, eltTypeName := super_typename);
     objectRef.fields := NEW(REF ARRAY OF FieldDebug,n_fields);
     objectRef.methods := NEW(REF ARRAY OF MethodDebug,n_methods);
     objectRef.fieldIndex := 0;
