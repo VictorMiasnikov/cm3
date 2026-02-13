@@ -13,7 +13,7 @@ on:
         required: false
         type: string
       bootstrap:
-        default: cm3-boot-AMD64_LINUX-None.tar.xz
+        default: cm3-boot-AMD64_LINUX-d5.11.10.tar.xz
         required: false
         type: string
 
@@ -52,7 +52,7 @@ jobs:
     - name: Fetch sources
       uses: actions/checkout@v2
 
-    - name: Build all the things
+    - name: Build everything
       run: |
         scripts/concierge.py full-upgrade --backend "${{ matrix.backend }}" headless -m3gdb
 

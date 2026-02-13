@@ -60,7 +60,7 @@ jobs:
     - name: Fetch sources
       uses: actions/checkout@v2
 
-    - name: Build all the things
+    - name: Build everything
       run: |
         python3 scripts/concierge.py full-upgrade headless -m3gdb -caltech-other -caltech-parser -m3-scheme
 

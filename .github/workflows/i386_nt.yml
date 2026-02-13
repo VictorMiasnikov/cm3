@@ -61,7 +61,7 @@ jobs:
     - name: Fetch sources
       uses: actions/checkout@v2
 
-    - name: Build all the things
+    - name: Build everything
       run: |
         cm3 -version
         python3 scripts\concierge.py full-upgrade --backend "${{ matrix.backend }}" headless -m3gdb -caltech-other -caltech-parser -m3-scheme
