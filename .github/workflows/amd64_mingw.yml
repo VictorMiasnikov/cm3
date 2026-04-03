@@ -9,7 +9,7 @@ on:
         required: false
         type: string
       release:
-        default: https://github.com/VictorMiasnikov/cm3/releases/download/d5.11.10-ZZYYXX-20260201_00-02
+        default: https://github.com/VictorMiasnikov/cm3/releases/download/d5.11.10-ZZYYXX-20260205_19-36
         required: false
         type: string
       bootstrap:
@@ -20,7 +20,7 @@ on:
 jobs:
   build:
     runs-on: ${{ inputs.os }}
-    timeout-minutes: 55
+    timeout-minutes: 25
 
     defaults:
       run:
