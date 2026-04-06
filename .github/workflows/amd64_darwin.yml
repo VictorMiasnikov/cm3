@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        backend: [c]
+        backend: [c, gcc]
 
     env:
       CM3_TARGET: AMD64_DARWIN
