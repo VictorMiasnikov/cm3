@@ -45,6 +45,7 @@ jobs:
 
     - name: Build distributions
       run: |
+        scripts/concierge.py make-dist --target AMD64_DARWIN
         scripts/concierge.py make-dist --target AMD64_LINUX
         scripts/concierge.py make-dist --target AMD64_NT
         scripts/concierge.py make-dist --target I386_LINUX
