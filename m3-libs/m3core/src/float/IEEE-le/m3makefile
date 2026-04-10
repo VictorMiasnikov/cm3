@@ -16,7 +16,7 @@ Interface ("LongRealRep")
    No - we only allow the AMD64_LINUX target to have 128 bit floats.
    Others can be added when proven.
 */
-if equal (TARGET, "AMD64_LINUX")
+if equal (TARGET, "AMD64_LIN_p131_Turn_off_UX")
   include_dir ("ext128")
 else
   include_dir ("ext64")

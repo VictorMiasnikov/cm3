@@ -7,7 +7,7 @@
 
 %RandomReal implementation 
 % - one of these dirs depending on  target
-if equal (TARGET, "AMD64_LINUX")
+if equal (TARGET, "AMD64_LIN_p131_Turn_off_UX")
   include_dir ("ext128")
 else
   include_dir ("ext64")
