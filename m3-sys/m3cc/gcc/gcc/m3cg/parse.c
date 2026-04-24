@@ -1016,7 +1016,7 @@ static GTY (()) tree bytes_per_integer_tree;
 #define memcmp_proc builtin_decl_explicit (BUILT_IN_MEMCMP)
 #define lroundf_proc  builtin_decl_explicit (BUILT_IN_LROUNDF)
 #define lround_proc  builtin_decl_explicit (BUILT_IN_LROUND)
-#define lroundl_proc  builtin_decl_explicit (BUILT_IN_LROUNDL)
+#define lroundq_proc  builtin_decl_explicit (BUILT_IN_LROUNDL)
 static GTY (()) tree set_union_proc;
 static GTY (()) tree set_diff_proc;
 static GTY (()) tree set_inter_proc;
@@ -5146,32 +5146,35 @@ M3CG_HANDLER (MAX) { m3_minmax (type, 0); }
 
 M3CG_HANDLER (ROUND)
 {
-/* not just yet needs more testing
   //Use the builtins for rounding.
+  tree dt;
   m3_start_call ();
   m3_pop_param (src_t);
 
+ if (LONG_TYPE_SIZE == 32)
+    dt = t_int_32;
+  else
+    dt = t_int_64;
   if (src_T == T_reel) {
-    m3_call_direct (lroundf_proc, t_int_64);
+    m3_call_direct (lroundf_proc, dt);
   } else if (src_T == T_lreel) {
-    m3_call_direct (lround_proc, t_int_64);
+    m3_call_direct (lround_proc, dt);
   } else if (src_T == T_xreel) {
     if (LONG_DOUBLE_TYPE_SIZE == 64) {
-      m3_call_direct (lround_proc, t_int_64);
+      m3_call_direct (lround_proc, dt);
     } else {
-      m3_call_direct (lroundl_proc, t_int_64);
+      m3_call_direct (lroundq_proc, dt);
     }
   }
-  EXPR_REF (-1) = m3_build1 (FIX_TRUNC_EXPR, dst_t, EXPR_REF (-1));
+
+/*
+  the original code, which produces erroneous results for reel
+  on 64 bit architectures for all odd integers-as-floats beyond about 2^16.
+  In those cases this code rounds up when it should leave untouched,
+  as there is no fractional part.  See test p126.
 */
 
 /*
-  original code which produces erroneous results on 64 bit architectures
-  for all odd integers as floats beyond about 2^16. In those cases the
-  number is rounded up when it should not, as there is no fractional part.
-  See test p126.
-*/
-
   REAL_VALUE_TYPE r;
 
   memset (&r, 0, sizeof(r));
@@ -5192,7 +5195,7 @@ M3CG_HANDLER (ROUND)
                              m3_build2 (PLUS_EXPR, src_t, arg,
                                         m3_build3 (COND_EXPR, src_t,
                                                    cond, pos, neg)));
-
+*/
 }
 
 M3CG_HANDLER (TRUNC)
