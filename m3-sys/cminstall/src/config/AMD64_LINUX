@@ -8,16 +8,16 @@ SYSTEM_CXXC = "g++ -m64 -fPIC -g" % C++ compiler
 % But Dwarf interferes with m3gdb.
 % https://gcc.gnu.org/bugzilla/show_bug.cgi?id=99457
 %
-if defined("M3_BACKEND_MODE")
-  if not equal(M3_BACKEND_MODE, "C")
-    SYSTEM_CC = SYSTEM_CC & "stabs+"
-    SYSTEM_CXXC = SYSTEM_CXXC & "stabs+"
-  end
-else
-  % It will likely not default to C.
-  SYSTEM_CC = SYSTEM_CC & "stabs+"
-  SYSTEM_CXXC = SYSTEM_CXXC & "stabs+"
-end
+% VVM temp-ry turn off if defined("M3_BACKEND_MODE")
+% VVM temp-ry turn off   if not equal(M3_BACKEND_MODE, "C")
+% VVM temp-ry turn off     SYSTEM_CC = SYSTEM_CC & "stabs+"
+% VVM temp-ry turn off     SYSTEM_CXXC = SYSTEM_CXXC & "stabs+"
+% VVM temp-ry turn off   end
+% VVM temp-ry turn off else
+% VVM temp-ry turn off   % It will likely not default to C.
+% VVM temp-ry turn off   SYSTEM_CC = SYSTEM_CC & "stabs+"
+% VVM temp-ry turn off   SYSTEM_CXXC = SYSTEM_CXXC & "stabs+"
+% VVM temp-ry turn off end
 
 readonly SYSTEM_ASM = "as --64" % Assembler
 
