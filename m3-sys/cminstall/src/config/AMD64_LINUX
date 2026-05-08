@@ -21,6 +21,7 @@ SYSTEM_CXXC = "g++ -m64 -fPIC -g" % C++ compiler
 
 readonly SYSTEM_ASM = "as --64" % Assembler
 
+%uncomment this define to use zero cost exception handling
 % Enable C++ zero-cost exception handling (ex_stack).
 % Comment out to revert to the native GCC backend (mode "3").
 % Requires libunwind-dev: apt-get install libunwind-dev
@@ -38,24 +39,14 @@ include("Linux.common")
 
 SYSTEM_LIBS{"LIBC"} += [ "-lquadmath" ]
 
-<<<<<<< HEAD
-%uncomment this define to use zero cost exception handling
-%M3_USE_STACK_WALKER = TRUE
-
-% PIE debugging requires gdb 7.1 or newer, even for C
-% see http://www.gnu.org/software/gdb/download/ANNOUNCEMENT
-%uncomment this define to use m3gdb
-readonly POSITION_INDEPENDENT_EXECUTABLE = "-no-pie"
-
-=======
->>>>>>> modula3/master
 if defined("M3_USE_STACK_WALKER")
   % RTStackC.c and M3C.m3-generated files use C++ EH (catch/_M3Exc/throw),
   % so SYSTEM_CC must invoke the C++ compiler with -x c++.
   SYSTEM_CC = "g++ -g -m64 -fPIC -x c++"
   SYSTEM_LIBS{"UNWIND"} = [ "-lunwind-x86_64", "-lunwind" ]
 end
-<<<<<<< HEAD
 
-=======
->>>>>>> modula3/master
+% PIE debugging requires gdb 7.1 or newer, even for C
+% see http://www.gnu.org/software/gdb/download/ANNOUNCEMENT
+%uncomment this define to use m3gdb
+readonly POSITION_INDEPENDENT_EXECUTABLE = "-no-pie"
