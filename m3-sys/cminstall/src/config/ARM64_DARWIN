@@ -1,12 +1,7 @@
-<<<<<<< HEAD
-M3_BACKEND_MODE = "C"
-readonly TARGET = "ARM64_DARWIN"
-=======
 % Copyright 1996-2000 Critical Mass, Inc. All rights reserved.
 % See file COPYRIGHT-CMASS for details.
 %
->>>>>>> modula3/master
-
+M3_BACKEND_MODE = "C"
 readonly TARGET = "ARM64_DARWIN"
 readonly DarwinArch = "arm64"
 
