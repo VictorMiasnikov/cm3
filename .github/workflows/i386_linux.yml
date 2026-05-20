@@ -10,11 +10,11 @@ on:
         required: false
         type: string
       release:
-        default: https://github.com/VictorMiasnikov/cm3/releases/download/d5.11.10-ZZYYXX-20260205_19-36
+        default: https://github.com/VictorMiasnikov/cm3/releases/download/d5.12.1-ZZYYXX-20260509
         required: false
         type: string
       bootstrap:
-        default: cm3-boot-I386_LINUX-None.tar.xz
+        default: cm3-boot-I386_LINUX-d5.12.1-ZZYYXX-20260509.tar.xz
         required: false
         type: string
 

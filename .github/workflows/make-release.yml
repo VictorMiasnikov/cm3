@@ -12,7 +12,7 @@ jobs:
     timeout-minutes: 60
 
     env:
-      BOOTSTRAP: https://github.com/modula3/cm3/releases/download/d5.12.0/cm3-boot-AMD64_LINUX-d5.12.0.tar.xz
+      BOOTSTRAP: https://github.com/VictorMiasnikov/cm3/releases/download/d5.12.1-ZZYYXX-20260509/cm3-boot-AMD64_LINUX-d5.12.1-ZZYYXX-20260509.tar.xz
 
     steps:
     - name: Install prerequisites
