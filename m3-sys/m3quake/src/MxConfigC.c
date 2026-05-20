@@ -266,6 +266,11 @@ MxConfigC__HOST(void)
     else if (hppa) // hppa/parisc => pa (too short?)
         uname_machine = "PA";
 
+    else if (powerpc64)
+        uname_machine = "PPC64";
+    else if (powerpc)
+        uname_machine = "PPC";
+
     // Alpha and IA64 are not always 64bits.
     // VMS, HPUX, NT offer 32bit variations, NT/Alpha64 never shipped.
     if (ia64 && (vms || hpux))
