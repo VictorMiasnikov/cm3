@@ -9,11 +9,11 @@ on:
         required: false
         type: string
       release:
-        default: https://github.com/VictorMiasnikov/cm3/releases/download/d5.12.1-ZZYYXX-20260509
+        default: https://github.com/VictorMiasnikov/cm3/releases/download/d5.12.1-ZZYYXX-20260509_19-45
         required: false
         type: string
       bootstrap:
-        default: cm3-boot-AMD64_NT-d5.12.1-ZZYYXX-20260509.7z
+        default: cm3-boot-AMD64_NT-d5.12.1-ZZYYXX-20260509_19-45.7z
         required: false
         type: string
 
