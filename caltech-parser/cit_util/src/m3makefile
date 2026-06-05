@@ -231,7 +231,11 @@ Gmodule("ArrayHash")
 ArrayHash("Int", "Integer")
 
 Module("CITRandom")
-Module("ProcUtils")
+if equal (OS_TYPE, "WIN32")
+  include_dir ("WIN32")
+else
+  Module("ProcUtils")
+end
 Module("RemoteFileRd")
 Module("PathnameUtils")
 
@@ -413,8 +417,10 @@ Table ("TextCard", "Text", "Cardinal")
 
 Table ("LRVectorLR", "LRVector", "LongrealType")
 
-Module ("RepeatMe")
-Module ("Watchdog")
+if equal (OS_TYPE, "POSIX")
+  Module ("RepeatMe")
+  Module ("Watchdog")
+end
 
 Library("cit_util")
 
