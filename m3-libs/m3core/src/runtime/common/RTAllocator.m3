@@ -341,7 +341,7 @@ PROCEDURE ArraySize (def: RT0.ArrayTypeDefn;  READONLY s: Shape): CARDINAL =
   VAR n_elts := 1;  c: CARDINAL;
   BEGIN
     FOR i := 0 TO NUMBER(s) - 1 DO
-      c := LOOPHOLE(s[i], CARDINAL);  (* half-force a range check *)
+      c := s[i];  (* force a range check *)
       n_elts := c * n_elts;
     END;
     RETURN RTMisc.Upper(def.common.dataSize + def.elementSize * n_elts,
