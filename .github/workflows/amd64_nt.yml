@@ -40,7 +40,7 @@ jobs:
 
     - name: Define install location
       run: |
-        echo CM3_INSTALL=%CD%\..\install\cm3>>%GITHUB_ENV%
+        for %%I in (..) do echo CM3_INSTALL=%%~fI\install\cm3>>%GITHUB_ENV%
 
     - name: Install bootstrap release
       run: |

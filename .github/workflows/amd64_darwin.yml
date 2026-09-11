@@ -38,7 +38,7 @@ jobs:
 
     - name: Define install location
       run: |
-        echo CM3_INSTALL="$(pwd)/../install" >> $GITHUB_ENV
+        echo "CM3_INSTALL=$(dirname "$PWD")/install" >> $GITHUB_ENV
 
     - name: Install bootstrap release
       run: |
