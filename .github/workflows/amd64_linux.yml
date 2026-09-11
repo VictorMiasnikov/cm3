@@ -9,11 +9,11 @@ on:
         required: false
         type: string
       release:
-        default: https://github.com/VictorMiasnikov/cm3/releases/download/d5.12.1-ZZYYXX-20260509_22-59
+        default: https://github.com/VictorMiasnikov/cm3/releases/download/d5.12.1-ZZYYXX-20260509_19-45
         required: false
         type: string
       bootstrap:
-        default: cm3-boot-AMD64_LINUX-d5.12.1-ZZYYXX-20260509_22-59.tar.xz
+        default: cm3-boot-AMD64_LINUX-d5.12.1-ZZYYXX-20260509_19-45.tar.xz
         required: false
         type: string
 
@@ -71,14 +71,17 @@ jobs:
         path: m3-sys/m3tests/m3tests-results.xml
         reporter: java-junit
 
+    - name: Package build artifacts
+      run: |
+        ARCHIVE_NAME="cm3-${{ env.CM3_TARGET }}-${{ matrix.backend }}.tar.xz"
+        echo "Creating archive $ARCHIVE_NAME from ${CM3_INSTALL}..."
+        tar -cJf "$ARCHIVE_NAME" -C "${CM3_INSTALL}" .
+        echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> $GITHUB_ENV
+
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: cm3-build-files-${{ env.CM3_TARGET }}-${{ matrix.backend }}
-        path: |
-          ${{ env.CM3_INSTALL }}/bin
-          ${{ env.CM3_INSTALL }}/lib
-          ${{ env.CM3_INSTALL }}/pkg
-          ${{ env.CM3_INSTALL }}/man
-        if-no-files-found: warn
+        name: cm3-build-${{ env.CM3_TARGET }}-${{ matrix.backend }}
+        path: ${{ env.ARCHIVE_NAME }}
+        if-no-files-found: error
         retention-days: 7
