@@ -72,3 +72,15 @@ jobs:
       run: |
         cm3 -DHTML
       working-directory: m3-sys\m3tests
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: cm3-build-files-${{ env.CM3_TARGET }}-${{ matrix.backend }}
+        path: |
+          ${{ env.CM3_INSTALL }}/bin
+          ${{ env.CM3_INSTALL }}/lib
+          ${{ env.CM3_INSTALL }}/pkg
+          ${{ env.CM3_INSTALL }}/man
+        if-no-files-found: warn
+        retention-days: 7
