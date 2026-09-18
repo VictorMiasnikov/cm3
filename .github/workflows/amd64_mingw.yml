@@ -77,11 +77,10 @@ jobs:
     - name: Package build artifacts
       run: |
         ARCHIVE_NAME="cm3-${{ env.CM3_TARGET }}.7z"
+        echo "ARCHIVE_NAME=${ARCHIVE_NAME}" >> $GITHUB_ENV
         echo "Creating archive $ARCHIVE_NAME from ${CM3_INSTALL_MSYS}..."
         cd "${CM3_INSTALL_MSYS}"
-        7z a -t7z "../${ARCHIVE_NAME}" .
-        cd "${GITHUB_WORKSPACE}"
-        echo "ARCHIVE_NAME=${ARCHIVE_NAME}" >> $GITHUB_ENV
+        7z a -t7z "${GITHUB_WORKSPACE}/${ARCHIVE_NAME}" .
       shell: msys2 {0}
 
     - name: Upload build artifacts

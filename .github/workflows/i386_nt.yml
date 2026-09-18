@@ -76,11 +76,10 @@ jobs:
     - name: Package build artifacts
       run: |
         set ARCHIVE_NAME=cm3-%CM3_TARGET%-${{ matrix.backend }}.7z
+        echo ARCHIVE_NAME=%ARCHIVE_NAME%>>%GITHUB_ENV%
         echo Creating archive %ARCHIVE_NAME% from %CM3_INSTALL%...
         cd /d "%CM3_INSTALL%"
-        7z a -t7z "..\%ARCHIVE_NAME%" .
-        cd /d "%GITHUB_WORKSPACE%"
-        echo ARCHIVE_NAME=%ARCHIVE_NAME% >> %GITHUB_ENV%
+        7z a -t7z "%GITHUB_WORKSPACE%\%ARCHIVE_NAME%" .
       shell: cmd
 
     - name: Upload build artifacts
