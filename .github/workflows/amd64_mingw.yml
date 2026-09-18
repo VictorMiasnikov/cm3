@@ -45,7 +45,6 @@ jobs:
       run: |
         WIN_PARENT=$(cygpath -m "$(dirname "$PWD")")
         echo "CM3_INSTALL=${WIN_PARENT}/install/cm3" >> $GITHUB_ENV
-        
         echo "CM3_INSTALL_MSYS=$(dirname "$PWD")/install/cm3" >> $GITHUB_ENV
 
     - name: Install bootstrap release
@@ -75,14 +74,20 @@ jobs:
         cm3 -DHTML
       working-directory: m3-sys/m3tests
 
+    - name: Package build artifacts
+      run: |
+        ARCHIVE_NAME="cm3-${{ env.CM3_TARGET }}.7z"
+        echo "Creating archive $ARCHIVE_NAME from ${CM3_INSTALL_MSYS}..."
+        cd "${CM3_INSTALL_MSYS}"
+        7z a -t7z "../${ARCHIVE_NAME}" .
+        cd "${GITHUB_WORKSPACE}"
+        echo "ARCHIVE_NAME=${ARCHIVE_NAME}" >> $GITHUB_ENV
+      shell: msys2 {0}
+
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: cm3-build-files-${{ env.CM3_TARGET }}
-        path: |
-          ${{ env.CM3_INSTALL }}/bin
-          ${{ env.CM3_INSTALL }}/lib
-          ${{ env.CM3_INSTALL }}/pkg
-          ${{ env.CM3_INSTALL }}/man
-        if-no-files-found: warn
+        name: cm3-build-${{ env.CM3_TARGET }}
+        path: ${{ env.ARCHIVE_NAME }}
+        if-no-files-found: error
         retention-days: 7
