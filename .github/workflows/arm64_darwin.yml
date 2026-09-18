@@ -84,4 +84,4 @@ jobs:
         name: cm3-build-${{ env.CM3_TARGET }}-${{ matrix.backend }}
         path: ${{ env.ARCHIVE_NAME }}
         if-no-files-found: error
-        retention-days: 7
+        retention-days: 77
