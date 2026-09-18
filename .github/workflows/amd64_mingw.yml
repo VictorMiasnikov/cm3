@@ -43,7 +43,10 @@ jobs:
 
     - name: Define install location
       run: |
-        echo "CM3_INSTALL=$(dirname "$PWD")/install/cm3" >> $GITHUB_ENV
+        WIN_PARENT=$(cygpath -m "$(dirname "$PWD")")
+        echo "CM3_INSTALL=${WIN_PARENT}/install/cm3" >> $GITHUB_ENV
+        
+        echo "CM3_INSTALL_MSYS=$(dirname "$PWD")/install/cm3" >> $GITHUB_ENV
 
     - name: Install bootstrap release
       env:
@@ -53,9 +56,11 @@ jobs:
         cd ../install
         wget --quiet "${{ inputs.release }}/${{ inputs.bootstrap }}"
         7z x -o.. "${{ inputs.bootstrap }}"
-        cmake -S ../bootstrap -B ../build -G Ninja -DCMAKE_INSTALL_PREFIX="${CM3_INSTALL}" -DCMAKE_LIBRARY_PATH="${CMAKE_LIBRARY_PATH}"
+        cmake -S ../bootstrap -B ../build -G Ninja -DCMAKE_INSTALL_PREFIX="${{ env.CM3_INSTALL_MSYS }}" -DCMAKE_LIBRARY_PATH="${CMAKE_LIBRARY_PATH}"
         cmake --build ../build
         cmake --install ../build
+
+        echo "${{ env.CM3_INSTALL_MSYS }}/bin" >> $GITHUB_PATH
 
     - name: Fetch sources
       uses: actions/checkout@v4
