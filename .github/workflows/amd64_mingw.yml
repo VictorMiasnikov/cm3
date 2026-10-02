@@ -62,7 +62,7 @@ jobs:
         echo "${{ env.CM3_INSTALL_MSYS }}/bin" >> $GITHUB_PATH
 
     - name: Fetch sources
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Build everything
       run: |
@@ -84,7 +84,7 @@ jobs:
       shell: msys2 {0}
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: cm3-build-${{ env.CM3_TARGET }}
         path: ${{ env.ARCHIVE_NAME }}

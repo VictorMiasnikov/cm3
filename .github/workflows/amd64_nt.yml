@@ -54,7 +54,7 @@ jobs:
         echo %CM3_INSTALL%\bin>>%GITHUB_PATH%
 
     - name: Fetch sources
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Build everything
       run: |
@@ -78,7 +78,7 @@ jobs:
       shell: cmd
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: cm3-build-${{ env.CM3_TARGET }}
         path: ${{ env.ARCHIVE_NAME }}

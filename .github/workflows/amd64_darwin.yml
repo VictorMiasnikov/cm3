@@ -50,7 +50,7 @@ jobs:
         echo "${CM3_INSTALL}/bin" >> $GITHUB_PATH
 
     - name: Fetch sources
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Build everything
       run: |
@@ -63,7 +63,7 @@ jobs:
       working-directory: m3-sys/m3tests
 
     - name: Generate test report
-      uses: dorny/test-reporter@v2
+      uses: dorny/test-reporter@v3
       with:
         name: ${{ format('m3tests ({0}, {1})', env.CM3_TARGET, matrix.backend) }}
         fail-on-error: false
@@ -75,12 +75,11 @@ jobs:
       run: |
         ARCHIVE_NAME="cm3-${{ env.CM3_TARGET }}-${{ matrix.backend }}.tar.xz"
         echo "Creating archive $ARCHIVE_NAME from ${CM3_INSTALL}..."
-        # -C "${CM3_INSTALL}" . архивирует содержимое папки, а не саму папку с именем "install"
         tar -cJf "$ARCHIVE_NAME" -C "${CM3_INSTALL}" .
         echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> $GITHUB_ENV
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: cm3-build-${{ env.CM3_TARGET }}-${{ matrix.backend }}
         path: ${{ env.ARCHIVE_NAME }}

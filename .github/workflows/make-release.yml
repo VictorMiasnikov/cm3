@@ -34,7 +34,7 @@ jobs:
         echo "${CM3_INSTALL}/bin" >> $GITHUB_PATH
 
     - name: Fetch sources
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Fetch tag
       run: git fetch --force origin ${{ github.ref }}:${{ github.ref }}
@@ -51,7 +51,7 @@ jobs:
         scripts/concierge.py make-dist --target I386_NT
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: dist-linux
         path: |
@@ -85,7 +85,7 @@ jobs:
         echo "${CM3_INSTALL}/bin" >> $GITHUB_PATH
 
     - name: Fetch sources
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Fetch tag
       run: git fetch --force origin ${{ github.ref }}:${{ github.ref }}
@@ -100,7 +100,7 @@ jobs:
         scripts/concierge.py make-dist --target AMD64_DARWIN
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: dist-macos
         path: |
@@ -112,12 +112,12 @@ jobs:
 
     steps:
     - name: Download Linux artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v6
       with:
         name: dist-linux
 
     - name: Download macOS artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v6
       with:
         name: dist-macos
 
