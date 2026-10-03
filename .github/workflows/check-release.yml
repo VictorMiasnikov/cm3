@@ -35,7 +35,7 @@ jobs:
         ../dist/scripts/concierge.py install --prefix ../install
 
   AMD64_LINUX:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     env:
       CM3DIST: cm3-dist-AMD64_LINUX-${{ github.event.inputs.tag }}.tar.xz
     steps:

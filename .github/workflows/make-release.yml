@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 60
 
     env:
@@ -108,7 +108,7 @@ jobs:
 
   create-release:
     needs: [build-linux, build-macos]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     steps:
     - name: Download Linux artifacts
