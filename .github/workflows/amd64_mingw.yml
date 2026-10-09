@@ -33,11 +33,11 @@ jobs:
     - name: Install command-line tools
       uses: msys2/setup-msys2@v2
       with:
-        msystem: mingw64
+        msystem: ucrt64
         install: >-
-          mingw-w64-x86_64-cmake
-          mingw-w64-x86_64-ninja
-          mingw-w64-x86_64-toolchain
+          mingw-w64-ucrt-x86_64-cmake
+          mingw-w64-ucrt-x86_64-ninja
+          mingw-w64-ucrt-x86_64-toolchain
           p7zip
           wget
 
@@ -49,7 +49,7 @@ jobs:
 
     - name: Install bootstrap release
       env:
-        CMAKE_LIBRARY_PATH: /mingw64/x86_64-w64-mingw32/lib
+        CMAKE_LIBRARY_PATH: /ucrt64/x86_64-w64-mingw32/lib
       run: |
         mkdir ../build ../install
         cd ../install
