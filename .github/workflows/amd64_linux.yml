@@ -5,7 +5,7 @@ on:
   workflow_call:
     inputs:
       os:
-        default: ubuntu-latest
+        default: ubuntu-26.04
         required: false
         type: string
       release:
@@ -36,6 +36,9 @@ jobs:
         sudo apt-get update --quiet
         sudo apt-get install --quiet --assume-yes libglu1-mesa-dev ninja-build xorg-dev binutils-gold
         sudo apt-get install --quiet --assume-yes libz-dev libzstd-dev lzma
+        sudo ln -sf /usr/bin/llvm-config-22 /usr/local/bin/llvm-config
+        sudo ln -sf /usr/bin/llc-22 /usr/local/bin/llc
+        sudo ln -sf /usr/bin/opt-22 /usr/local/bin/opt
 
     - name: Install LLVM 22
       run: |
@@ -63,7 +66,7 @@ jobs:
 
     - name: Build everything
       run: |
-        scripts/concierge.py full-upgrade --backend "${{ matrix.backend }}" headless -m3gdb
+        scripts/concierge.py full-upgrade --backend "${{ matrix.backend }}" -g0 all -caltech-other -caltech-parser -m3-scheme
 
     - name: Run compiler validation suite
       continue-on-error: true
