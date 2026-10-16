@@ -55,7 +55,7 @@ jobs:
 
     - name: Build everything
       run: |
-        scripts/concierge.py full-upgrade --backend "${{ matrix.backend }}" headless -m3gdb
+        scripts/concierge.py full-upgrade --backend "${{ matrix.backend }}" all -m3gdb
 
     - name: Run compiler validation suite
       continue-on-error: true
