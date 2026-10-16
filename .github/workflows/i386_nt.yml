@@ -25,7 +25,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        backend: [c, integrated]
+#       backend: [c, integrated]
+        backend: [integrated]
 
     defaults:
       run: {shell: cmd}

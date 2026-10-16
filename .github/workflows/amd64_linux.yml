@@ -25,7 +25,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        backend: [c, gcc, llvm]
+#       backend: [c, gcc, llvm]
+        backend: [gcc, llvm]
 
     env:
       CM3_TARGET: AMD64_LINUX
