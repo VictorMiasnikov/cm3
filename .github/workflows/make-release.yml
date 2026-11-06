@@ -18,7 +18,7 @@ jobs:
     - name: Install prerequisites
       run: |
         sudo apt-get update --quiet
-        sudo apt-get install --quiet --assume-yes ninja-build
+        sudo apt-get install --quiet --assume-yes libglu1-mesa-dev ninja-build xorg-dev binutils-gold
 
     - name: Define install location
       run: |
