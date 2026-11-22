@@ -14,21 +14,16 @@
 #include <setjmp.h>
 #include <signal.h>
 #include <libunwind.h>
-
-
-/* _M3Exc is the C++ exception type thrown by RTStack__ThrowM3Exc and caught
-   by the "catch (_M3Exc& _m3exc)" clauses that M3C.m3 generates in each
-   translation unit.  It must be a proper C++ struct (not inside extern "C")
-   so that C++ EH type-matching works correctly.  The identical definition
-   appears in the M3C.m3 preamble for generated translation units; ODR is
-   satisfied because the layout is the same everywhere. */
-#ifdef __cplusplus
-struct _M3Exc { void* act; };
-#endif
+#include "m3core.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+INTEGER __cdecl RTStack_Has_walker (void)
+{
+    return TRUE;
+}
 
 /* Exception handling register numbers per the System V AMD64 ABI.
    Register 0 carries the exception object pointer; register 1 the
@@ -37,38 +32,19 @@ extern "C" {
 #define EHObjRegNo  0
 #define EHTypeRegNo 1
 
-/* Personality function stub — the real dispatch is done in RTEHScan. */
+/* Personality function stub, the real dispatch is done in RTEHScan. */
 void * __m3_personality_v0();
 
-/* External M3 allocator — avoids a memory leak in CurFrame. */
-extern char * RTException__AllocBuf(int size);
+/* External M3 allocator, avoids a memory leak in CurFrame. */
+char * RTException__AllocBuf (INTEGER size);
 
-/*
-  FrameInfo = RECORD
-    pc  : ADDRESS;
-    sp  : ADDRESS;
-    bp  : ADDRESS;        (* base pointer — unused *)
-    lock: INTEGER;        (* sentinel to detect cursor overrun *)
-    excRef  : ADDRESS;    (* ref to the exception activation *)
-    tTypeIndex : INTEGER; (* tTypeIndex from exception table *)
-    cursor : ADDRESS;     (* libunwind cursor to cur frame *)
-    startIP : ADDRESS;    (* libunwind start ip of current proc *)
-    endIP : ADDRESS;      (* libunwind end ip of current proc *)
-    lsda : ADDRESS;       (* libunwind lsda *)
-    persFn : ADDRESS;     (* libunwind handler pers fn *)
-    landingPad : ADDRESS; (* libunwind landing pad *)
-  END;
- * The typedef below must agree with the definition above
- * and in RTMachine.i3.
- */
-
+/* Frame must match RTMachine.FrameInfo. */
 typedef struct {
-  unsigned long pc;
-  unsigned long sp;
-  unsigned long bp;
-  long lock;
-  unsigned long exceptionRef;
-  long tTypeIndex;
+  WORD_T pc;
+  WORD_T sp;
+  INTEGER lock;
+  WORD_T exceptionRef;
+  INTEGER tTypeIndex;
   unw_cursor_t *cursor;
   unw_word_t start_ip;
   unw_word_t end_ip;
@@ -77,7 +53,7 @@ typedef struct {
   unw_word_t landingPad;
 } Frame;
 
-#define FrameLock 0x1234567890
+#define FrameLock ((INTEGER)((sizeof(size_t) >= 8) ? 0x1234567890 : 0x12345678))
 
 void * __m3_personality_v0() {
   printf("m3 personality\n");
@@ -118,15 +94,15 @@ char* RTStack__ProcName (Frame *f)
   long name_len = 50;
   unw_word_t ofp;
 
-  /* Small leak is acceptable — only called for debug/diagnostic output. */
-  name = (char *) malloc(name_len);
+  /* Small leak is acceptable, only called for debug/diagnostic output. */
+  name = (char *) calloc (1, name_len);
 
-  res = unw_get_proc_name(f->cursor, name, name_len, &ofp);
-  if (res == 0) {
+  res = unw_get_proc_name (f->cursor, name, name_len, &ofp);
+  if (res == 0)
     return name;
-  } else {
-    return 0;
-  }
+
+  free (name);
+  return 0;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -251,7 +227,7 @@ void show_backtrace (void) {
   while (unw_step(&cursor) > 0) {
     unw_get_reg(&cursor, UNW_REG_IP, &ip);
     unw_get_reg(&cursor, UNW_REG_SP, &sp);
-    printf ("ip = %lx, sp = %lx\n", (long) ip, (long) sp);
+    printf ("ip = %llx, sp = %llx\n", (long long) ip, (long long) sp);
 
     ret = unw_get_proc_name(&cursor, name, name_len, &ofp);
     printf("name %s\n",name);
@@ -263,13 +239,3 @@ void show_backtrace (void) {
 } /* extern "C" */
 #endif
 
-#ifdef __cplusplus
-/* RTStack__ThrowM3Exc is defined outside the extern "C" block so that the
-   C++ compiler's exception-handling machinery is fully engaged (the throw
-   expression needs C++ EH unwinding, not C abort semantics).  The
-   extern "C" on the definition gives the symbol C linkage so that M3
-   code can call it via the EXTERNAL pragma in RTStack.i3. */
-extern "C" void RTStack__ThrowM3Exc(void* act) {
-  throw _M3Exc{act};
-}
-#endif

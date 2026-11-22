@@ -50,3 +50,10 @@ end
 % see http://www.gnu.org/software/gdb/download/ANNOUNCEMENT
 %uncomment this define to use m3gdb
 readonly POSITION_INDEPENDENT_EXECUTABLE = "-no-pie"
+
+% M3C declares EXTENDED as _Float128, which g++ < 13 (Debian 12) lacks in C++;
+% __float128 is the same IEEE binary128 type on x86-64.
+if not equal(try_exec("@echo '_Float128 x;' | g++ -x c++ -fsyntax-only - >/dev/null 2>&1"), 0)
+  SYSTEM_CC = SYSTEM_CC & " -D_Float128=__float128"
+  SYSTEM_CXXC = SYSTEM_CXXC & " -D_Float128=__float128"
+end
