@@ -1,16 +1,33 @@
+%% Copyright (C) 1992, Digital Equipment Corporation
+%% All rights reserved.
+%% See the file COPYRIGHT for a full description.
+%readonly USE_I386_NT_CONTEXT = {
+% "I386_NT"     : TRUE,
+% "I386_MINGW"  : TRUE,
+% "I386_CYGWIN" : TRUE,
+% "NT386"       : TRUE,
+%}
+%if USE_I386_NT_CONTEXT contains TARGET
+%  interface ("ThreadContext")
+%end
+%module ("ThreadWin32")
+%if equal (OS_TYPE, "POSIX")   
+%    implementation("SchedulerPosix")   
+%end 
 % Copyright (C) 1992, Digital Equipment Corporation
 % All rights reserved.
 % See the file COPYRIGHT for a full description.
-readonly USE_I386_NT_CONTEXT = {
- "I386_NT"     : TRUE,
- "I386_MINGW"  : TRUE,
- "I386_CYGWIN" : TRUE,
- "NT386"       : TRUE,
-}
-if USE_I386_NT_CONTEXT contains TARGET
-  interface ("ThreadContext")
-end
+
+%if equal(OS_TYPE, "WIN32")
+  if equal(WORD_SIZE, "64BITS")
+    include_dir("64BITS")
+  else
+    include_dir("32BITS")
+  end
+%end
+
 module ("ThreadWin32")
 if equal (OS_TYPE, "POSIX")   
     implementation("SchedulerPosix")   
 end 
+
