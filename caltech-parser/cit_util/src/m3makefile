@@ -280,9 +280,10 @@ ListMultiTbl("TextTextListMultiTbl",
 	"Text", "Text", "TextList", "TextTextListTbl")
 Interface("BrandedWr")
 
-Module("UnixFilter")
-Module("SlowTextCompress")
-
+if not equal (OS_TYPE, "WIN32")
+  Module("UnixFilter")
+  Module("SlowTextCompress")
+end
 Fifo("Text", "Text")
 Fifo("Ref", "Refany")
 Fifo("Char", "Char")
@@ -417,10 +418,13 @@ Table ("TextCard", "Text", "Cardinal")
 
 Table ("LRVectorLR", "LRVector", "LongrealType")
 
-if equal (OS_TYPE, "POSIX")
+if not equal (OS_TYPE, "WIN32")
   Module ("RepeatMe")
   Module ("Watchdog")
 end
+
+Module ("RepeatMe")
+Module ("Watchdog")
 
 Library("cit_util")
 
