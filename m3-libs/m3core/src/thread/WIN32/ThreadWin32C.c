@@ -95,9 +95,16 @@ PCONTEXT __cdecl ThreadWin32__NewContext(void)
         CONTEXT a;
         unsigned char b[0x300];
     } CONTEXT300;
-    PCONTEXT context = (PCONTEXT)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(CONTEXT300));
-    if (context)
+    /* PCONTEXT context = (PCONTEXT)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(CONTEXT300)); */
+    PCONTEXT context = (PCONTEXT)_aligned_malloc( sizeof(CONTEXT300), 64);
+    if (context) {
+        ZeroMemory(context, sizeof(CONTEXT300));
+        /* VVM: This is do not need
+        context->ContextFlags = (CONTEXT_ALL | CONTEXT_XSTATE);
+        */
         context->ContextFlags = (CONTEXT_CONTROL | CONTEXT_INTEGER);
+
+    };
     return context;
 }
 
@@ -105,7 +112,8 @@ void __cdecl ThreadWin32__DeleteContext(void** p)
 {
 	void* q = *p;
 	*p = 0;
-    HeapFree(GetProcessHeap(), 0, q);
+    /* HeapFree(GetProcessHeap(), 0, q); */
+    _aligned_free(q);
 }
 
 /*-------------------------------------------------------------------------*/
