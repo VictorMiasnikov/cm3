@@ -37,8 +37,8 @@ TYPE
   ValRec = RECORD
     kind      : VKind;        (* type of descriptor *)
     type      : Type;         (* type of the value *)
-    temp_base : BOOLEAN;      (* TRUE => base is a temp. *)
-    temp_bits : BOOLEAN;      (* TRUE => bits is a temp. *)
+    base_is_temp : BOOLEAN;      (* TRUE => base is a temp. *)
+    bits_is_temp : BOOLEAN;      (* TRUE => bits is a temp. *)
     old_align : Alignment;    (* known alignment of ??? *)
     base_align: Alignment;    (* alignment of ADR(base). *)
     base_value_align: Alignment;
@@ -58,6 +58,11 @@ TYPE
     base      : Var;          (* base address *)
     bits      : Var;          (* non-constant bit offset *)
     offset    : INTEGER;      (* constant bit offset *)
+    bits_span : INTEGER;      (* when bits # NIL and bits_span > 0, the
+                                 bits index a packed array of bits_span bits
+                                 that starts at constant bit offset
+                                 bits_base; set by Index_bits. *)
+    bits_base : INTEGER;
     next      : Val;          (* link for lists *)
     int       : Target.Int;   (* literal integer value *)
     float     : Target.Float; (* literal floating point value *)
@@ -674,8 +679,8 @@ PROCEDURE Pop (): Val =
                          v.type, in_memory := FALSE);
       cg.store (z, 0, StackType[v.type], v.type);
       v.kind      := VKind.Direct;
-      v.temp_base := TRUE;
-      v.temp_bits := FALSE;
+      v.base_is_temp := TRUE;
+      v.bits_is_temp := FALSE;
       v.old_align := TargetMap.CG_Align [v.type];
       v.base      := z;
       v.base_align:= TargetMap.CG_Align [v.type];
@@ -687,8 +692,8 @@ PROCEDURE Pop (): Val =
       cg.store (z, 0, Type.Addr, Type.Addr);
       v.kind      := VKind.Indirect;
       v.type      := Type.Addr;
-      v.temp_base := TRUE;
-      v.temp_bits := FALSE;
+      v.base_is_temp := TRUE;
+      v.bits_is_temp := FALSE;
       v.base      := z;
       v.base_align:= Target.Address.align
    (* v.bits      := NIL;
@@ -709,8 +714,8 @@ PROCEDURE Push (v: Val) =
   BEGIN
     WITH x = stack [SCheck (0, "Push")] DO
       x := v^;
-      x.temp_base := FALSE;
-      x.temp_bits := FALSE;
+      x.base_is_temp := FALSE;
+      x.bits_is_temp := FALSE;
       x.next      := NIL;
     END;
     INC (tos);
@@ -941,10 +946,10 @@ PROCEDURE Force_byte_align (VAR x: ValRec; s: Size) =
       x.kind := VKind.Absolute;
       x.type := Type.Addr;
       x.base := tmp;
-      x.temp_base:= TRUE;
+      x.base_is_temp:= TRUE;
       x.offset := 0;
       x.bits := NIL;
-      x.temp_bits := FALSE;
+      x.bits_is_temp := FALSE;
       x.old_align := word_align;
       x.base_align := Target.Address.align;
       x.base_value_align := word_align;
@@ -969,11 +974,11 @@ PROCEDURE Force_LValue (VAR x: ValRec) =
 
 PROCEDURE Release_temps (VAR x: ValRec) =
   BEGIN
-    IF (x.temp_base) THEN Free_temp (x.base); END;
-    IF (x.temp_bits) THEN Free_temp (x.bits); END;
+    IF (x.base_is_temp) THEN Free_temp (x.base); END;
+    IF (x.bits_is_temp) THEN Free_temp (x.bits); END;
     (* NOTE: Free_temp is a NOP. *)
-    x.temp_base := FALSE;
-    x.temp_bits := FALSE;
+    x.base_is_temp := FALSE;
+    x.bits_is_temp := FALSE;
     x.base      := NIL;
     x.bits      := NIL;
   END Release_temps;
@@ -1567,8 +1572,8 @@ PROCEDURE Load
             x.addr_align := addr_align;
             x.bits := NIL;
             x.offset := 0;
-            x.temp_base := FALSE;
-            x.temp_bits := FALSE;
+            x.base_is_temp := FALSE;
+            x.bits_is_temp := FALSE;
             x.next:= NIL;
           END;
           INC (tos);
@@ -1599,8 +1604,8 @@ PROCEDURE SimpleLoad
     WITH x = stack [SCheck (0, "SimpleLoad")] DO
       x.kind      := VKind.Direct;
       x.type      := t;
-      x.temp_base := FALSE;
-      x.temp_bits := FALSE;
+      x.base_is_temp := FALSE;
+      x.bits_is_temp := FALSE;
       x.old_align := Target.Byte;
       x.base_align:= base_align;
       x.base_value_align := addr_align;
@@ -1889,8 +1894,8 @@ PROCEDURE Load_addr_of (v: Var;  o: Offset; addr_align: Alignment) =
     WITH x = stack [SCheck (0, "Load_addr_of")] DO
       x.kind      := VKind.Absolute;
       x.type      := Type.Addr;
-      x.temp_base := FALSE;
-      x.temp_bits := FALSE;
+      x.base_is_temp := FALSE;
+      x.bits_is_temp := FALSE;
       x.old_align := ByteAlign (addr_align) * Target.Byte;
       x.base_align:= Target.Address.align;
       x.base_value_align := addr_align;
@@ -1906,7 +1911,7 @@ PROCEDURE Load_addr_of (v: Var;  o: Offset; addr_align: Alignment) =
 PROCEDURE Load_addr_of_temp (v: Var; o: Offset; addr_align: Alignment) =
   BEGIN
     Load_addr_of (v, o, addr_align);
-    stack[SCheck(1,"Load_addr_of_temp")].temp_base := TRUE;
+    stack[SCheck(1,"Load_addr_of_temp")].base_is_temp := TRUE;
   END Load_addr_of_temp;
 
 PROCEDURE Load_int (t: IType;  v: Var;  o: Offset := 0) =
@@ -1929,16 +1934,16 @@ PROCEDURE Load_indirect
   VAR
     t_size     := TargetMap.CG_Size [t];
     t_align    := TargetMap.CG_Align [t];
-    best_align : Alignment;
-    best_size  : Size;
-    best_type  : Type;
-    fetch_align: INTEGER;
+    fetch_align : Alignment;
+    fetch_size  : Size;
+    fetch_type  : Type;
+    container_align: INTEGER;
     oddStaticBitCt : INTEGER;
     save_bits  : Var := NIL;
     oddRTBits : Var;
-    save_temp_bits : BOOLEAN;
+    save_bits_is_temp : BOOLEAN;
 
-best_type1  : Type;
+fetch_type1  : Type;
 a1          : INTEGER;
 oddStaticBitCt1 : INTEGER;
 x1, x2, x3, x4, x5, x6, x7, x8,x9, x10: ValRec;
@@ -1953,50 +1958,54 @@ a1 := x.addr_align;
 
       IF s = t_size AND x.addr_align MOD t_align = 0 THEN
         (* A full t_size'd and t_align'ed load. *)
-        SimpleIndirectLoad (x, t, addr_align);
+        LoadIndirectSimple (x, t, addr_align);
 
       ELSIF s = t_size  AND x.addr_align MOD Target.Byte = 0
             AND Target.Allow_packed_byte_aligned THEN
         (* A full t_size'd and byte-aligned load, supported by the processor.
            This is used by packed structures. *)
-        SimpleIndirectLoad (x, t, addr_align);
+        LoadIndirectSimple (x, t, addr_align);
 
       ELSIF s > t_size THEN
         Err ("In Load_indirect, memory size exceeds stack size.");
         ForceStacked (); (* to connect the error message with the code *)
 x3 := stack[SCheck(1,"Load_indirect-x3")];
-        SimpleIndirectLoad (x, t, addr_align);
+        LoadIndirectSimple (x, t, addr_align);
+
+      ELSIF SpanBytes (x, t) > 0 THEN
+        (* A packed element at a run-time offset that may cross a byte. *)
+        LoadIndirectBytes (t, s, SpanBytes (x, t), addr_align);
 
       ELSIF (t = Target.Word.cg_type) OR (t = Target.Integer.cg_type)
             OR (t = Target.Long.cg_type) OR (t = Target.Longint.cg_type)
       THEN
-        best_type := MayFindIntType (t, s, x.offset, x.base_value_align);
-        IF best_type # Type.Void THEN
- best_type1 := best_type;
-          best_size := TargetMap.CG_Size [best_type];
-          best_align := TargetMap.CG_Align [best_type];
-          oddStaticBitCt := x.offset MOD best_align;
+        fetch_type := MayFindIntType (t, s, x.offset, x.base_value_align);
+        IF fetch_type # Type.Void THEN
+ fetch_type1 := fetch_type;
+          fetch_size := TargetMap.CG_Size [fetch_type];
+          fetch_align := TargetMap.CG_Align [fetch_type];
+          oddStaticBitCt := x.offset MOD fetch_align;
  oddStaticBitCt1 := oddStaticBitCt; 
           IF (oddStaticBitCt = 0) AND (x.bits = NIL) THEN
-            (* A best_align'ed load. *)
-            SimpleIndirectLoad (x, best_type, addr_align);
+            (* A fetch_align'ed load. *)
+            LoadIndirectSimple (x, fetch_type, addr_align);
             (* x.kind IN {Direct, Stacked} *)
-            IF (s # best_size) THEN (* NOT all of best_size to be loaded. *)
+            IF (s # fetch_size) THEN (* NOT all of fetch_size to be loaded. *)
               ForceStacked ();
 x4 := stack[SCheck(1,"Load_indirect-x4")];
               IF Target.endian = Target.Endian.Little
               THEN cg.extract_mn (StackType[t],
                                   Target.SignedType[t], 0, s);
               ELSE cg.extract_mn (StackType[t],
-                                  Target.SignedType[t], best_size - s, s);
+                                  Target.SignedType[t], fetch_size - s, s);
               END;
               FinishLoadIndirect (x, t, addr_align);
             END;            
           ELSIF (x.bits = NIL) THEN
-            (* Unaligned, partial best_size'd load. *)
+            (* Unaligned, partial fetch_size'd load. *)
             DEC (x.offset, oddStaticBitCt);
 x5 := stack[SCheck(1,"Load_indirect-x5")];
-            SimpleIndirectLoad (x, best_type, addr_align);
+            LoadIndirectSimple (x, fetch_type, addr_align);
 x6 := stack[SCheck(1,"Load_indirect-x6")];
             ForceStacked ();
 x7 := stack[SCheck(1,"Load_indirect-x7")];
@@ -2004,37 +2013,46 @@ x7 := stack[SCheck(1,"Load_indirect-x7")];
             THEN cg.extract_mn (StackType[t], Target.SignedType[t],
                                 oddStaticBitCt, s);
             ELSE cg.extract_mn (StackType[t], Target.SignedType[t],
-                                best_size - oddStaticBitCt - s, s);
+                                fetch_size - oddStaticBitCt - s, s);
             END;
             FinishLoadIndirect (x, t, addr_align);
           ELSE (* bits # NIL *)
             (* Unaligned, partial-word load with RT variable offset. *)
-            fetch_align := MIN (x.addr_align, t_size);
-            IF (best_size < fetch_align) THEN
+            (* The container's size comes from the alignment of the base the
+               bits are counted from, not from addr_align: Index_bits folds
+               the bits' own alignment (often 1) into addr_align, which would
+               leave a one-byte container for an element crossing a byte. *)
+            container_align := MIN (x.base_value_align, t_size);
+            IF MayFindIntType (t, MAX (s, container_align), x.offset MOD container_align,
+                               x.base_value_align) = Type.Void THEN
+              (* No container that wide fits the static offset: as before. *)
+              container_align := MIN (x.addr_align, t_size);
+            END;
+            IF (fetch_size < container_align) THEN
               (* make sure we load the largest possible aligned value,
                  because we can't tell how far the variable bit-offset
                  will take us.  *)
-              best_type := MustFindIntType 
-                             (t, MAX (s, fetch_align), x.offset MOD fetch_align,
+              fetch_type := MustFindIntType 
+                             (t, MAX (s, container_align), x.offset MOD container_align,
                               x.base_value_align);
-              best_size  := TargetMap.CG_Size [best_type];
-              best_align := TargetMap.CG_Align [best_type];
-              oddStaticBitCt := x.offset MOD best_align;
+              fetch_size  := TargetMap.CG_Size [fetch_type];
+              fetch_align := TargetMap.CG_Align [fetch_type];
+              oddStaticBitCt := x.offset MOD fetch_align;
             END;
-            IF (x.base_value_align < best_align) THEN 
+            IF (x.base_value_align < fetch_align) THEN 
               Err ("unaligned fetch type in Load_indirect."); 
             END;
 
-            oddRTBits := ReduceBits (best_align); 
+            oddRTBits := ReduceBits (fetch_align); 
 
             (* hide the runtime bit offset value. *)
             save_bits := x.bits;       x.bits := NIL;
-            save_temp_bits := x.temp_bits;  x.temp_bits := FALSE;
+            save_bits_is_temp := x.bits_is_temp;  x.bits_is_temp := FALSE;
 
             (* generate the aligned load *)
             DEC (x.offset, oddStaticBitCt);
 x8 := stack[SCheck(1,"Load_indirect-x8")];
-            SimpleIndirectLoad (x, best_type, addr_align);
+            LoadIndirectSimple (x, fetch_type, addr_align);
 x9 := stack[SCheck(1,"Load_indirect-x9")];
             ForceStacked ();
 x10 := stack[SCheck(1,"Load_indirect-x10")];
@@ -2047,7 +2065,7 @@ x10 := stack[SCheck(1,"Load_indirect-x10")];
                 cg.add (Target.Integer.cg_type);
               END;
             ELSE (* big endian *)
-              cg_load_intt (best_size - oddStaticBitCt - s);
+              cg_load_intt (fetch_size - oddStaticBitCt - s);
               cg.load (oddRTBits, 0, Target.Integer.cg_type, Target.Integer.cg_type);
               cg.subtract (Target.Integer.cg_type);
             END;
@@ -2057,7 +2075,7 @@ x10 := stack[SCheck(1,"Load_indirect-x10")];
             FinishLoadIndirect (x, t, addr_align);
 
             Free_temp (oddRTBits);
-            IF save_temp_bits THEN Free_temp (save_bits) END; 
+            IF save_bits_is_temp THEN Free_temp (save_bits) END; 
           END;
         ELSIF x.addr_align MOD Target.Byte = 0 THEN
           LoadIndirectStraddling (t, addedOffset, s); 
@@ -2065,14 +2083,14 @@ x10 := stack[SCheck(1,"Load_indirect-x10")];
           Err ("unaligned word-straddling load_indirect, type="& Target.TypeNames[t]
               & "  s/a=" & Fmt.Int (s) & "/" & Fmt.Int (x.addr_align));
           ForceStacked ();  (* to connect the error message *)
-          SimpleIndirectLoad (x, t, addr_align);
+          LoadIndirectSimple (x, t, addr_align);
           ForceStacked ();
         END
       ELSE
         Err ("unaligned partial-word load_indirect, type="& Target.TypeNames[t]
             & "  s/a=" & Fmt.Int (s) & "/" & Fmt.Int (x.addr_align));
         ForceStacked ();  (* to connect the error message *)
-        SimpleIndirectLoad (x, t, addr_align);
+        LoadIndirectSimple (x, t, addr_align);
         ForceStacked ();
       END;
     END (*WITH*);
@@ -2085,16 +2103,16 @@ PROCEDURE FinishLoadIndirect
     x.type := StackType[t];
     x.base := NIL;
     x.offset := 0;
-    x.temp_base := FALSE;
+    x.base_is_temp := FALSE;
     x.bits := NIL;
-    x.temp_bits := FALSE;
+    x.bits_is_temp := FALSE;
     x.old_align := Target.Byte;
     x.base_align := TargetMap.CG_Align [x.type];
     x.base_value_align := addr_align;
     x.addr_align := addr_align;
   END FinishLoadIndirect; 
 
-PROCEDURE SimpleIndirectLoad (VAR x: ValRec;  t: MType; addr_align: Alignment) =
+PROCEDURE LoadIndirectSimple (VAR x: ValRec;  t: MType; addr_align: Alignment) =
 (* PRE: x.kind IN {Stacked, Absolute, Pointer}. *)
 (* Load full t-size'd and t-align'ed. *)
   VAR offs: INTEGER;
@@ -2113,13 +2131,13 @@ PROCEDURE SimpleIndirectLoad (VAR x: ValRec;  t: MType; addr_align: Alignment) =
       FinishLoadIndirect (x, t, addr_align);
       
     ELSE (* ?? *)
-      ErrI (ORD (x.kind), "bad VKind in SimpleIndirectLoad");
+      ErrI (ORD (x.kind), "bad VKind in LoadIndirectSimple");
       ForceStacked ();
       stackType := StackType[t];
       cg.load_indirect (0, t, stackType);
       FinishLoadIndirect (x, t, addr_align);
     END;
-  END SimpleIndirectLoad;
+  END LoadIndirectSimple;
 
 PROCEDURE Store
   (v: Var;  o: Offset;  s: Size;  base_align (*of ADR(v)*): Alignment;
@@ -2241,15 +2259,15 @@ PROCEDURE Store_indirect (t: Type; addedOffset: Offset;  s: Size) =
   VAR
     t_size     := TargetMap.CG_Size [t];
     t_align    := TargetMap.CG_Align [t];
-    best_align : Alignment;
-    best_size  : Size;
-    best_type  : Type;
+    fetch_align : Alignment;
+    fetch_size  : Size;
+    fetch_type  : Type;
     addr_align : INTEGER;
     tmp        : Val;
     oddStaticBitCt : INTEGER;
     save_bits  : Var := NIL;
     oddRTBits : Var;
-    save_temp_bits : BOOLEAN := FALSE;
+    save_bits_is_temp : BOOLEAN := FALSE;
   BEGIN
     Swap ();
     ForceAddr2SAP (addedOffset);
@@ -2261,36 +2279,40 @@ PROCEDURE Store_indirect (t: Type; addedOffset: Offset;  s: Size) =
 
       IF s = t_size AND (x.addr_align MOD t_align) = 0 THEN
         (* A full t_size'd and t_align'ed store. *)
-        SimpleIndirectStore (x, t, t);
+        IndirectStoreSimple (x, t, t);
       ELSIF s = t_size
             AND (x.addr_align MOD Target.Byte) = 0
             AND Target.Allow_packed_byte_aligned THEN
         (* A full t_size'd and byte-aligned store, supported by the processor.
            This is used by structures containing packed components. *)
-        SimpleIndirectStore (x, t, t);
+        IndirectStoreSimple (x, t, t);
 
       ELSIF s > t_size THEN
         Err ("In Store_indirect, memory size exceeds stack size.");
-        SimpleIndirectStore (x, t, t);
+        IndirectStoreSimple (x, t, t);
+
+      ELSIF SpanBytes (x, t) > 0 THEN
+        (* A packed element at a run-time offset that may cross a byte. *)
+        StoreIndirectBytes (t, s, SpanBytes (x, t));
 
       ELSIF (t = Target.Word.cg_type) OR (t = Target.Integer.cg_type)
         OR  (t = Target.Long.cg_type) OR (t = Target.Longint.cg_type) THEN
-        best_type := MayFindIntType (t, s, x.offset, x.base_value_align);
-        IF best_type # Type.Void THEN 
-          best_size := TargetMap.CG_Size [best_type];
-          best_align := TargetMap.CG_Align [best_type];
-          oddStaticBitCt := x.offset MOD best_align;
-          IF (oddStaticBitCt = 0) AND (s = best_size) AND (x.bits = NIL) THEN
-            (* A full best_size'd and best_align'ed store. *)
-            SimpleIndirectStore (x, t, best_type);
+        fetch_type := MayFindIntType (t, s, x.offset, x.base_value_align);
+        IF fetch_type # Type.Void THEN 
+          fetch_size := TargetMap.CG_Size [fetch_type];
+          fetch_align := TargetMap.CG_Align [fetch_type];
+          oddStaticBitCt := x.offset MOD fetch_align;
+          IF (oddStaticBitCt = 0) AND (s = fetch_size) AND (x.bits = NIL) THEN
+            (* A full fetch_size'd and fetch_align'ed store. *)
+            IndirectStoreSimple (x, t, fetch_type);
           ELSIF (oddStaticBitCt = 0) AND (x.bits = NIL) THEN
-            (* A best_align'ed but only partial best_size'd store. *)
+            (* A fetch_align'ed but only partial fetch_size'd store. *)
             Swap (); (* Address on top *)
             tmp := Pop ();
             Push (tmp);
             ForceAddr2SAP (0);
-            SimpleIndirectLoad (* Fetched word on top. *)
-              (stack [SCheck (1,"Store_indirect-1")], best_type, 1);
+            LoadIndirectSimple (* Fetched word on top. *)
+              (stack [SCheck (1,"Store_indirect-1")], fetch_type, 1);
 
             (* stuff the bits *)
             ForceStacked ();
@@ -2298,23 +2320,23 @@ PROCEDURE Store_indirect (t: Type; addedOffset: Offset;  s: Size) =
             ForceStacked ();
             IF Target.endian = Target.Endian.Little
               THEN cg.insert_mn (StackType[t], 0, s);
-              ELSE cg.insert_mn (StackType[t], best_size - s, s);
+              ELSE cg.insert_mn (StackType[t], fetch_size - s, s);
             END;
             SPop (1, "Store_indirect #1");
             Push (tmp);
             ForceAddr2SAP (0);
             Swap (); (* Value on top. *) 
-            SimpleIndirectStore (x, t, best_type);
+            IndirectStoreSimple (x, t, fetch_type);
             Free (tmp);
           ELSIF (x.bits = NIL) THEN
-            (* Unaligned, partial best_size'd store. *)
+            (* Unaligned, partial fetch_size'd store. *)
             DEC (x.offset, oddStaticBitCt);
             Swap (); (* Address on top *)
             tmp := Pop ();
             Push (tmp);
             ForceAddr2SAP (0);
-            SimpleIndirectLoad (* Fetched word on top. *)
-              (stack [SCheck (1, "Store_indirect-2")], best_type, 1);
+            LoadIndirectSimple (* Fetched word on top. *)
+              (stack [SCheck (1, "Store_indirect-2")], fetch_type, 1);
 
             (* stuff the bits *)
             ForceStacked ();
@@ -2322,7 +2344,7 @@ PROCEDURE Store_indirect (t: Type; addedOffset: Offset;  s: Size) =
             ForceStacked ();
             IF Target.endian = Target.Endian.Little
               THEN cg.insert_mn (StackType[t], oddStaticBitCt, s);
-              ELSE cg.insert_mn (StackType[t], best_size - oddStaticBitCt - s, s);
+              ELSE cg.insert_mn (StackType[t], fetch_size - oddStaticBitCt - s, s);
             END;
             SPop (1, "Store_indirect #2");
             
@@ -2330,34 +2352,41 @@ PROCEDURE Store_indirect (t: Type; addedOffset: Offset;  s: Size) =
             Push (tmp);
             ForceAddr2SAP (0);
             Swap (); (* Stuffed word on top, address below. *) 
-            SimpleIndirectStore (x, t, best_type);
+            IndirectStoreSimple (x, t, fetch_type);
             Free (tmp);
           ELSE (* bits # NIL *)
-            (* Unaligned, partial best_size'd store with RT variable offset. *)
-            addr_align := MIN (x.addr_align, t_size);
-            IF (best_size < addr_align) THEN
+            (* Unaligned, partial fetch_size'd store with RT variable offset. *)
+            (* The container's size comes from the base's alignment; see
+               Load_indirect. *)
+            addr_align := MIN (x.base_value_align, t_size);
+            IF MayFindIntType (t, MAX (s, addr_align), x.offset MOD addr_align,
+                               x.base_value_align) = Type.Void THEN
+              (* No container that wide fits the static offset: as before. *)
+              addr_align := MIN (x.addr_align, t_size);
+            END;
+            IF (fetch_size < addr_align) THEN
               (* make sure we load and store the largest possible aligned value,
                  because we can't tell how far the variable bit-offset
                  will take us.  *)
-              best_type
+              fetch_type
                 := MustFindIntType
                      (t, MAX (s, addr_align), x.offset MOD addr_align,
                       x.base_value_align);
-              best_size  := TargetMap.CG_Size [best_type];
-              best_align := TargetMap.CG_Align [best_type];
-              oddStaticBitCt := x.offset MOD best_align;
+              fetch_size  := TargetMap.CG_Size [fetch_type];
+              fetch_align := TargetMap.CG_Align [fetch_type];
+              oddStaticBitCt := x.offset MOD fetch_align;
             END;
-            IF (x.base_value_align < best_align) THEN 
+            IF (x.base_value_align < fetch_align) THEN 
               Err ("unaligned fetch type in Store_indirect");
             END;
 
             Swap (); (* Address on top *) 
-            oddRTBits := ReduceBits (best_align); 
+            oddRTBits := ReduceBits (fetch_align); 
             Swap (); (* Value back on top. *) 
 
             (* Hide the unreduced runtime bit offset. *)
             save_bits := x.bits; x.bits := NIL;
-            save_temp_bits := x.temp_bits; x.temp_bits:= FALSE;
+            save_bits_is_temp := x.bits_is_temp; x.bits_is_temp:= FALSE;
 
             (* generate the aligned load *)
             DEC (x.offset, oddStaticBitCt);
@@ -2365,8 +2394,8 @@ PROCEDURE Store_indirect (t: Type; addedOffset: Offset;  s: Size) =
             tmp := Pop ();
             Push (tmp);
             ForceAddr2SAP (0);
-            SimpleIndirectLoad
-              (stack [SCheck (1, "Store_indirect-3")], best_type, addr_align);
+            LoadIndirectSimple
+              (stack [SCheck (1, "Store_indirect-3")], fetch_type, addr_align);
               (* ^Fetched word on top, to-store value below. *)
                
             (* Code to compute the full bit offset. *)
@@ -2382,7 +2411,7 @@ PROCEDURE Store_indirect (t: Type; addedOffset: Offset;  s: Size) =
                 cg.add (Target.Integer.cg_type);
               END;
             ELSE (* big endian *)
-              cg_load_intt (best_size - oddStaticBitCt - s);
+              cg_load_intt (fetch_size - oddStaticBitCt - s);
               cg.load
                 (oddRTBits, 0, Target.Integer.cg_type, Target.Integer.cg_type);
               cg.subtract (Target.Integer.cg_type);
@@ -2397,11 +2426,11 @@ PROCEDURE Store_indirect (t: Type; addedOffset: Offset;  s: Size) =
             Push (tmp);
             ForceAddr2SAP (0);
             Swap (); (* Stuffed word on top, address below. *) 
-            SimpleIndirectStore (x, t, best_type);
+            IndirectStoreSimple (x, t, fetch_type);
 
             Free (tmp);
             Free_temp (oddRTBits);
-            IF save_temp_bits THEN Free_temp (save_bits) END;
+            IF save_bits_is_temp THEN Free_temp (save_bits) END;
           END;
         ELSIF x.addr_align MOD Target.Byte = 0 THEN
           StoreIndirectStraddling (t, addedOffset, s);
@@ -2409,19 +2438,153 @@ PROCEDURE Store_indirect (t: Type; addedOffset: Offset;  s: Size) =
         ELSE
           Err ("unaligned word-straddling store_indirect, type="& Target.TypeNames[t]
               & "  s/a=" & Fmt.Int (s) & "/" & Fmt.Int (x.addr_align));
-          SimpleIndirectStore (x, t, t);
+          IndirectStoreSimple (x, t, t);
           END 
       ELSE
         Err ("unaligned partial-word store_indirect, type="& Target.TypeNames[t]
             & "  s/a=" & Fmt.Int (s) & "/" & Fmt.Int (x.addr_align));
-        SimpleIndirectStore (x, t, t);
+        IndirectStoreSimple (x, t, t);
       END;
 
     END;
     SPop (2, "Store_indirect");
   END Store_indirect;
 
-PROCEDURE SimpleIndirectStore (READONLY x: ValRec; t: ZType; u:MType)=
+(* A packed array whose element size is not a power of two may have elements
+   that cross a byte, or a larger boundary, wherever the array starts; the
+   front end bounds such an array to a word (2.2.5), but its alignment can be
+   as small as a byte.  So an element at a run-time subscript is loaded and
+   stored through a container made of the array's bytes, each accessed on its
+   own, so that no access is wider than the array's alignment allows. *)
+
+PROCEDURE SpanBytes (READONLY x: ValRec;  t: Type): INTEGER =
+(* If the run-time bits of x index a packed array of known size (see
+   Index_bits) that a word of type t can hold, the number of bytes that hold
+   the array, counting from the byte containing its first bit; else 0. *)
+  VAR odd, n: INTEGER;
+  BEGIN
+    IF x.bits = NIL OR x.bits_span <= 0 THEN RETURN 0 END;
+    IF (t # Target.Word.cg_type) AND (t # Target.Integer.cg_type) THEN
+      RETURN 0;
+    END;
+    odd := x.bits_base MOD Target.Byte;
+    n := (odd + x.bits_span + Target.Byte - 1) DIV Target.Byte;
+    IF n * Target.Byte > Target.Word.size THEN RETURN 0 END;
+    RETURN n;
+  END SpanBytes;
+
+PROCEDURE BytesAddrToTemp (VAR x: ValRec;  VAR bits: Var;
+                           VAR bits_is_temp: BOOLEAN;
+                           VAR rel: INTEGER): Var =
+(* Detach x's run-time bits, leave in a new temp the address of the byte
+   that holds the first bit of x's packed array, and set rel to the constant
+   bit offset of x's element from that byte.  x stays on the CG stack, but no
+   longer on the M3CG stack. *)
+  VAR first: INTEGER;  addr: Var;
+  BEGIN
+    bits := x.bits;  bits_is_temp := x.bits_is_temp;
+    x.bits := NIL;  x.bits_is_temp := FALSE;
+    first := x.bits_base - x.bits_base MOD Target.Byte;
+    rel := x.offset - first;
+    x.offset := first;
+    ForceStacked ();
+    addr := Declare_addr_temp (in_memory := FALSE);
+    cg.store (addr, 0, Type.Addr, Type.Addr);
+    RETURN addr;
+  END BytesAddrToTemp;
+
+PROCEDURE LoadBytes (addr: Var;  n: INTEGER;  st: Type) =
+(* Push, as one st value, the n bytes at addr, in target byte order. *)
+  VAR shift: INTEGER;
+  BEGIN
+    FOR j := 0 TO n - 1 DO
+      cg.load (addr, 0, Type.Addr, Type.Addr);
+      cg.load_indirect (j, Type.Word8, st);
+      IF Target.endian = Target.Endian.Little
+        THEN shift := j * Target.Byte;
+        ELSE shift := (n - 1 - j) * Target.Byte;
+      END;
+      IF shift # 0 THEN
+        cg_load_intt (shift);
+        cg.shift_left (st);
+      END;
+      IF j > 0 THEN cg.or (st) END;
+    END;
+  END LoadBytes;
+
+PROCEDURE LoadBitPos (bits: Var;  rel, n: INTEGER;  s: Size) =
+(* Push the bit position, within the n-byte container, of the s-bit element
+   at run-time bit offset bits plus constant offset rel. *)
+  BEGIN
+    IF Target.endian = Target.Endian.Little THEN
+      cg.load (bits, 0, Target.Integer.cg_type, Target.Integer.cg_type);
+      IF rel # 0 THEN
+        cg_load_intt (rel);
+        cg.add (Target.Integer.cg_type);
+      END;
+    ELSE
+      cg_load_intt (n * Target.Byte - rel - s);
+      cg.load (bits, 0, Target.Integer.cg_type, Target.Integer.cg_type);
+      cg.subtract (Target.Integer.cg_type);
+    END;
+  END LoadBitPos;
+
+PROCEDURE LoadIndirectBytes (t: Type;  s: Size;  n: INTEGER;
+                             addr_align: Alignment) =
+(* s0.t := Mem [s0.A + s0.bits : s], through the n bytes of s0's array. *)
+  VAR st := StackType[t];  bits, addr: Var;  bits_is_temp: BOOLEAN;
+      rel: INTEGER;
+  BEGIN
+    WITH x = stack [SCheck (1, "LoadIndirectBytes")] DO
+      cg.comment ("LoadIndirectBytes:");
+      addr := BytesAddrToTemp (x, bits, bits_is_temp, rel);
+      LoadBytes (addr, n, st);
+      LoadBitPos (bits, rel, n, s);
+      cg.extract_n (st, Target.SignedType[t], s);
+      FinishLoadIndirect (x, t, addr_align);
+      Free_temp (addr);
+      IF bits_is_temp THEN Free_temp (bits) END;
+    END;
+  END LoadIndirectBytes;
+
+PROCEDURE StoreIndirectBytes (t: Type;  s: Size;  n: INTEGER) =
+(* Mem [s1.A + s1.bits : s] := s0.t, through the n bytes of s1's array.
+   Leaves both operands on the CG stack, for the caller to pop. *)
+  VAR st := StackType[t];  bits, addr, word: Var;  bits_is_temp: BOOLEAN;
+      rel, shift: INTEGER;
+  BEGIN
+    Swap (); (* Address on top. *)
+    WITH x = stack [SCheck (1, "StoreIndirectBytes")] DO
+      cg.comment ("StoreIndirectBytes:");
+      addr := BytesAddrToTemp (x, bits, bits_is_temp, rel);
+    END;
+    (* M3CG stack: value. *)
+    LoadBytes (addr, n, st);                 (* value, container *)
+    cg.swap (st, st);                        (* container, value *)
+    LoadBitPos (bits, rel, n, s);
+    cg.insert_n (st, s);                     (* new container *)
+    word := Declare_temp (Target.Word.size, Target.Word.align, st,
+                          in_memory := FALSE);
+    cg.store (word, 0, st, st);
+    FOR j := 0 TO n - 1 DO
+      cg.load (addr, 0, Type.Addr, Type.Addr);
+      cg.load (word, 0, st, st);
+      IF Target.endian = Target.Endian.Little
+        THEN shift := j * Target.Byte;
+        ELSE shift := (n - 1 - j) * Target.Byte;
+      END;
+      IF shift # 0 THEN
+        cg_load_intt (shift);
+        cg.shift_right (st);
+      END;
+      cg.store_indirect (j, st, Type.Word8);
+    END;
+    Free_temp (word);
+    Free_temp (addr);
+    IF bits_is_temp THEN Free_temp (bits) END;
+  END StoreIndirectBytes;
+
+PROCEDURE IndirectStoreSimple (READONLY x: ValRec; t: ZType; u:MType)=
 (* PRE: x.kind IN {Stacked, Absolute, Pointer}. *)
 (* Store full t-size'd and t-align'ed into u. *)
   BEGIN
@@ -2431,10 +2594,10 @@ PROCEDURE SimpleIndirectStore (READONLY x: ValRec; t: ZType; u:MType)=
     | VKind.Pointer, VKind.Stacked =>
       cg.store_indirect (AsBytes (x.offset), t, u);
     ELSE (* ?? *)
-      ErrI (ORD (x.kind), "bad VKind in SimpleIndirectStore");
+      ErrI (ORD (x.kind), "bad VKind in IndirectStoreSimple");
       cg.store_indirect (AsBytes (x.offset), t, u);
     END;
-  END SimpleIndirectStore;
+  END IndirectStoreSimple;
 
 PROCEDURE StoreIndirectStraddling
   (<*UNUSED*> t: Type; o: Offset; s: Size; PleaseZextField:= TRUE) =
@@ -3463,8 +3626,8 @@ PROCEDURE Check_byte_aligned () =
       ELSIF (x.offset MOD Target.Byte) # 0 THEN
         Err ("address's offset is not byte aligned");
       ELSIF (x.bits # NIL) THEN
-        extra_bits := x.bits;   extra_is_temp := x.temp_bits;
-        x.bits := NIL;          x.temp_bits := FALSE;
+        extra_bits := x.bits;   extra_is_temp := x.bits_is_temp;
+        x.bits := NIL;          x.bits_is_temp := FALSE;
         EVAL RunTyme.LookUpProc (RunTyme.Hook.Abort);
         cg.load (extra_bits, 0, Target.Integer.cg_type, Target.Integer.cg_type);
         cg_load_intt (Target.Byte - 1);
@@ -3518,11 +3681,11 @@ PROCEDURE EnsureTempBase (t: Type; VAR x: ValRec) =
   (* Ensure x has a base and it is a temp.  Its runtime contents will
      be uninitialized. *) 
   BEGIN
-    IF x.base = NIL OR NOT x.temp_base THEN
+    IF x.base = NIL OR NOT x.base_is_temp THEN
       x.base := Declare_temp
         (TargetMap.CG_Size[t], TargetMap.CG_Align[t], t, in_memory := FALSE);
       x.base_align := TargetMap.CG_Align[t];
-      x.temp_base := TRUE;
+      x.base_is_temp := TRUE;
     END 
   END EnsureTempBase; 
 
@@ -3556,7 +3719,7 @@ PROCEDURE Index_bytes (size: INTEGER) =
         addr.kind := VKind.Indirect;
         addr.offset := 0;
         addr.bits := NIL; 
-        addr.temp_bits := FALSE;  
+        addr.bits_is_temp := FALSE;  
 
       | VKind.Absolute =>
         index := Pop ();
@@ -3587,7 +3750,7 @@ PROCEDURE Index_bytes (size: INTEGER) =
     END;
   END Index_bytes;
 
-PROCEDURE Index_bits (bits_addr_align: Alignment := 1) =
+PROCEDURE Index_bits (bits_addr_align: Alignment := 1;  span: INTEGER := 0) =
 (* s1.A := s1.A + s0.I ; pop -- note that s0.I must be less than
   or equal to the alignment of s1.A, otherwise bad code will be generated. *)
 (* TODO: Remove this restriction by moving code from ArrayType.GenIndex in here,
@@ -3595,18 +3758,30 @@ PROCEDURE Index_bits (bits_addr_align: Alignment := 1) =
   VAR index := Pop_temp (); (* Direct, no offset or bits. *) 
   BEGIN
     WITH x = stack [SCheck (1, "Index_bits")] DO
-      <* ASSERT index.temp_base *> 
+      <* ASSERT index.base_is_temp *> 
       IF x.bits # NIL THEN
         cg.load (index.base, 0, Target.Integer.cg_type, Target.Integer.cg_type);
         cg.load (x.bits, 0, Target.Integer.cg_type, Target.Integer.cg_type);
         cg.add (Target.Integer.cg_type); 
         cg.store (index.base, 0, Target.Integer.cg_type, Target.Integer.cg_type);
+        (* The bits still count from the enclosing array's start, so its
+           bits_span and bits_base stand. *)
+      END;
+      IF (x.kind = VKind.Direct) THEN
+        (* Materialize the address from the direct variable now; ForceAddr2SAP
+           cannot handle VKind.Direct with a non-NIL bits field. *)
+        ForceStacked ();
+        x.kind := VKind.Stacked;
       END;
       IF (x.kind = VKind.Stacked) THEN x.kind := VKind.Pointer; END;
+      IF x.bits = NIL THEN
+        x.bits_span := span;
+        x.bits_base := x.offset;
+      END;
       x.bits := index.base;
-      x.temp_bits := TRUE;
+      x.bits_is_temp := TRUE;
       x.addr_align := GCD (x.addr_align, bits_addr_align);
-      index.temp_base := FALSE; 
+      index.base_is_temp := FALSE; 
       Free (index);
     END;
   END Index_bits;
@@ -4152,8 +4327,8 @@ PROCEDURE SPush (t: Type; addr_align: Alignment := Target.Word8.align) =
     WITH x = stack[SCheck(0,"SPush")] DO
       x.kind      := VKind.Stacked;
       x.type      := StackType[t];
-      x.temp_base := FALSE;
-      x.temp_bits := FALSE;
+      x.base_is_temp := FALSE;
+      x.bits_is_temp := FALSE;
       x.old_align := TargetMap.CG_Align[t] (*Was Target.Byte*);
       x.base_align:= TargetMap.CG_Align[x.type];
       x.base_value_align:= addr_align;
@@ -4235,8 +4410,8 @@ PROCEDURE SDump (tag: TEXT) =
       WITH x = stack[i] DO
         msg := VName [x.kind];
         msg := msg & Target.TypeNamesFixedWidth [x.type];
-        msg := msg & Bool [x.temp_base];
-        msg := msg & Bool [x.temp_bits];
+        msg := msg & Bool [x.base_is_temp];
+        msg := msg & Bool [x.bits_is_temp];
         msg := msg & Fmt.Int (x.old_align) & " ";
         msg := msg & Fmt.Int (x.base_align) & " ";
         msg := msg & Fmt.Int (x.addr_align) & " ";
