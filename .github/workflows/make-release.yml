@@ -12,13 +12,13 @@ jobs:
     timeout-minutes: 60
 
     env:
-      BOOTSTRAP: https://github.com/VictorMiasnikov/cm3/releases/download/d5.12.1-ZZYYXX-20260606/cm3-boot-AMD64_LINUX-d5.12.1-ZZYYXX-20260606.tar.xz
+      BOOTSTRAP: https://github.com/VictorMiasnikov/cm3/releases/download/d5.12.1-ZZYYXX-20261107/cm3-boot-AMD64_LINUX-d5.12.1-ZZYYXX-20261107.tar.xz
 
     steps:
     - name: Install prerequisites
       run: |
         sudo apt-get update --quiet
-        sudo apt-get install --quiet --assume-yes libglu1-mesa-dev ninja-build xorg-dev binutils-gold
+        sudo apt-get install --quiet --assume-yes libglu1-mesa-dev xorg-dev binutils-gold
         sudo apt-get install --quiet --assume-yes ninja-build libunwind-dev
 
     - name: Define install location
@@ -64,7 +64,7 @@ jobs:
     timeout-minutes: 120
 
     env:
-      BOOTSTRAP: https://github.com/VictorMiasnikov/cm3/releases/download/d5.12.1-ZZYYXX-20260606/cm3-boot-ARM64_DARWIN-d5.12.1-ZZYYXX-20260606.tar.xz
+      BOOTSTRAP: https://github.com/VictorMiasnikov/cm3/releases/download/d5.12.1-ZZYYXX-20261107/cm3-boot-ARM64_DARWIN-d5.12.1-ZZYYXX-20261107.tar.xz
 
     steps:
     - name: Install prerequisites

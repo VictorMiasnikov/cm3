@@ -5,7 +5,7 @@ name: integration
 # Pushes run only on master: a branch with an open PR is tested by its
 # pull_request run, and a push run of the same code doubled the load.
 on:
-  pull_request: {branches: d5.12.1-ZZYYXX-20261107}
+  pull_request: {branches: d5.12.1-ZZYYXX-20261110}
   push:
 
 # One queue per branch or PR (it was one for the whole repository, so any
@@ -17,22 +17,22 @@ concurrency:
 
 jobs:
   ARM64_DARWIN:
-    uses: VictorMiasnikov/cm3/.github/workflows/arm64_darwin.yml@d5.12.1-ZZYYXX-20261107
+    uses: VictorMiasnikov/cm3/.github/workflows/arm64_darwin.yml@d5.12.1-ZZYYXX-20261110
 
   AMD64_DARWIN:
-    uses: VictorMiasnikov/cm3/.github/workflows/amd64_darwin.yml@d5.12.1-ZZYYXX-20261107
+    uses: VictorMiasnikov/cm3/.github/workflows/amd64_darwin.yml@d5.12.1-ZZYYXX-20261110
 
   AMD64_LINUX:
-    uses: VictorMiasnikov/cm3/.github/workflows/amd64_linux.yml@d5.12.1-ZZYYXX-20261107
+    uses: VictorMiasnikov/cm3/.github/workflows/amd64_linux.yml@d5.12.1-ZZYYXX-20261110
 
   AMD64_MINGW:
-    uses: VictorMiasnikov/cm3/.github/workflows/amd64_mingw.yml@d5.12.1-ZZYYXX-20261107
+    uses: VictorMiasnikov/cm3/.github/workflows/amd64_mingw.yml@d5.12.1-ZZYYXX-20261110
 
   AMD64_NT:
-    uses: VictorMiasnikov/cm3/.github/workflows/amd64_nt.yml@d5.12.1-ZZYYXX-20261107
+    uses: VictorMiasnikov/cm3/.github/workflows/amd64_nt.yml@d5.12.1-ZZYYXX-20261110
 
   I386_LINUX:
-    uses: VictorMiasnikov/cm3/.github/workflows/i386_linux.yml@d5.12.1-ZZYYXX-20261107
+    uses: VictorMiasnikov/cm3/.github/workflows/i386_linux.yml@d5.12.1-ZZYYXX-20261110
 
   I386_NT:
-    uses: VictorMiasnikov/cm3/.github/workflows/i386_nt.yml@d5.12.1-ZZYYXX-20261107
+    uses: VictorMiasnikov/cm3/.github/workflows/i386_nt.yml@d5.12.1-ZZYYXX-20261110
