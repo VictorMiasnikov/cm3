@@ -38,6 +38,9 @@
 
 /* Last modified on Tue May  4 10:17:51 PDT 1993 by mjordan                  */
 
+% FreeBSD 4 or earlier might not have a viable pthreads,
+% in which case make a separate config file and set NOPTHREAD = TRUE or such.
+
 include_dir ("Common")
 
 % FreeBSD 4 or earlier might not have a viable pthreads,

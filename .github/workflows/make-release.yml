@@ -19,6 +19,7 @@ jobs:
       run: |
         sudo apt-get update --quiet
         sudo apt-get install --quiet --assume-yes libglu1-mesa-dev ninja-build xorg-dev binutils-gold
+        sudo apt-get install --quiet --assume-yes ninja-build libunwind-dev
 
     - name: Define install location
       run: |
