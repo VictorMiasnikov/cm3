@@ -20,13 +20,13 @@ on:
 jobs:
   build:
     runs-on: ${{ inputs.os }}
-    timeout-minutes: 35
+    timeout-minutes: 135
 
     strategy:
       fail-fast: false
       matrix:
-#       backend: [c, integrated]
-        backend: [integrated]
+        backend: [c, integrated]
+#       backend: [integrated]
 
     defaults:
       run: {shell: cmd}
