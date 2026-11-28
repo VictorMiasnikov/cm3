@@ -47,16 +47,14 @@ jobs:
           echo "code=false" >> "$GITHUB_OUTPUT"
         fi
 
-  AMD64_DARWIN:
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
-
   ARM64_DARWIN:
     needs: changes
     if: needs.changes.outputs.code == 'true'
     uses: VictorMiasnikov/cm3/.github/workflows/arm64_darwin.yml@d5.12.1-ZZYYXX-20261110
 
   AMD64_DARWIN:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     uses: VictorMiasnikov/cm3/.github/workflows/amd64_darwin.yml@d5.12.1-ZZYYXX-20261110
 
   AMD64_LINUX:
