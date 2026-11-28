@@ -468,7 +468,17 @@ proc GetM3Back() is
     m3back = INSTALL_ROOT & "/bin/"
   end end
   
-  m3back = "@" & m3back & "cm3cg " & GetM3BackFlags()
+  % Modula-3 rounds the result of each floating-point operation to its
+  % type, so cm3cg must not contract a*b+c into a fused multiply-add, which
+  % GCC does by default for a front end other than ISO C, on targets with
+  % FMA instructions such as PPC (M3C's output says the same with a pragma,
+  % #1414).  ARM_DARWIN's cm3cg is Apple's GCC 4.2, which has no
+  % -ffp-contract and no contraction.
+  local contract = " -ffp-contract=off "
+  if equal(TARGET, "ARM_DARWIN")
+    contract = " "
+  end
+  m3back = "@" & m3back & "cm3cg" & contract & GetM3BackFlags()
   return m3back
 end
 
@@ -545,6 +555,14 @@ if equal(M3_BACKEND_MODE, "0") or equal(M3_BACKEND_MODE, "1")
     % M3_FRONT_FLAGS += ["-unfold_nested_procs"]
     % M3_FRONT_FLAGS += ["-check_procs" ]
     M3_FRONT_FLAGS = ["-unfold_nested_procs", "-check_procs" ]
+end
+
+% -DM3_OVERFLOW_CHECKS on the command line, or M3_OVERFLOW_CHECKS = TRUE
+% in cm3.cfg: INTEGER and LONGINT arithmetic aborts with a runtime error
+% when it overflows, instead of wrapping around.  (For one package, put
+% M3_OPTIONS += "-OverflowChk" in its m3makefile.)
+if defined ("M3_OVERFLOW_CHECKS")
+  M3_FRONT_FLAGS += ["-OverflowChk"]
 end
 
 M3_OPTIONS = [ ]

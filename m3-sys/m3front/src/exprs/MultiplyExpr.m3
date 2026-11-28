@@ -10,6 +10,7 @@ MODULE MultiplyExpr;
 
 IMPORT CG, Expr, ExprRep, Type, Int, LInt, Reel, EReel, Target;
 IMPORT SetExpr, IntegerExpr, ReelExpr, LReel, SetType, ErrType;
+IMPORT Host, OverflowChk;
 
 CONST
   cINT   = 0;
@@ -97,6 +98,7 @@ PROCEDURE Check (p: P;  VAR cs: Expr.CheckState) =
       p.class := cINT;
     END;
     p.type := ta;
+    IntegerExpr.CheckOverflow (IntegerExpr.Op.Multiply, p.a, p.b);
   END Check;
 
 PROCEDURE Prep (p: P) =
@@ -126,11 +128,17 @@ PROCEDURE Compile (p: P; StaticOnly: BOOLEAN) =
     IF (p.class = cINT) THEN
       Expr.Compile (p.a);
       Expr.Compile (p.b);
-      CG.Multiply (Target.Integer.cg_type);
+      IF Host.doOverflowChk
+        THEN OverflowChk.Multiply (Target.Integer.cg_type);
+        ELSE CG.Multiply (Target.Integer.cg_type);
+      END;
     ELSIF (p.class = cLINT) THEN
       Expr.Compile (p.a);
       Expr.Compile (p.b);
-      CG.Multiply (Target.Longint.cg_type);
+      IF Host.doOverflowChk
+        THEN OverflowChk.Multiply (Target.Longint.cg_type);
+        ELSE CG.Multiply (Target.Longint.cg_type);
+      END;
     ELSIF (p.class # cSET) THEN
       Expr.Compile (p.a);
       Expr.Compile (p.b);

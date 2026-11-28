@@ -838,6 +838,7 @@ PROCEDURE SuspendOthers () =
         act := act.next;
       END;
       IF NOT retry THEN
+        RTHeapRep.worldStoppedBy := ADR(me.heapState);
         RETURN;
       END;
       Sleep(1);
@@ -852,6 +853,7 @@ PROCEDURE ResumeOthers () =
     (* <* ASSERT suspend_cnt = 1 *> *)
     DEC (suspend_cnt);
     IF suspend_cnt = 0 THEN
+      RTHeapRep.worldStoppedBy := NIL;
       me := GetActivation();
       act := me.next;
       WHILE act # me DO

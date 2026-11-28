@@ -181,6 +181,32 @@ proc FileExists(x) is
     return not stale(x, x)
 end
 
+% cl.exe echoes the name of every source file it compiles, and -nologo
+% does not stop it, so on Windows drop those lines from the build output:
+% a line with no space that ends in ".c" or ".cpp".  The file is rewritten
+% only if it has such a line (split drops empty lines).
+proc IsCompilerEcho (Line) is
+  if tcontains (Line, " ") return FALSE end
+  local L = Line & "|"
+  return tcontains (L, ".cpp|") or tcontains (L, ".c|")
+end
+
+proc StripCompilerEcho (Path) is
+  if not FileExists (Path) return end
+  local Out = ""
+  local Found = FALSE
+  foreach Line in split (fs_contents (Path), "\n")
+    if IsCompilerEcho (Line)
+      Found = TRUE
+    else
+      Out = Out & Line & "\n"
+    end
+  end
+  if Found
+    fs_putfile (Path, Out)
+  end
+end
+
 proc cmp_file (dir, file, ignoreLinesWith, ignoreTexts, probeForTargetSpecificFile) is
   local ExpectedPath = dir & "/" & file
   local OutputPath = dir & "/" & BUILD_DIR & "/" & file
@@ -211,8 +237,10 @@ proc cmp_file (dir, file, ignoreLinesWith, ignoreTexts, probeForTargetSpecificFi
     write(ComparisonLogData)
   end
 
-  local OutputContents = fs_contents (OutputPath)
-  local ExpectedContents = fs_contents (ExpectedPath)
+  % Outputs are normalized to LF line ends (NormalizeString), but a
+  % Windows checkout can give the expected files CRLF (git's autocrlf).
+  local OutputContents = del_chars (fs_contents (OutputPath), "\r")
+  local ExpectedContents = del_chars (fs_contents (ExpectedPath), "\r")
 
   if not empty (ignoreLinesWith)
     local ocLines = split (OutputContents, "\n")
@@ -445,6 +473,9 @@ readonly proc run_test (class, group, uid, comment, should_run, cm3opts, runopts
 
     NormalizeFile (dir & "/" & BUILD_DIR & "/stdout.build")
     NormalizeFile (dir & "/" & BUILD_DIR & "/stderr.build")
+    if equal (OS_TYPE, "WIN32")
+      StripCompilerEcho (dir & "/" & BUILD_DIR & "/stdout.build")
+    end
 
     if defined ("CAPTURE_BUILD")
       if not cmp_file (dir, "stdout.build", [ ], [ ], probeForTargetSpecificFiles)
@@ -571,6 +602,10 @@ p_test ("p3", "p330", "NARROW (x, NULL) checks that x is NIL")
 p_test ("p3", "p331", "signed packed array elements at a run-time subscript")
 p_test ("p3", "p334", "a record with packed fields keeps a larger field alignment (EXTENDED)")
 p_test ("p3", "p335", "variables of a record type are aligned as the front end laid it out")
+p_test ("p3", "p338", "-OverflowChk: INTEGER and LONGINT arithmetic aborts exactly on overflow")
+p_test ("p3", "p339", "FIRST DIV -1 wraps around and FIRST MOD -1 is 0, with no trap")
+p_test ("p3", "p337", "FLOOR, CEILING, ROUND, TRUNC to LONGINT and FLOAT of LONGINT, beyond 32 bits")
+p_test ("p3", "p340", "LONGINT comparisons whose high words are equal compare the low words unsigned")
 p_test ("p3", "p323", "RAISE of a record argument inside a TRY with no other call")
 p_test ("p3", "p318", "Loads of traced references from each kind of storage during an incremental collection")
 p_test ("p3", "p302", "Address of a global at an offset, compared directly")
@@ -891,6 +926,7 @@ readonly proc e_test (group, uid, comment) is
   run_test ("_etests", group, uid, comment, "", cm3opts, runopts, "probeForTargetSpecificFiles")
 end
 
+e_test ("e0", "e042", "-OverflowChk: integer overflow in a constant expression is an error")
 e_test ("e0", "e041", "Illegal mutually recursive revealed opaque types in separate units")
 e_test ("e0", "e040", "Bad SUBARRAY actuals")
 e_test ("e0", "e035", "illegal recursive declaration")
