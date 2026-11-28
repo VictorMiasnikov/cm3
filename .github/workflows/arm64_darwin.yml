@@ -58,7 +58,9 @@ jobs:
 
     - name: Build all the things
       run: |
+        cm3 -version
         scripts/concierge.py full-upgrade --backend "${{ matrix.backend }}" all -m3gdb
+        cm3 -version
 
     - name: Run compiler validation suite
       continue-on-error: true
@@ -79,13 +81,13 @@ jobs:
       if: ${{ !cancelled() }}
       run: |
         python3 m3-sys/m3tests/check-results.py m3-sys/m3tests/m3tests-results.xml "m3-sys/m3tests/known-failures/${CM3_TARGET}-${{ matrix.backend }}"
+
     - name: Package build artifacts
       run: |
         ARCHIVE_NAME="cm3-${{ env.CM3_TARGET }}-${{ matrix.backend }}.tar.xz"
         echo "Creating archive $ARCHIVE_NAME from ${CM3_INSTALL}..."
         tar -cJf "$ARCHIVE_NAME" -C "${CM3_INSTALL}" .
         echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> $GITHUB_ENV
-
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v6

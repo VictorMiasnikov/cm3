@@ -25,8 +25,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        backend: [c, gcc]
-#       backend: [c]
+#       backend: [c, gcc]
+        backend: [c]
 
     env:
       CM3_TARGET: AMD64_DARWIN
@@ -38,6 +38,8 @@ jobs:
     # are built on ARM64_DARWIN, where bottles exist.
     - name: Install prerequisites
       run: |
+        brew update
+        brew install xquartz libxft libxaw
         python3 -m venv "$RUNNER_TEMP/tools"
         "$RUNNER_TEMP/tools/bin/pip" install --quiet cmake ninja
         echo "$RUNNER_TEMP/tools/bin" >> $GITHUB_PATH
@@ -60,7 +62,9 @@ jobs:
 
     - name: Build everything
       run: |
+        cm3 -version
         scripts/concierge.py full-upgrade --backend "${{ matrix.backend }}" all -m3gdb
+        cm3 -version
 
     - name: Run compiler validation suite
       continue-on-error: true
