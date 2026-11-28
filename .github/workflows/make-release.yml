@@ -12,7 +12,7 @@ jobs:
     timeout-minutes: 60
 
     env:
-      BOOTSTRAP: https://github.com/VictorMiasnikov/cm3/releases/download/d5.12.1-ZZYYXX-20261107/cm3-boot-AMD64_LINUX-d5.12.1-ZZYYXX-20261107.tar.xz
+      BOOTSTRAP: https://github.com/VictorMiasnikov/cm3/releases/download/d5.12.1-ZZYYXX-20261110/cm3-boot-AMD64_LINUX-d5.12.1-ZZYYXX-20261110.tar.xz
 
     steps:
     - name: Install prerequisites
@@ -64,7 +64,7 @@ jobs:
     timeout-minutes: 120
 
     env:
-      BOOTSTRAP: https://github.com/VictorMiasnikov/cm3/releases/download/d5.12.1-ZZYYXX-20261107/cm3-boot-ARM64_DARWIN-d5.12.1-ZZYYXX-20261107.tar.xz
+      BOOTSTRAP: https://github.com/VictorMiasnikov/cm3/releases/download/d5.12.1-ZZYYXX-20261110/cm3-boot-ARM64_DARWIN-d5.12.1-ZZYYXX-20261110.tar.xz
 
     steps:
     - name: Install prerequisites

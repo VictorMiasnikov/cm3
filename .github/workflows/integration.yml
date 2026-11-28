@@ -5,7 +5,7 @@ name: integration
 # Pushes run only on master: a branch with an open PR is tested by its
 # pull_request run, and a push run of the same code doubled the load.
 on:
-  pull_request: {branches: d5.12.1-ZZYYXX-20261110}
+  pull_request: {branches: d5.12.1-ZZYYXX-20261111}
   push:
 
 # One queue per branch or PR (it was one for the whole repository, so any
@@ -50,37 +50,37 @@ jobs:
   ARM64_DARWIN:
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    uses: VictorMiasnikov/cm3/.github/workflows/arm64_darwin.yml@d5.12.1-ZZYYXX-20261110
+    uses: VictorMiasnikov/cm3/.github/workflows/arm64_darwin.yml@d5.12.1-ZZYYXX-20261111
 
   AMD64_DARWIN:
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    uses: VictorMiasnikov/cm3/.github/workflows/amd64_darwin.yml@d5.12.1-ZZYYXX-20261110
+    uses: VictorMiasnikov/cm3/.github/workflows/amd64_darwin.yml@d5.12.1-ZZYYXX-20261111
 
   AMD64_LINUX:
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    uses: VictorMiasnikov/cm3/.github/workflows/amd64_linux.yml@d5.12.1-ZZYYXX-20261110
+    uses: VictorMiasnikov/cm3/.github/workflows/amd64_linux.yml@d5.12.1-ZZYYXX-20261111
 
   AMD64_MINGW:
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    uses: VictorMiasnikov/cm3/.github/workflows/amd64_mingw.yml@d5.12.1-ZZYYXX-20261110
+    uses: VictorMiasnikov/cm3/.github/workflows/amd64_mingw.yml@d5.12.1-ZZYYXX-20261111
 
   AMD64_NT:
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    uses: VictorMiasnikov/cm3/.github/workflows/amd64_nt.yml@d5.12.1-ZZYYXX-20261110
+    uses: VictorMiasnikov/cm3/.github/workflows/amd64_nt.yml@d5.12.1-ZZYYXX-20261111
 
   I386_LINUX:
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    uses: VictorMiasnikov/cm3/.github/workflows/i386_linux.yml@d5.12.1-ZZYYXX-20261110
+    uses: VictorMiasnikov/cm3/.github/workflows/i386_linux.yml@d5.12.1-ZZYYXX-20261111
 
   I386_NT:
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    uses: VictorMiasnikov/cm3/.github/workflows/i386_nt.yml@d5.12.1-ZZYYXX-20261110
+    uses: VictorMiasnikov/cm3/.github/workflows/i386_nt.yml@d5.12.1-ZZYYXX-20261111
 
   # The one check for branch protection to require: it fails if any of the
   # Linux or Darwin jobs failed or was cancelled, and passes when they
